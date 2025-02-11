@@ -1,0 +1,11 @@
+---
+title: "Untitled"
+format: html
+---
+
+The Canadian Institutes for Health Research provides X% of funding for health research in Canada (cite). Determinations of priorities for research funds comes from both strategic investments as well as a process of competetive proposals. Determining which proposals are ultimately selected for funding depends chiefly on the process of review of proposals by committees of peers, charged with identifying the most promising ideas for research.
+
+From CIHR: 
+> The Project Grant program is open to applicants in all areas of health research that are aligned with the CIHR mandate. It is designed to capture ideas with the greatest potential for important advances in fundamental or applied health-related knowledge, health care, health systems, and/or health outcomes, by supporting projects of research conducted by individual researchers or groups of researchers in all areas of health. The best ideas may stem from new, incremental, innovative, and/or high-risk lines of inquiry or knowledge translation approaches.
+
+> Project Grant applications follow a committee-based peer review process. This process involves the evaluation of applications by a group of reviewers, who have the required experience and expertise to assess the quality and potential impact of the proposed research and research related activities, within the context of the program's objectives. These reviewers are grouped into Peer Review Committees based on their expertise and the topics of applications submitted to these committees.
