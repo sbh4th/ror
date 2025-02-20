@@ -1,20 +1,22 @@
 ---
-title: Simulated Grant Data
+title: Hypothetical Analysis and Questions
+author: Sam Harper
 format: # html
   typst: 
     mainfont: "Helvetica"
+    margin:
+      x: "1in"
+      y: "1in"
     
 ---
 
 ## Overview
 
-The code below attempts to create a simulated dataset for the purposes of evaluating how factors such as the level of expertise (high, medium, low, not enough) and role (reviewer, panelist) might impact overall scores. 
+The code below attempts to create a simulated dataset for the purposes of evaluating how factors such as the level of expertise (high, medium, low, not enough) and role (reviewer, panelist) might impact overall scores. Ultimately we are interested in how these factors might affect the difference between initial consensus and final overall scores and, ultimately, funding decisions, but that depends largely on what data are available.
 
-The unit of observation is the application and basic structure attempts to mimic the multilevel nature of the review process for the CIHR Project Grant competitions. There are roughly 50 CIHR Committees, and each committee has around 25 or so members. In practice the number of total applications may vary quite a lot across committees (e.g., up to 50 for PH1 or PH2 when I was SO); however since we are focused on the evaluation of overall scores *among those proposals discussed* (i.e., excluding those streamlined), this is likely closer to 15 or so proposals per committee (again, my reference is PH committees). 
+The unit of observation is the application and basic structure attempts to mimic the multilevel nature of the review process for the CIHR Project Grant competitions. There are roughly 50 CIHR Committees, and each committee has around 25 or so members.^[For the Project Scheme in 2024 the number of members per committee was 31.2 (SD=1.9) from a low of about 28 to a high of about 34] In practice the number of total applications may vary quite a lot across committees (e.g., up to 50 for PH1 or PH2 when I was SO); however since we are focused on the evaluation of overall scores *among those proposals discussed* (i.e., excluding those streamlined), this is likely closer to 15 or so proposals per committee (again, my reference is PH committees). 
 
-In the code below we specify 50 committees, 15 discussed applications per committee, and 24 members per committee. 
-
-The code below is annotated with some simple coefficients for reviewer status and expertise (no interaction).
+In the code below we create some fake data on committees, discussed applications, and members, aw well as some simple coefficients for reviewer status and expertise (i.e., with no interaction between these factors).
 
 First, load the packages needed for this setup and analysis
 ```{r}
@@ -34,7 +36,9 @@ pkgs <- c('here', 'tidyverse', 'faux', 'modelsummary',
 lapply(pkgs, library, character.only=TRUE)
 ```
 
-Now we set up simple parameters and multilevel structure for the simulated data. For simplicity we take 50 committees and 24 members per committee, though in practice it seems likely that this would vary across committees. Note that since we are focused on those applications that are not streamlined and make it to discussion, we limit the number of applications to 15 per committee (again, this would probably vary across committees). In addition, given this is restricted to the discussion phase the distribution of the overall score is truncated. CIHR places an upper limit of 4.9 for the highest ranking and in many cases a lower level of 3.5 is used (though not the only criteria) to draw the line below which applications are streamlined.
+Now we set up simple parameters and multilevel structure for the simulated data. For simplicity we take 50 committees and 24 members per committee, though in practice it seems likely that this would vary across committees. Note that since we are focused on those applications that are not streamlined and make it to discussion, we limit the number of applications to 15 per committee (again, this would probably vary across committees). In addition, given this is restricted to the discussion phase the distribution of the overall score will be truncated. CIHR places an upper limit of 4.9 for the highest ranking and in many cases a lower level of 3.5 is used (though not the only criteria) to draw the line below which applications are streamlined. 
+
+The baseline score here is set to 4.1 with random variation across committee, application, and committee member, as well as are small effects being a panelist (small positive rating) and different levels of expertise (high, medium, low, not enough). 
 
 ```{r}
 #| label: data
@@ -110,17 +114,15 @@ data <- add_random(committee = cmte_n,
   select(-committee, -application, -member,
          -u0c, -u0m, -u0a, -sigma)
 
+# write a copy as a csv file
+write_csv(data, here("data", "sim-data.csv"))
+
 ```
 
 Here is a glimpse of the data structure:
 ```{r}
 tt(head(data), digits = 2) |>
   style_tt(fontsize = 0.8)
-```
-
-Some basic descriptive statistics for each of the variables:
-```{r}
-datasummary_skim(data, type = "numeric")
 ```
 
 And a simple histogram of the distribution of overall scores:
@@ -131,7 +133,7 @@ ggplot(data, aes(x = score)) + geom_histogram() +
          theme_classic()
 ```
 
-A simple set of models with random effects for committee, member, and application, and fixed effects for whether or not the score comes from a panelist and various levels of expertise (should probably be estimated by interval regression or some other way of accounting for the truncated distribution of the outcome, but later):
+A simple set of models with random effects for committee, member, and application, and fixed effects for whether or not the score comes from a reviewer or panelist and various levels of expertise:
 
 ```{r}
 #| label: models
@@ -175,13 +177,21 @@ This toy example leads to average predictions of 4.1 for a panelist with "Not en
 In large part the simplified dataset above only allows for basic questions regarding how much, for example, expertise and reviewer status may affect the overall score. More interesting questions could be asked if additional fields are available at different levels of the data.
 
 ### Application level
-Additional data on initial reviewer scores, consensus score, keywords or domain of inquiry, re-submission status, no. of investigators, funding requested.
+Additional data on funding result, initial reviewer scores, consensus score, keywords or domain of inquiry, re-submission status, no. of investigators, funding requested. This would allow for a better disentangling of how, for example, initial reviewer scores and consensus scores may be altered by committee discussion, as well as how this may have affected which applications were ultimately funded. 
 
 ### Reviewer level
-Data on reviewer gender, experience, past funding success, conflicts of interest
+Data on reviewer gender, experience, past funding success, conflicts of interest. If there are additional fields that could be (safely) added on reviewer characteristics, this could help further answer questions about how the composition of committees may also impact overall scores and funding.
 
 
-## Applicant level
-Data (respecting confidentiality) on gender, career stage, age, scientific productivity, prior funding success, would allow for the investigation
+### Applicant level
+Lastly, data (respecting confidentiality) on gender, career stage, age, scientific productivity, prior funding success, would allow for the investigation of the impact that committee discussions may have on scores and success rates by important applicant characteristics. While not feasible in a packaged dataset, conducting these analyses remotely would still allow important questions to be answered. 
+
+## Questions
+
+- Are any of the other fields of data mentioned above available for analysis?
+- If so, which of these may be possible to create as a data extract and which might feasibly be analyzed by CIHR analysts in collaboration with our team?
+- How might we budget for the amount of time needed to create datasets or run analyses remotely? 
+
+
 
 

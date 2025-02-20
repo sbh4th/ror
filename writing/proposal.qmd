@@ -1,26 +1,47 @@
 ---
 title: ""
 format: # html
-  grant-typst: default
+  typst: 
+    mainfont: "Arial"
+    fontsize: "11pt"
+    margin:
+      x: "1.87cm"
+      y: "1.87cm"
+    keep-typ: true
+    citeproc: true
+    bibliographystyle: vancouver.csl
 bibliography: ror.bib
-csl: vancouver.csl
 ---
+# Project Description
 ## Objectives 
-The overall aim of this project is to investigate how to optimize peer review of funding applications at CIHR.
+The overall aim of this project is to investigate the impact of committee group discussion on fairness in the distribution of scores and funding success of CIHR Project Grant applications. 
 
 Although CIHR has now effectively transitioned to virtual peer review for the Project Grant scheme, this still requires considerable reviewer and panelist time, and it is unclear whether that time is needed or could possibly be allocated to additional reviews that may improve overall reliability of applications. 
 
 ## Background
 
-The prior work most similar was a 2007 study of CIHR fellowship applications that estimated the impact of committee discussions [@obrecht2007] and found no evidence that discussions improved fairness.  
+Empirical evaluations of the peer review process for funding are uncommon. However, past work suggests The prior work most similar was a 2007 study of CIHR fellowship applications that estimated the impact of committee discussions [@obrecht2007] and found no evidence that discussions improved fairness. 
+
+Considerable questions have been raised about whether existing grant panel review processes may affect funding inequalities by gender, ethnicity, or career stage. Eroshiva [@erosheva2020]
+
+However, much of the past work on how committee dynamics and composition may affect funding success has focused more
+
+CIHR lists 4 principles for peer review: confidentiality, absence of conflicts of interest, fairness, and transparency. 
+
+## Methods
+To estimate the impact of 
+
+**Applicant characteristics**. 
 
 ## Expected outcomes
 
 ## Training and mentoring
 
+Since the analysis for this project requires both an in-depth understanding of multi-level modeling as well as the ability to write computer remotely, we aim to 
+
 ## Knowledge mobilization
 
-a brief literature review (if applicable), training and mentoring plans, and planned knowledge mobilization
+
 The Canadian Institutes for Health Research provides X% of funding for health research in Canada (cite). Determinations of priorities for research funds comes from both strategic investments as well as a process of competetive proposals. Determining which proposals are ultimately selected for funding depends chiefly on the process of review of proposals by committees of peers, charged with identifying the most promising ideas for research.
 
 From CIHR: 
@@ -36,4 +57,31 @@ It is an open question as to how non-reviewing committee members typically assig
 
 Several studies have shown evidence of a roughly 5% funding disadvantage for female investigators in CIHR competitions [@tamblyn2018; @witteman2019; @burns2019].
 
+{{< pagebreak >}}
 
+# Bibliography
+
+::: {#refs}
+
+:::
+
+{{< pagebreak >}}
+
+# Budget Justification
+
+## Personnel costs
+
+## Travel costs
+
+## Other expenses
+
+### Non-disposable equipment
+Each PhD student will require a laptop for conducting relevant background research, coding policies, analyzing data, writing up manuscripts and theses (2 x \$1500). Total cost: \$3,000.
+
+### Publication fees
+We plan to make our research results widely available and estimate publishing 5 manuscripts: 1) Aim 1: construction of the database; 2) Aim 1: Changes in ECEC policy characteristics over time; 3) Aim 2: Impact of ECEC policies on cognitive outcomes; 4) Aim 2: Impact of ECEC policies on non-cognitive outcomes; 5) Aim 3: Impact of ECEC participation on child outcomes. As per the KMB plan we have specific journals targeted for these manuscripts, and we will publish these in open access format at an
+estimated cost of \$2500 per manuscript. Total cost: \$12,500.
+
+{{< pagebreak >}}
+
+# Letters of Support
