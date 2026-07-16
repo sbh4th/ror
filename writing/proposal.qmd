@@ -2,8 +2,11 @@
 title: ""
 format: # html
   typst: 
-    mainfont: "Arial"
+    mainfont: "C059"
     fontsize: "11pt"
+    font-paths:
+      - fonts
+      - writing/fonts
     margin:
       x: "1.87cm"
       y: "1.87cm"

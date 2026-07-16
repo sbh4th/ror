@@ -4,9 +4,7 @@
   #block(inset: (left: 1.5em, top: 0.2em, bottom: 0.2em))[#body]
 ]
 
-#let horizontalrule = [
-  #line(start: (25%,0%), end: (75%,0%))
-]
+#let horizontalrule = line(start: (25%,0%), end: (75%,0%))
 
 #let endnote(num, contents) = [
   #stack(dir: ltr, spacing: 3pt, super[#num], contents)
@@ -23,10 +21,10 @@
 
 // Some quarto-specific definitions.
 
-#show raw.where(block: true): block.with(
-    fill: luma(230), 
-    width: 100%, 
-    inset: 8pt, 
+#show raw.where(block: true): set block(
+    fill: luma(230),
+    width: 100%,
+    inset: 8pt,
     radius: 2pt
   )
 
@@ -37,17 +35,17 @@
   if fields.at("below", default: none) != none {
     // TODO: this is a hack because below is a "synthesized element"
     // according to the experts in the typst discord...
-    fields.below = fields.below.amount
+    fields.below = fields.below.abs
   }
   return block.with(..fields)(new_content)
 }
 
 #let empty(v) = {
-  if type(v) == "string" {
+  if type(v) == str {
     // two dollar signs here because we're technically inside
     // a Pandoc template :grimace:
     v.matches(regex("^\\s*$")).at(0, default: none) != none
-  } else if type(v) == "content" {
+  } else if type(v) == content {
     if v.at("text", default: none) != none {
       return empty(v.text)
     }
@@ -110,7 +108,7 @@
 // callout rendering
 // this is a figure show rule because callouts are crossreferenceable
 #show figure: it => {
-  if type(it.kind) != "string" {
+  if type(it.kind) != str {
     return it
   }
   let kind_match = it.kind.matches(regex("^quarto-callout-(.*)")).at(0, default: none)
@@ -142,12 +140,12 @@
       new_title))
 
   block_with_new_content(old_callout,
-    new_title_block +
+    block(below: 0pt, new_title_block) +
     old_callout.body.children.at(1))
 }
 
 // 2023-10-09: #fa-icon("fa-info") is not working, so we'll eval "#fa-info()" instead
-#let callout(body: [], title: "Callout", background_color: rgb("#dddddd"), icon: none, icon_color: black) = {
+#let callout(body: [], title: "Callout", background_color: rgb("#dddddd"), icon: none, icon_color: black, body_background_color: white) = {
   block(
     breakable: false, 
     fill: background_color, 
@@ -166,7 +164,7 @@
         block(
           inset: 1pt, 
           width: 100%, 
-          block(fill: white, width: 100%, inset: 8pt, body))
+          block(fill: body_background_color, width: 100%, inset: 8pt, body))
       }
     )
 }
@@ -175,17 +173,23 @@
 
 #let article(
   title: none,
+  subtitle: none,
   authors: none,
   date: none,
   abstract: none,
   abstract-title: none,
   cols: 1,
-  margin: (x: 1.25in, y: 1.25in),
-  paper: "us-letter",
   lang: "en",
   region: "US",
-  font: (),
+  font: "libertinus serif",
   fontsize: 11pt,
+  title-size: 1.5em,
+  subtitle-size: 1.25em,
+  heading-family: "libertinus serif",
+  heading-weight: "bold",
+  heading-style: "normal",
+  heading-color: black,
+  heading-line-height: 0.65em,
   sectionnumbering: none,
   toc: false,
   toc_title: none,
@@ -193,21 +197,30 @@
   toc_indent: 1.5em,
   doc,
 ) = {
-  set page(
-    paper: paper,
-    margin: margin,
-    numbering: "1",
-  )
   set par(justify: true)
   set text(lang: lang,
            region: region,
            font: font,
            size: fontsize)
   set heading(numbering: sectionnumbering)
-
   if title != none {
     align(center)[#block(inset: 2em)[
-      #text(weight: "bold", size: 1.5em)[#title]
+      #set par(leading: heading-line-height)
+      #if (heading-family != none or heading-weight != "bold" or heading-style != "normal"
+           or heading-color != black) {
+        set text(font: heading-family, weight: heading-weight, style: heading-style, fill: heading-color)
+        text(size: title-size)[#title]
+        if subtitle != none {
+          parbreak()
+          text(size: subtitle-size)[#subtitle]
+        }
+      } else {
+        text(weight: "bold", size: title-size)[#title]
+        if subtitle != none {
+          parbreak()
+          text(weight: "bold", size: subtitle-size)[#subtitle]
+        }
+      }
     ]]
   }
 
@@ -265,16 +278,21 @@
   inset: 6pt,
   stroke: none
 )
-#show: doc => article(
+
+#set page(
+  paper: "us-letter",
   margin: (x: 1.87cm,y: 1.87cm,),
-  font: ("Arial",),
+  numbering: "1",
+)
+
+#show: doc => article(
+  font: ("C059",),
   fontsize: 11pt,
   toc_title: [Table of contents],
   toc_depth: 3,
   cols: 1,
   doc,
 )
-
 
 = Project Description
 <project-description>
@@ -286,7 +304,7 @@ Although CIHR has now effectively transitioned to virtual peer review for the Pr
 
 == Background
 <background>
-Empirical evaluations of the peer review process for funding are uncommon. However, past work suggests The prior work most similar was a 2007 study of CIHR fellowship applications that estimated the impact of committee discussions (Obrecht, Tibelius, and D’Aloisio 2007) and found no evidence that discussions improved fairness.
+Empirical evaluations of the peer review process for funding are uncommon. However, past work suggests The prior work most similar was a 2007 study of CIHR fellowship applications that estimated the impact of committee discussions (Obrecht, Tibelius, and D'Aloisio 2007) and found no evidence that discussions improved fairness.
 
 Considerable questions have been raised about whether existing grant panel review processes may affect funding inequalities by gender, ethnicity, or career stage. Eroshiva (Erosheva et al. 2020)
 
@@ -313,7 +331,7 @@ The Canadian Institutes for Health Research provides X% of funding for health re
 From CIHR: \> The Project Grant program is open to applicants in all areas of health research that are aligned with the CIHR mandate. It is designed to capture ideas with the greatest potential for important advances in fundamental or applied health-related knowledge, health care, health systems, and/or health outcomes, by supporting projects of research conducted by individual researchers or groups of researchers in all areas of health. The best ideas may stem from new, incremental, innovative, and/or high-risk lines of inquiry or knowledge translation approaches.
 
 #quote(block: true)[
-Project Grant applications follow a committee-based peer review process. This process involves the evaluation of applications by a group of reviewers, who have the required experience and expertise to assess the quality and potential impact of the proposed research and research related activities, within the context of the program’s objectives. These reviewers are grouped into Peer Review Committees based on their expertise and the topics of applications submitted to these committees.
+Project Grant applications follow a committee-based peer review process. This process involves the evaluation of applications by a group of reviewers, who have the required experience and expertise to assess the quality and potential impact of the proposed research and research related activities, within the context of the program's objectives. These reviewers are grouped into Peer Review Committees based on their expertise and the topics of applications submitted to these committees.
 ]
 
 Although the process of peer review for funding CIHR Project Scheme applications is transparent, there remain important questions regarding whether the current procedures are optimal with respect. In practice, each application is only read and evaluated by 3 committee members assigned to each application. These reviews are detailed and the reviewers are asked to judge
@@ -337,15 +355,15 @@ Erosheva, Elena A., Sheridan Grant, Mei-Ching Chen, Mark D. Lindner, Richard K. 
 
 ] <ref-erosheva2020>
 #block[
-Obrecht, Michael, Karl Tibelius, and Guy D’Aloisio. 2007. “Examining the Value Added by Committee Discussion in the Review of Applications for Research Awards.” #emph[Research Evaluation] 16 (2): 79–91. #link("https://doi.org/10.3152/095820207X223785");.
+Obrecht, Michael, Karl Tibelius, and Guy D'Aloisio. 2007. “Examining the Value Added by Committee Discussion in the Review of Applications for Research Awards.” #emph[Research Evaluation] 16 (2): 79--91. #link("https://doi.org/10.3152/095820207X223785");.
 
 ] <ref-obrecht2007>
 #block[
-Tamblyn, Robyn, Nadyne Girard, Christina J. Qian, and James Hanley. 2018. “Assessment of Potential Bias in Research Grant Peer Review in Canada.” #emph[Canadian Medical Association Journal] 190 (16): E489–99. #link("https://doi.org/10.1503/cmaj.170901");.
+Tamblyn, Robyn, Nadyne Girard, Christina J. Qian, and James Hanley. 2018. “Assessment of Potential Bias in Research Grant Peer Review in Canada.” #emph[Canadian Medical Association Journal] 190 (16): E489--99. #link("https://doi.org/10.1503/cmaj.170901");.
 
 ] <ref-tamblyn2018>
 #block[
-Witteman, Holly O, Michael Hendricks, Sharon Straus, and Cara Tannenbaum. 2019. “Are Gender Gaps Due to Evaluations of the Applicant or the Science? A Natural Experiment at a National Funding Agency.” #emph[The Lancet] 393 (10171): 531–40. #link("https://doi.org/10.1016/S0140-6736(18)32611-4");.
+Witteman, Holly O, Michael Hendricks, Sharon Straus, and Cara Tannenbaum. 2019. “Are Gender Gaps Due to Evaluations of the Applicant or the Science? A Natural Experiment at a National Funding Agency.” #emph[The Lancet] 393 (10171): 531--40. #link("https://doi.org/10.1016/S0140-6736(18)32611-4");.
 
 ] <ref-witteman2019>
 ] <refs>

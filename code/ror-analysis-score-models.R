@@ -16,7 +16,7 @@
 #            calls instead of one bf(y ~ ..., hu ~ ...) call:
 #              m1: bernoulli() -- did this member deviate from consensus
 #                  at all? (the "hu" part, just fit as its own model)
-#              m2: student_t() on the signed deviation, among deviators
+#              m2: student() on the signed deviation, among deviators
 #                  only (the "magnitude" part)
 #            Combine downstream the way u2s-analysis-priors.R combines
 #            hu-part and main-part draws by hand:
@@ -100,7 +100,7 @@ if (FIT_MODELS) {
 }
 
 ## 3 Model 2: signed magnitude of deviation, among deviators ----
-## bounded +/- 0.5; student_t() for some robustness to the tails while
+## bounded +/- 0.5; student() for some robustness to the tails while
 ## we don't yet have a truncated family wired up in brms
 
 #delete model if it exists
@@ -113,7 +113,7 @@ if (FIT_MODELS) {
 
   m1_magnitude <-
     brm(data = d1_dev,
-        family = student_t(),
+        family = student(),
         deviation ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | app),
         prior = c(prior(normal(0, 0.2), class = Intercept),
                   prior(normal(0, 0.2), class = b),
@@ -122,6 +122,7 @@ if (FIT_MODELS) {
         iter = 2000, warmup = 1000, chains = 4, cores = 4,
         sample_prior = "yes",
         seed = 8253,
+        control = list(adapt_delta = 0.95),
         file = here("code/fits/ror-magnitude-m1"))
 
 }
