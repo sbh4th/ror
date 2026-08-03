@@ -58,6 +58,9 @@ dev_max  =  0.5
 score_min = 3.5   # lower bound for overall score (streamlining cutoff)
 score_max = 4.9   # upper bound for overall score
 
+# CIHR scores are entered to one decimal place only
+round_tenth <- function(x) round(x * 10) / 10
+
 ##  2 Set up multilevel structure (mirrors writing/sim-data.qmd) ----
 
 data <- add_random(committee = cmte_n,
@@ -92,10 +95,15 @@ data <- add_random(committee = cmte_n,
   add_ranef("application", u0a = u0a_sd) |>
 
   mutate(
-    consensus = pmax(score_min, pmin(score_max, b0 + u0c + u0a))
+    consensus = round_tenth(pmax(score_min, pmin(score_max, b0 + u0c + u0a)))
   )
 
 ##  3 Two-part deviation from consensus ----
+## CIHR scores (both consensus and individual final scores) can only be
+## entered to one decimal place, so deviation -- and hence score -- must
+## also land on a tenth. A raw truncnorm() draw is continuous, so we round
+## it and then redraw any deviated == 1 case that rounds to exactly 0 (a
+## "deviator" can't end up with a final score identical to consensus).
 
 data <- data |>
   mutate(
@@ -104,10 +112,23 @@ data <- data |>
     deviated = rbinom(n(), 1, p_dev),
     deviation = if_else(
       deviated == 1,
-      rtruncnorm(n(), a = dev_min, b = dev_max,
-        mean = dev_bias, sd = dev_sd),
-      0),
-    score = pmax(score_min, pmin(score_max, consensus + deviation))
+      round_tenth(rtruncnorm(n(), a = dev_min, b = dev_max,
+        mean = dev_bias, sd = dev_sd)),
+      0)
+  )
+
+# redraw+round any deviated == 1 rows whose rounded deviation collapsed to 0
+zero_idx <- which(data$deviated == 1 & data$deviation == 0)
+while (length(zero_idx) > 0) {
+  data$deviation[zero_idx] <- round_tenth(
+    rtruncnorm(length(zero_idx), a = dev_min, b = dev_max,
+      mean = dev_bias, sd = dev_sd))
+  zero_idx <- which(data$deviated == 1 & data$deviation == 0)
+}
+
+data <- data |>
+  mutate(
+    score = round_tenth(pmax(score_min, pmin(score_max, consensus + deviation)))
   ) |>
   select(-committee, -application, -member, -u0c, -u0a, -p_dev)
 
@@ -128,7 +149,15 @@ stopifnot(
   "score should stay within [score_min, score_max]" =
     all(data$score >= score_min & data$score <= score_max),
   "consensus should stay within [score_min, score_max]" =
-    all(data$consensus >= score_min & data$consensus <= score_max)
+    all(data$consensus >= score_min & data$consensus <= score_max),
+  "consensus should be rounded to the nearest tenth" =
+    all(abs(data$consensus * 10 - round(data$consensus * 10)) < 1e-8),
+  "deviation should be rounded to the nearest tenth" =
+    all(abs(data$deviation * 10 - round(data$deviation * 10)) < 1e-8),
+  "score should be rounded to the nearest tenth" =
+    all(abs(data$score * 10 - round(data$score * 10)) < 1e-8),
+  "deviated == 1 rows should never have a zero deviation after rounding" =
+    all(data$deviation[data$deviated == 1] != 0)
 )
 
 ##  5 Write output ----
