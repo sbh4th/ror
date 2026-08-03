@@ -28,7 +28,7 @@ library(faux)
 library(truncnorm)
 
 # set seed for reproducibility
-set.seed(4875)
+set.seed(4138)
 
 ##  1 Define parameters ----
 

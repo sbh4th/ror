@@ -1,6 +1,10 @@
 # Project Overview: Reviewer Expertise & Engagement in Grant Peer Review
 
-Tracking doc for ongoing work — updated as the project progresses.
+Tracking doc for ongoing work — updated as the project progresses. This is a
+lightweight, session-continuity note (where things stand, what to pick up
+next), not a decision record. For the actual research log — dated entries
+with rationale, code, and results for substantive decisions — see
+[`code/ror-research-log.qmd`](code/ror-research-log.qmd).
 
 ## Where we left off (2026-07-16)
 

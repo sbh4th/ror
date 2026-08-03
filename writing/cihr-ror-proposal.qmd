@@ -13,7 +13,16 @@ format: # html
     keep-typ: true
     citeproc: true
     bibliographystyle: vancouver.csl
+    include-in-header:
+      text: |
+        #show heading.where(level: 1): set text(size: 1.25em)
+        #show heading.where(level: 2): set text(size: 1.1em)
+        #show heading.where(level: 3): set text(size: 1em)
 bibliography: ror.bib
+brand:
+  typography:
+    headings:
+      family: C059
 ---
 
 # Project Description

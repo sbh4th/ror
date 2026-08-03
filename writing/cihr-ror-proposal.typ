@@ -278,6 +278,10 @@
   inset: 6pt,
   stroke: none
 )
+#show heading.where(level: 1): set text(size: 1.25em)
+#show heading.where(level: 2): set text(size: 1.1em)
+#show heading.where(level: 3): set text(size: 1em)
+#show heading: set text(font: ("C059",), )
 
 #set page(
   paper: "us-letter",
@@ -289,6 +293,7 @@
   title: [The Influence of Reviewer Expertise and Engagement on Peer Review of Grants],
   font: ("C059",),
   fontsize: 11pt,
+  heading-family: ("C059",),
   toc_title: [Table of contents],
   toc_depth: 3,
   cols: 1,

@@ -16,11 +16,24 @@
 #            calls instead of one bf(y ~ ..., hu ~ ...) call:
 #              m1: bernoulli() -- did this member deviate from consensus
 #                  at all? (the "hu" part, just fit as its own model)
-#              m2: student() on the signed deviation, among deviators
-#                  only (the "magnitude" part)
+#              m2: cumulative() ordinal model on the signed deviation,
+#                  among deviators only (the "magnitude" part). CIHR
+#                  scores are only entered to one decimal place, so a
+#                  deviator's score can only depart from consensus by
+#                  one of 10 discrete steps (+/-0.1 ... +/-0.5) -- this
+#                  is genuinely ordinal/discrete data, not a continuous
+#                  quantity with occasional extreme values, so a
+#                  cumulative() logit model (flexible, non-equidistant
+#                  thresholds) is a better match than treating it as
+#                  continuous (e.g. student()/gaussian()): it respects
+#                  the +/-0.5 bound without truncation hacks, and it
+#                  doesn't assume the 10 steps are equally likely.
 #            Combine downstream the way u2s-analysis-priors.R combines
 #            hu-part and main-part draws by hand:
 #              E[deviation] = P(deviate) * E[deviation | deviate]
+#            where E[deviation | deviate] from the ordinal model is the
+#            probability-weighted sum over the 10 category values, not
+#            a linear prediction -- see TODO block below.
 #            See PROJECT.md for the fuller rationale.
 #
 #  status:   DRAFT. FIT_MODELS is FALSE below -- this script defines the
@@ -38,6 +51,7 @@ library(tidybayes)
 library(brms)
 library(cmdstanr)
 library(marginaleffects)
+library(bayesplot)
 
 # Use the cmdstanr backend for Stan
 # You need to install the cmdstanr package first
@@ -76,6 +90,13 @@ d1 <- d |>
     deviated = factor(deviated, levels = c(0, 1))
   )
 
+# the 10 discrete steps a deviator's score can take relative to consensus
+# (+/-0.1 ... +/-0.5, in tenths -- CIHR scores have one decimal place).
+# Matched against sprintf()-formatted strings rather than the raw doubles
+# to sidestep floating-point equality issues between how the simulator
+# rounds values and how a plain numeric factor() call would compare them.
+dev_levels <- sprintf("%.1f", setdiff((-5:5) / 10, 0))
+
 ## 2 Model 1: did this member deviate from consensus at all? ----
 ## (bernoulli "any deviation" model -- the hu-equivalent part)
 
@@ -95,30 +116,37 @@ if (FIT_MODELS) {
         iter = 2000, warmup = 1000, chains = 4, cores = 4,
         sample_prior = "yes",
         seed = 4102,
+        control = list(adapt_delta = 0.95),
         file = here("code/fits/ror-deviate-m1"))
 
 }
 
 ## 3 Model 2: signed magnitude of deviation, among deviators ----
-## bounded +/- 0.5; student() for some robustness to the tails while
-## we don't yet have a truncated family wired up in brms
+## ordinal cumulative() model over the 10 discrete +/-0.1 ... +/-0.5
+## steps -- see header note above for why this replaced student().
+## Thresholds default to "flexible" (not "equidistant"), so the model
+## does not assume the 10 steps are equally likely -- important given
+## how concentrated the simulated deviations are near +/-0.1 (see
+## PROJECT.md / session log).
 
 #delete model if it exists
 if (file.exists(here("code/fits/ror-magnitude-m1.rds"))) {
   file.remove(here("code/fits/ror-magnitude-m1.rds"))}
 
-d1_dev <- d1 |> filter(deviated == 1)
+d1_dev <- d1 |>
+  filter(deviated == 1) |>
+  mutate(deviation = factor(sprintf("%.1f", deviation),
+    levels = dev_levels, ordered = TRUE))
 
 if (FIT_MODELS) {
 
   m1_magnitude <-
     brm(data = d1_dev,
-        family = student(),
+        family = cumulative(link = "logit", threshold = "flexible"),
         deviation ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | app),
-        prior = c(prior(normal(0, 0.2), class = Intercept),
-                  prior(normal(0, 0.2), class = b),
-                  prior(exponential(1), class = sd),
-                  prior(exponential(1), class = sigma)),
+        prior = c(prior(normal(0, 1.5), class = Intercept),  # thresholds
+                  prior(normal(0, 0.5), class = b),           # betas
+                  prior(exponential(1), class = sd)),         # group SDs
         iter = 2000, warmup = 1000, chains = 4, cores = 4,
         sample_prior = "yes",
         seed = 8253,
@@ -135,10 +163,20 @@ if (FIT_MODELS) {
 # - Decide re_formula = NULL vs NA for the headline marginaleffects
 #   estimate (NULL = conditional on these committees, NA = population-
 #   average across committees) -- see PROJECT.md discussion
+# - m1_magnitude is now ordinal (cumulative()), so E[deviation | deviate]
+#   is NOT a linear prediction -- it's the probability-weighted sum over
+#   the 10 category values (posterior_epred(..., dpar or category probs)
+#   x dev_levels, summed per draw). marginaleffects/tidybayes can do this
+#   but it needs an explicit custom contrast, not the default continuous
+#   marginal-effect output.
 # - Write the combination step: E[deviation] = P(deviate) * E[deviation |
 #   deviate], propagating full posterior uncertainty from both fits
 #   (draws from m1_deviate and m1_magnitude, joined by posterior
 #   iteration, not point estimates)
+# - Confirm with CIHR that real data actually lands on the same +/-0.1
+#   ... +/-0.5 grid (dev_levels above) -- this is currently an assumption
+#   carried over from the simulator's parameters, not confirmed with the
+#   Funding Analytics Team
 # - Once real fields are confirmed with CIHR (see writing/sim-data.qmd,
 #   "Questions"), add applicant gender/career-stage to both formulas for
 #   Aim 2, and re-simulate data/sim-deviation-data.csv accordingly
