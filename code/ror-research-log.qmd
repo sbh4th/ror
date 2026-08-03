@@ -1,0 +1,220 @@
+---
+title: "RoR Research Log"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    df-print: paged
+  typst:
+    toc: true
+---
+
+Chronological record of substantive decisions, rationale, and results for the
+"Influence of Reviewer Expertise and Engagement on Peer Review of Grants"
+project. This is the actual decision log for the project -- edited by Sam,
+and by Claude when asked. For a lightweight session-continuity summary (where
+things stand, what to pick up next), see `PROJECT.md` at the repo root
+instead; that file is not a substitute for this one.
+
+# 2026-08-03
+
+## Proposal docx converted to Quarto
+
+Converted `writing/cihr-ror-proposal.docx` (a downloaded Google Doc believed
+to be the source of the funded proposal) into `writing/cihr-ror-proposal.qmd`,
+matching the repo's existing typst/Quarto template. All 38 numbered in-text
+citations were mapped to existing `@key`s in `writing/ror.bib` -- no new
+bibliography entries were needed, every key already existed. The Gantt-style
+timeline figure was extracted from the docx and saved to
+`writing/media/timeline.png`. Rendered cleanly via `quarto render --to typst`
+with zero citation warnings.
+
+## Typst rendering polish
+
+Two aesthetic fixes to `writing/cihr-ror-proposal.qmd`:
+
+- **Title font mismatch.** The document title was rendering in Quarto's
+  default typst template font ("libertinus serif") instead of the body font
+  (C059), because the title block in `typst-template.typ` is styled
+  separately from ordinary headings via a `heading-family` parameter that
+  only gets set through the `brand.typography.headings.family` metadata
+  path -- not through `mainfont`. Fixed by adding:
+  ```yaml
+  brand:
+    typography:
+      headings:
+        family: C059
+  ```
+- **Section headings too large/bold for this font.** Added an
+  `include-in-header` block with explicit `show heading.where(level: N):`
+  rules to size down H1/H2 slightly (1.25em / 1.1em instead of Typst's
+  default ~1.4em / 1.2em).
+
+## Fixed brms family-name bug: `student_t()` -> `student()`
+
+User hit `Error in student_t() : could not find function "student_t"` when
+sourcing `code/ror-analysis-score-models.R`. `student_t()` is a Stan
+distribution function name, not an R function brms exports -- the correct
+brms family constructor is `student()`. Fixed the `family = ` argument and
+the two comments referencing it.
+
+## Outcome choice: model $d_{ijk}$, not final score conditional on consensus
+
+Question raised: should the primary outcome be the consensus-to-final
+difference score ($d_{ijk}$, currently `PROJECT.md`'s stated choice) or the
+final score modeled directly with consensus score as a covariate? Decided to
+keep $d_{ijk}$, for three reasons:
+
+1. **The point mass doesn't disappear if you model final score instead --
+   it just stops being a fixed reference.** A non-deviating member's final
+   score equals consensus exactly. Modeling `final_score ~ consensus_score
+   + ...` still has that spike, just located at a value that moves
+   application-by-application (wherever that application's consensus
+   happened to land), instead of a single common value (0). Differencing
+   first standardizes the spike location across every application, which is
+   what makes a shared bernoulli-hurdle-style family tractable.
+2. **Avoids reintroducing a confound.** A freely-estimated slope on
+   consensus in a `final_score ~ consensus + ...` model has to recover
+   something close to 1 from the data; if reviewer composition happens to
+   correlate with consensus level across committees, that estimation can
+   leak into the coefficients of actual interest. Differencing with an
+   implicit slope of exactly 1 (which is the true administrative rule, not
+   an assumption) removes that channel by construction.
+3. **Matches the actual research question.** Aim 1 is about the *change*
+   induced by discussion, not the *level* of the final score (which is
+   mostly driven by application quality, not the process under study).
+   Nothing is lost: `final_score = consensus + d_ijk` is a trivial identity,
+   so anything Aim 3 needs at the score-level for funding-decision
+   simulations can be reconstructed downstream.
+
+## A naive linear model on $d_{ijk}$ has ~zero power to detect known effects
+
+Empirical check on `data/sim-deviation-data.csv` (which has known ground
+truth -- `job`/`exp` are coded to affect $P(\text{deviate})$ but not the
+*mean* deviation given deviation, since `dev_bias = 0` in
+`ror-sim-deviation.R`):
+
+```r
+> m <- lm(deviation ~ job + exp, data = d)
+            Estimate Std. Error t value Pr(>|t|)
+(Intercept)  -0.0016     0.0016 -0.9956   0.3195
+jobreviewer  -0.0014     0.0024 -0.5833   0.5597
+explow        0.0040     0.0025  1.5784   0.1145
+expmed        0.0017     0.0020  0.8430   0.3992
+expnone       0.0052     0.0025  2.0649   0.0389
+
+> m2 <- glm(deviated ~ job + exp, data = d, family = binomial())
+            Estimate Std. Error  z value Pr(>|z|)
+(Intercept)  -0.9202     0.0337 -27.2977        0
+jobreviewer  -0.2601     0.0484  -5.3764        0
+explow        0.6631     0.0497  13.3402        0
+expmed        0.4244     0.0410  10.3555        0
+expnone       0.8639     0.0495  17.4691        0
+```
+
+The linear model's coefficients are tiny and mostly non-significant (largest
+effect size 0.005 points on a variable bounded at +/-0.5). The logistic
+model on the same covariates recovers the true, large, highly significant
+effect pattern baked into the simulator. This isn't a subtle power
+difference -- because deviation magnitude is symmetric around zero given
+deviation, essentially all covariate signal lives in *whether* someone
+deviates, and a model that only looks at the conditional mean of $d_{ijk}$
+structurally cannot see it. Confirms the two-part (bernoulli x magnitude)
+model structure is necessary here, not over-engineering.
+
+## Simulator bug: scores weren't rounded to the CIHR-mandated tenth
+
+Sam flagged: CIHR reviewer scores (consensus and individual final scores)
+can only be entered to one decimal place. `ror-sim-deviation.R` was not
+enforcing this -- `consensus`/`score` were raw floating-point draws (e.g.
+`3.808046`), not multiples of 0.1.
+
+Fixed by adding a `round_tenth()` helper and rounding `consensus`,
+`deviation`, and `score` to the nearest tenth. This introduced a
+correctness wrinkle: rounding a continuous `deviation` draw can collapse it
+to exactly 0, which is a contradiction for a row where `deviated == 1`
+(that member is defined to have deviated). Fixed with rejection sampling --
+redraw from `rtruncnorm()` and re-round, looping until no `deviated == 1`
+row has a zero deviation. With `dev_sd = 0.15`, about 26% of raw draws land
+in the collapse-to-zero band, so this loop does real work (average ~1.35
+draws/row), not just handling a rare edge case:
+
+```r
+> ptruncnorm(0.05, a=-0.5, b=0.5, mean=0, sd=0.15) - ptruncnorm(-0.05, a=-0.5, b=0.5, mean=0, sd=0.15)
+[1] 0.261
+```
+
+Added `stopifnot()` checks confirming `consensus`/`deviation`/`score` are
+all exact tenths and that no `deviated == 1` row has zero deviation. Current
+distribution of deviation magnitude among deviators (n = 6756 deviators out
+of 18000 rows):
+
+```
+-0.5 -0.4 -0.3 -0.2 -0.1  0.1  0.2  0.3  0.4  0.5
+   8   69  333 1026 1915 1952 1033  340   75    5
+```
+
+## Magnitude submodel switched from `student()` to ordinal `cumulative()`
+
+Direct consequence of the rounding fix above: deviation magnitude among
+deviators is not continuous -- it's one of 10 discrete, unevenly-spaced
+values. Discussed the trade-off explicitly before changing anything:
+
+- A continuous family (`student()`/`gaussian()`) assigns probability to
+  impossible values, can't represent the actual (very uneven) spacing
+  between categories -- sharply peaked near +/-0.1, sparse at +/-0.5 -- and
+  has no natural bound at +/-0.5 without truncation hacks. The sparse tails
+  are exactly the large swings most relevant to Aim 3's funding-decision
+  question, so a poorly-fit tail is a real cost, not a rounding curiosity.
+- An ordinal `cumulative()` model matches the discretization exactly, gets
+  the +/-0.5 bound for free, and (with `threshold = "flexible"`, the
+  default) doesn't assume the 10 steps are equally likely. Cost: contrasts
+  in score-point units require an explicit probability-weighted sum over
+  category values rather than falling out of a default linear prediction;
+  9 threshold parameters instead of 1 scale parameter (irrelevant at
+  n ~ 6700).
+
+Decided to implement it. Changes to `code/ror-analysis-score-models.R`:
+
+- `deviation` recoded to an ordered factor over the 10 signed tenths
+  (matched via `sprintf("%.1f", ...)` string comparison to avoid
+  floating-point equality issues between the simulator's rounding and a
+  plain numeric `factor()` call).
+- `m1_magnitude` now `cumulative(link = "logit", threshold = "flexible")`
+  instead of `student()`.
+- Priors switched to match the logit scale (`normal(0, 1.5)` on thresholds,
+  `normal(0, 0.5)` on betas, matching `m1_deviate`'s own priors since both
+  models are now logit-linked); dropped the `sigma` prior (no residual-SD
+  parameter in an ordinal model).
+
+Two follow-ups flagged in the script's TODO block rather than resolved now:
+(1) the `E[deviation] = P(deviate) * E[deviation | deviate]` combination
+step needs `E[deviation | deviate]` computed as a probability-weighted sum
+over the 10 category values, not a linear prediction -- needs an explicit
+`marginaleffects`/`tidybayes` contrast; (2) the 10-category +/-0.1 ...
++/-0.5 grid is still an assumption carried over from the simulator's
+parameters, not yet confirmed with CIHR's Funding Analytics Team.
+
+## Confirmed: reviewers can deviate from their own consensus score
+
+Sam clarified the DGP: the 3 assigned reviewers must *agree* on a consensus
+score, but are not obligated to *use* it as their own final score -- they
+can deviate from it just like non-reviewing panelists. Checked
+`ror-sim-deviation.R`: this was already correctly implemented.
+`p_dev = plogis(a0 + a1*panelist + ...)` only adds the `a1` term for
+panelists; reviewers still get a nonzero baseline `p_dev`. Confirmed
+empirically -- reviewers deviate 32.7% of the time in the simulated data,
+not 0%. Consistent with the early proposal draft's own language
+(`writing/proposal.qmd`: "all committee members (including each of the
+reviewers) may assign their final score within a range of +/- 0.5 from the
+consensus score"). No code change needed.
+
+## This log created
+
+Split the project's actual decision/rationale record out from `PROJECT.md`.
+`PROJECT.md` will stay as a lightweight, Claude-oriented continuity note
+(where things stand, what to pick up next session) -- it is not a substitute
+for a real research log and was never intended as one. This file is that
+log: chronological, decisions + rationale + evidence, editable by Sam
+directly and by Claude on request. Mirrors the format used in the `u2-sibs`
+project's `code/u2s-research-log.Rmd`, adapted to Quarto.
