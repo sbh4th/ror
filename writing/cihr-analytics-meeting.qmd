@@ -66,7 +66,7 @@ for the $i$th panel member, $j$th application, $k$th committee
 
 ::: incremental
 - Bounded by design: $d_{ijk} \in [-0.5, 0.5]$
-- A member who simply adopts consensus has $d_{ijk} = 0$ -- this is most members, most of the time
+- A member who simply adopts consensus has $d_{ijk} = 0$ (probably most members, most of the time?)
 - We model the *change*, not the final score level, because:
   - it matches CIHR's actual +/- 0.5 rule exactly (an implicit slope of 1, not an estimated one)
   - it keeps "no change" at a fixed value (0) across every application, regardless of where that application's consensus happened to land
