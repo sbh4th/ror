@@ -1,0 +1,209 @@
+---
+title: "Reviewer Expertise, Engagement, and Peer Review of Grants"
+subtitle: "Working Session with CIHR's Funding Analytics Team"
+author: "Sam Harper & Arijit Nandi"
+institute: "McGill University"
+date: last-modified
+date-format: iso
+format:
+  revealjs:
+    theme: [default, custom.scss]
+    width: 1400
+    height: 788
+    slide-number: true
+    html-math-method: mathjax
+    # embed-resources: true
+editor: source
+---
+
+```{r setup, include=FALSE}
+library(here)
+library(tidyverse)
+library(tinytable)
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Why we're here
+
+- RoR grant funded: **The Influence of Reviewer Expertise and Engagement on Peer Review of Grants**
+- Before we finalize a data-sharing and analysis-plan agreement, we want to work through this together:
+  - what we're proposing to estimate, and why
+  - what we've already tested on simulated data
+  - where we anticipate friction, technically and logistically
+
+::: aside
+Application 1017-2025-00465. Funded Sept 2025 -- Aug 2028.
+:::
+
+## The research question
+
+Overall aim: does the CIHR Project Grant peer review process affect **reliability and fairness** in scoring and funding success?
+
+1. **Aim 1** -- How do reviewer expertise and engagement affect the impact of panel discussion on scores?
+2. **Aim 2** -- Do these effects differ by applicant gender or career stage?
+3. **Aim 3** (exploratory) -- How would alternative funding-decision schemes (e.g. weighting by engagement, partial randomization in the grey zone) compare to the status quo?
+
+## {.center}
+
+### [How does a score become a score?]{.blue}
+
+## The process we're modeling
+
+- 3 assigned reviewers read the application, score it, discuss, and agree a **consensus score**
+- All panel members -- including the 3 reviewers themselves -- then give a **final score**
+- Final score must be within **+/- 0.5** of consensus, entered to **one decimal place**
+- The average of final scores (equal weight, all members) feeds the funding decision
+
+::: aside
+Confirming our understanding is correct here is one of today's questions.
+:::
+
+## Our primary outcome
+
+$$d_{ijk} = \text{final score} - \text{consensus score}$$
+
+for the $i$th panel member, $j$th application, $k$th committee
+
+::: incremental
+- Bounded by design: $d_{ijk} \in [-0.5, 0.5]$
+- A member who simply adopts consensus has $d_{ijk} = 0$ -- this is most members, most of the time
+- We model the *change*, not the final score level, because:
+  - it matches CIHR's actual +/- 0.5 rule exactly (an implicit slope of 1, not an estimated one)
+  - it keeps "no change" at a fixed value (0) across every application, regardless of where that application's consensus happened to land
+:::
+
+## {.center}
+
+### [Testing the design before we ask you to run anything]{.blue}
+
+## Why we built a simulation first
+
+- Code has to run correctly **remotely**, without interactive access to real data
+- So: simulate data with the same structure CIHR would provide, build and pressure-test the full pipeline against it, *then* hand over code we're confident in
+- Mirrors 50 committees x 15 discussed applications x 24 members
+
+## Simulated data structure
+
+```{r sim-data-table}
+d <- read_csv(here("data", "sim-deviation-data.csv"), show_col_types = FALSE)
+
+d |>
+  select(cmte, app, memno, job, exp, consensus, deviated, deviation, score) |>
+  slice_head(n = 6) |>
+  tt(caption = "First 6 rows of the simulated committee-application-member dataset")
+```
+
+- `job`: reviewer vs. non-reviewing panelist
+- `exp`: self-described expertise (high / medium / low / not enough)
+- `consensus`, `score`: rounded to the nearest tenth, +/- 0.5 bound enforced
+
+## A constraint we initially missed
+
+- CIHR scores are entered to **one decimal place only** -- our first simulation draft didn't enforce this
+- Fixed it, which had a real downstream consequence: the magnitude of deviation among those who *do* deviate is not continuous -- it's one of **10 discrete steps** (+/-0.1 ... +/-0.5)
+
+```{r deviation-table}
+d |>
+  filter(deviated == 1) |>
+  count(deviation) |>
+  mutate(deviation = sprintf("%+.1f", deviation)) |>
+  pivot_wider(names_from = deviation, values_from = n) |>
+  tt(caption = "Distribution of deviation magnitude among deviators (simulated data)")
+```
+
+::: aside
+Sharply peaked near +/-0.1, sparse at +/-0.5 -- exactly where funding-decision consequences (Aim 3) are largest.
+:::
+
+## Why not a single linear model on $d_{ijk}$?
+
+Checked this empirically on the simulated data before committing to anything more complex:
+
+- A plain `lm(deviation ~ job + exp)` finds **no meaningful effect** of expertise or engagement (largest coefficient: 0.005 points, mostly non-significant)
+- A `glm(deviated ~ job + exp, family = binomial)` on the same covariates recovers the **known, large, highly significant** effect built into the simulation
+- Because deviation direction is symmetric around zero, almost all the covariate signal lives in *whether* someone deviates, not in the average size of the deviation -- a mean-only model structurally can't see it
+
+## Model structure
+
+Two linked models (brms has no single native family for "signed, bounded, spike at an interior value"):
+
+::: {.larger}
+**Part 1 -- did this member deviate at all?**
+:::
+
+$$\text{deviated}_{ijk} \sim \text{Bernoulli}(p_{ijk})$$
+
+::: {.larger}
+**Part 2 -- if they deviated, by how much?**
+:::
+
+Ordinal `cumulative()` model over the 10 discrete steps (not treated as continuous)
+
+$$E[d_{ijk}] = P(\text{deviate}) \times E[\text{magnitude} \mid \text{deviate}]$$
+
+## Software
+
+- **Bayesian**, via `brms` + `cmdstanr` (Stan backend)
+- Same conventions as our other multilevel work: weakly-informative priors, prior-predictive checks before fitting, `marginaleffects` for contrasts
+- Random effects for committee, reviewer, and application throughout
+
+## {.center}
+
+### [Questions for the Funding Analytics Team]{.red}
+
+## Can your environment run this?
+
+- `brms`/`cmdstanr` compiles a Stan model in C++ at fit time -- this is our single biggest technical risk
+- We can supply pre-compiled executables, but that raises portability questions of its own
+- **Question:** does your remote execution environment have a C++ toolchain available, or would we need another path (e.g. a Docker image, a pre-approved compute environment)?
+
+## Which fields can you actually extract?
+
+Fields we're assuming are available, still to be confirmed:
+
+- Initial reviewer scores, consensus score, final panel-member scores
+- Self-described expertise, engagement (reviewer/panelist), gender, experience, career stage, past funding success, conflicts of interest
+- Applicant gender, career stage
+- Keywords/domain, re-submission status, PRC, number of investigators, funding requested
+
+**Question:** which of these are extractable at the panel-member level (not just application level), and linked correctly across the consensus -> final score transition?
+
+## Policy changes we need your help accounting for
+
+Digging into CIHR's public documentation on the Project Grant program surfaced several structural changes that any historical/trend data will need to account for:
+
+::: {.smaller-text}
+| Year | Change |
+|---|---|
+| 2016 | Equalization introduced (early-career researcher NPIs) |
+| 2019 | Foundation Grant program sunset -- gradual return of holders into Project Grant pool, still ongoing |
+| 2021 | Equalization expanded (female NPIs, French-language); ~$50M/competition added |
+| Fall 2022 | Some peer review committees dissolved/merged |
+| 2022 | Indigenous Health Research given a separate iterative review process -- excluded from general ranking/equalization |
+| Fall 2024 | Equalization expanded (racialized, disability); equalization zone redefined (~15-34% -> 10-25%) |
+| Mar 2026 | Active consultation on further changes (in-person format, committee mandates, single annual competition) -- undecided |
+:::
+
+## Policy changes (continued)
+
+**Questions:**
+
+- For any historical/trend data: how should we treat the pre/post-2019 applicant pool shift as Foundation holders returned?
+- Should Indigenous Health Research committee data be excluded from our models entirely, given it isn't part of the general ranking system?
+- Is there a stable committee identifier we can use across the Fall 2022 restructuring?
+- Given the March 2026 consultation is still open, is there a chance committee structure or review format changes again during our data-collection window (2025--2028)?
+
+## Logistics
+
+- Confidentiality workflow: we supply code, your team runs it and returns results -- no direct access to identifiers
+- **Question:** how should we budget your analyst time for the remote runs, including any back-and-forth on debugging?
+- **Question:** what's a realistic timeline for finalizing the data-sharing and analysis-plan agreement?
+- We'd like to propose a first Ottawa visit early in Year 1 to work through the details of confidential fields and the analysis plan directly
+
+## {.center}
+
+### [Discussion]{.blue}
+
+Thank you -- looking forward to working through this together.
+
+sam.harper@mcgill.ca

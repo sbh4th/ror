@@ -1,6 +1,8 @@
 ---
 title: "The Influence of Reviewer Expertise and Engagement on Peer Review of Grants"
-format: # html
+format: 
+  html:
+    toc: true
   typst:
     mainfont: "C059"
     fontsize: "11pt"

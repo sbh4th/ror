@@ -1,0 +1,51 @@
+/*-- scss:defaults --*/
+
+$theme-blue: #1a5276;
+$theme-red: #c0392b;
+$theme-gray: #7f8c8d;
+$theme-white: #ffffff;
+$theme-green: #196f3d;
+
+/*-- scss:rules --*/
+
+.blue {
+  color: $theme-blue;
+}
+
+.red {
+  color: $theme-red;
+}
+
+.gray {
+  color: $theme-gray;
+}
+
+.white {
+  color: $theme-white;
+}
+
+.green {
+  color: $theme-green;
+}
+
+.larger {
+  font-size: 130%;
+}
+
+.smaller-text {
+  font-size: 75%;
+}
+
+.reveal .slide aside .aside-footnotes {
+  margin-bottom: 2em;
+}
+
+/* alignment */
+
+.h2center h2 {
+  text-align: center;
+}
+
+.center body {
+  text-align: center;
+}
