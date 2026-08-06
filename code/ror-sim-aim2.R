@@ -1,0 +1,255 @@
+#  program:  ror-sim-aim2.R
+#  task:     extend the Aim 1 simulation (code/ror-sim-deviation.R) with
+#            applicant-level gender/career stage, and bake in real,
+#            detectable interaction effects for Aim 2 (does the impact of
+#            reviewer engagement/expertise on scoring differ by applicant
+#            characteristics?) to pressure-test against
+#  input:    none (simulated from scratch; self-contained, does not
+#            source ror-sim-deviation.R -- see note below)
+#  output:   data/sim-aim2-data.csv
+#  project:  RoR
+#  author:   sam harper \ 2026-08-04
+#
+#  note:     per CIHR Funding Analytics' 2025-12-04 email (see
+#            ror-research-log.qmd), applicant gender and career stage will
+#            never be extractable, even as CIHR-generated dummy data --
+#            they can only ever be touched by a CIHR analyst running our
+#            code in-house. This simulation is therefore the only rehearsal
+#            we get for that part of the pipeline, so the interaction
+#            effects below are deliberately large enough to be cleanly
+#            recoverable (see the empirical check at the bottom), NOT
+#            estimates of real bias in CIHR review -- same illustrative-
+#            placeholder status as every other parameter in this project's
+#            simulations until real data says otherwise.
+#
+#            Self-contained rather than sourcing ror-sim-deviation.R,
+#            matching this repo's existing convention of independently
+#            runnable per-purpose scripts (see e.g. u2-sibs's
+#            per-outcome analysis scripts) -- some duplication of the
+#            committee/application/member setup is accepted deliberately.
+
+##  0 Load needed packages ----
+library(here)
+library(tidyverse)
+library(faux)
+library(truncnorm)
+
+# set seed for reproducibility
+set.seed(9042)
+
+##  1 Define parameters ----
+
+cmte_n   = 50     # number of committees
+app_n    = 15     # number of discussed applications per committee
+mem_n    = 24     # number of committee members per committee
+
+b0       = 4.1    # intercept for the application's true underlying quality
+u0c_sd   = 0.1    # random intercept SD for committee (quality level)
+u0a_sd   = 0.3    # random intercept SD for application (quality level)
+
+# consensus is not simulated directly -- it's the mean of the 3 assigned
+# reviewers' own initial scores around the true quality above, same
+# addition and rationale as ror-sim-aim1.R (2026-08-05)
+init_sd  = 0.3
+
+# probability of *any* deviation from consensus (logit scale) -- same
+# Aim 1 main effects as ror-sim-deviation.R, plus applicant-level terms
+a0       = -0.8   # baseline logit prob. of deviating
+a1       =  0.3   # panelist vs. reviewer
+a2       = -0.4   # high expertise
+a3       =  0.2   # low expertise
+a4       =  0.5   # no expertise
+
+# applicant-level main effects (modest -- not the effects of interest)
+g1       =  0.1   # applicant gender = female
+c1       = -0.1   # applicant career stage = early
+
+# Aim 2's actual target: does the reviewer-engagement / expertise effect
+# on P(deviate) differ by applicant gender / career stage? Baked in large
+# on purpose (see header note) so the empirical check below can confirm
+# the two-part model machinery actually recovers a real interaction, not
+# just a real main effect.
+i_panelist_female    =  0.5  # job(panelist) x gender(female)
+i_expnone_earlycareer =  0.6  # exp(none) x career_stage(early)
+
+# signed magnitude of deviation, given deviation occurs -- deliberately
+# left null for applicant-level terms, same logic as Aim 1's own
+# empirical finding (ror-research-log.qmd, 2026-08-03): virtually all
+# covariate signal lives in *whether* someone deviates, not in magnitude,
+# because magnitude is symmetric around zero given deviation. Aim 2's
+# signal goes entirely into p_dev below, consistent with that finding.
+dev_bias = 0
+dev_sd   = 0.15
+dev_min  = -0.5
+dev_max  =  0.5
+
+# between-member SD in habitual leniency/harshness, same addition and
+# same rationale as ror-sim-aim1.R (2026-08-05) -- some members
+# consistently deviate a bit high or low across every application they
+# review, population average stays at dev_bias (0). Independent
+# parameter here since this script doesn't source Aim 1's.
+u0m_bias_sd = 0.1
+
+score_min = 3.5   # lower bound for overall score (streamlining cutoff)
+score_max = 4.9   # upper bound for overall score
+
+# CIHR scores are entered to one decimal place only
+round_tenth <- function(x) round(x * 10) / 10
+
+##  2 Set up multilevel structure (mirrors ror-sim-deviation.R) ----
+
+data <- add_random(committee = cmte_n,
+  application = app_n, member = mem_n) |>
+
+  add_between("committee", cmte = sprintf("%02d", 1:cmte_n)) |>
+  add_between("application", app = 1:app_n) |>
+  add_between("member", memno = sprintf("%02d", 1:mem_n)) |>
+
+  mutate(cid = paste0(cmte, "_", memno)) |>
+
+  # random effects for the application's *true quality* (committee +
+  # application only) -- see ror-sim-aim1.R; consensus is derived from
+  # the reviewers' own initial scores next, not simulated directly.
+  add_ranef("cmte", u0c = u0c_sd) |>
+  add_ranef("application", u0a = u0a_sd) |>
+
+  # assign reviewers uniquely within each application, have the 3
+  # assigned reviewers independently score it (noisy reads of the true
+  # quality above), consensus = mean of those 3 -- see ror-sim-aim1.R
+  # for the full rationale
+  group_by(cmte, app) |>
+  mutate(
+    job = sample(c(rep("reviewer", 3),
+      rep("panelist", 21))),
+    exp = sample(c(rep("high", 6),
+      rep("med", 10), rep("low", 4),
+      rep("none", 4))),
+    init_score = if_else(job == "reviewer",
+      round_tenth(pmax(score_min, pmin(score_max,
+        b0 + u0c + u0a + rnorm(n(), mean = 0, sd = init_sd)))),
+      NA_real_),
+    consensus = round_tenth(mean(init_score, na.rm = TRUE)),
+    # applicant-level attributes: one draw per application, recycled
+    # across all member-rows for that application (dplyr recycles a
+    # length-1 mutate() result across the group)
+    gender = sample(c("female", "male"), 1),
+    career_stage = sample(c("early", "established"), 1)) |>
+  ungroup() |>
+
+  mutate(
+    panelist       = if_else(job == "panelist", 1, 0),
+    exp_high       = if_else(exp == "high", 1, 0),
+    exp_low        = if_else(exp == "low", 1, 0),
+    exp_none       = if_else(exp == "none", 1, 0),
+    female         = if_else(gender == "female", 1, 0),
+    early_career   = if_else(career_stage == "early", 1, 0)
+  ) |>
+
+  # member-level leniency/harshness trait, one draw per unique cid --
+  # see ror-sim-aim1.R for why this must be keyed to cid (add_ranef
+  # handles an arbitrary existing column fine), not faux's own crossed
+  # "member" factor
+  add_ranef("cid", u0m_bias = u0m_bias_sd)
+
+##  3 Two-part deviation from consensus ----
+## Same discretization logic as ror-sim-deviation.R -- CIHR scores are
+## entered to one decimal place, so deviation must land on a tenth, with
+## rejection-sampling to avoid a "deviated == 1" row collapsing to zero.
+
+data <- data |>
+  mutate(
+    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_high) +
+      (a3 * exp_low) + (a4 * exp_none) +
+      (g1 * female) + (c1 * early_career) +
+      (i_panelist_female * panelist * female) +
+      (i_expnone_earlycareer * exp_none * early_career)),
+    deviated = rbinom(n(), 1, p_dev),
+    deviation = if_else(
+      deviated == 1,
+      round_tenth(rtruncnorm(n(), a = dev_min, b = dev_max,
+        mean = dev_bias + u0m_bias, sd = dev_sd)),
+      0)
+  )
+
+# redraw+round any deviated == 1 rows whose rounded deviation collapsed to 0
+zero_idx <- which(data$deviated == 1 & data$deviation == 0)
+while (length(zero_idx) > 0) {
+  data$deviation[zero_idx] <- round_tenth(
+    rtruncnorm(length(zero_idx), a = dev_min, b = dev_max,
+      mean = dev_bias + data$u0m_bias[zero_idx], sd = dev_sd))
+  zero_idx <- which(data$deviated == 1 & data$deviation == 0)
+}
+
+data <- data |>
+  mutate(
+    score = round_tenth(pmax(score_min, pmin(score_max, consensus + deviation)))
+  ) |>
+  select(-committee, -application, -member, -u0c, -u0a, -u0m_bias, -p_dev)
+
+##  4 Sanity checks ----
+
+stopifnot(
+  "expect cmte_n x app_n x mem_n rows" =
+    nrow(data) == cmte_n * app_n * mem_n,
+  "expect exactly 3 reviewers per committee-application" =
+    data |> filter(job == "reviewer") |>
+      count(cmte, app) |> pull(n) |> unique() == 3,
+  "expect exactly 24 members per committee-application" =
+    data |> count(cmte, app) |> pull(n) |> unique() == mem_n,
+  "gender should be constant within each committee-application" =
+    data |> group_by(cmte, app) |> summarise(n = n_distinct(gender)) |>
+      pull(n) |> unique() == 1,
+  "career_stage should be constant within each committee-application" =
+    data |> group_by(cmte, app) |> summarise(n = n_distinct(career_stage)) |>
+      pull(n) |> unique() == 1,
+  "expect exactly 3 non-missing initial reviewer scores per application" =
+    data |> filter(!is.na(init_score)) |>
+      count(cmte, app) |> pull(n) |> unique() == 3,
+  "consensus should never fall outside the range of the 3 reviewers' own initial scores" =
+    data |> group_by(cmte, app) |>
+      summarise(
+        lo = min(init_score, na.rm = TRUE),
+        hi = max(init_score, na.rm = TRUE),
+        cons = first(consensus), .groups = "drop") |>
+      summarise(ok = all(cons >= lo & cons <= hi)) |> pull(ok),
+  "deviated should be 0/1" =
+    all(data$deviated %in% c(0, 1)),
+  "deviation should be exactly 0 when deviated == 0" =
+    all(data$deviation[data$deviated == 0] == 0),
+  "score should stay within [score_min, score_max]" =
+    all(data$score >= score_min & data$score <= score_max),
+  "consensus should stay within [score_min, score_max]" =
+    all(data$consensus >= score_min & data$consensus <= score_max),
+  "consensus should be rounded to the nearest tenth" =
+    all(abs(data$consensus * 10 - round(data$consensus * 10)) < 1e-8),
+  "deviation should be rounded to the nearest tenth" =
+    all(abs(data$deviation * 10 - round(data$deviation * 10)) < 1e-8),
+  "score should be rounded to the nearest tenth" =
+    all(abs(data$score * 10 - round(data$score * 10)) < 1e-8),
+  "deviated == 1 rows should never have a zero deviation after rounding" =
+    all(data$deviation[data$deviated == 1] != 0)
+)
+
+##  5 Empirical check: are the baked-in interactions actually recoverable? ----
+## Mirrors the Aim 1 check in ror-research-log.qmd (2026-08-03) -- confirms
+## the simulator did what it was supposed to before any brms model gets
+## built on top of it. Expect large, significant coefficients on the two
+## interaction terms below; this is a check on the simulator, not a
+## substantive result.
+
+m_check <- glm(deviated ~ job * gender + exp * career_stage,
+  data = data, family = binomial())
+coefs <- summary(m_check)$coefficients
+print(coefs[grepl(":", rownames(coefs)), ])
+
+## Same check for the new member-level term (see ror-sim-aim1.R) --
+## expect the cid-level SD near u0m_bias_sd (0.1), well below dev_sd
+## (0.15, the residual/within-member noise)
+suppressMessages(library(lme4))
+m_member_check <- lmer(deviation ~ 1 + (1 | cid),
+  data = data |> filter(deviated == 1))
+print(VarCorr(m_member_check))
+
+##  6 Write output ----
+
+write_csv(data, here("data", "sim-aim2-data.csv"))

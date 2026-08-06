@@ -1,25 +1,12 @@
-#  program:  ror-sim-deviation.R
-#  task:     extend the committee/application/member simulation with a
-#            per-application consensus score and a two-part (any-deviation
-#            + signed magnitude) process for how each member's final score
-#            departs from consensus
+#  program:  ror-sim-aim1.R
+#  task:     Aim 1 simulation. Extends the committee/application/member
+#            simulation with a per-application consensus score and a
+#            two-part (any-deviation + signed magnitude) process for how
+#            each member's final score departs from consensus
 #  input:    none (simulated from scratch)
-#  output:   data/sim-deviation-data.csv
+#  output:   data/sim-data-aim1.csv
 #  project:  RoR
-#  author:   sam harper \ 2026-07-16
-#
-#  note:     writing/sim-data.qmd simulates a final `score` per member
-#            directly (panelist/expertise effects act on the score level).
-#            It has no `consensus` field, so it can't support the
-#            deviation-from-consensus outcome discussed for the Bayesian
-#            models below. This script is additive -- it doesn't touch
-#            sim-data.qmd or data/sim-data.csv -- and produces a separate
-#            data/sim-deviation-data.csv for that purpose.
-#
-#            All effect sizes/probabilities below are illustrative
-#            placeholders, not estimates from real data. Revisit once we
-#            know what CIHR can actually extract (see "Questions" section
-#            of writing/sim-data.qmd).
+#  author:   sam harper \ 2026-08-05
 
 ##  0 Load needed packages ----
 library(here)
@@ -95,7 +82,8 @@ data <- add_random(committee = cmte_n,
   add_ranef("application", u0a = u0a_sd) |>
 
   mutate(
-    consensus = round_tenth(pmax(score_min, pmin(score_max, b0 + u0c + u0a)))
+    consensus = round_tenth(pmax(score_min, 
+      pmin(score_max, b0 + u0c + u0a)))
   )
 
 ##  3 Two-part deviation from consensus ----
@@ -117,7 +105,8 @@ data <- data |>
       0)
   )
 
-# redraw+round any deviated == 1 rows whose rounded deviation collapsed to 0
+# redraw+round any deviated == 1 rows whose 
+# rounded deviation collapsed to 0
 zero_idx <- which(data$deviated == 1 & data$deviation == 0)
 while (length(zero_idx) > 0) {
   data$deviation[zero_idx] <- round_tenth(
@@ -128,7 +117,8 @@ while (length(zero_idx) > 0) {
 
 data <- data |>
   mutate(
-    score = round_tenth(pmax(score_min, pmin(score_max, consensus + deviation)))
+    score = round_tenth(pmax(score_min, 
+      pmin(score_max, consensus + deviation)))
   ) |>
   select(-committee, -application, -member, -u0c, -u0a, -p_dev)
 
@@ -162,4 +152,4 @@ stopifnot(
 
 ##  5 Write output ----
 
-write_csv(data, here("data", "sim-deviation-data.csv"))
+write_csv(data, here("data", "sim-data-aim1.csv"))

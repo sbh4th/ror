@@ -6,17 +6,26 @@ next), not a decision record. For the actual research log — dated entries
 with rationale, code, and results for substantive decisions — see
 [`code/ror-research-log.qmd`](code/ror-research-log.qmd).
 
-## Where we left off (2026-07-16)
+## Where we left off (2026-08-05)
 
-Decided to move the analysis to a Bayesian framework, matching the `brms`/`cmdstanr` setup used in `u2-sibs`. Drafted (not fit) two new scripts — see Repo contents below: `code/ror-sim-deviation.R` (simulates a consensus score + two-part deviation outcome) and `code/ror-analysis-score-models.R` (sets up the two linked `brm()` models, `FIT_MODELS <- FALSE`). Both run cleanly (verified via `Rscript`).
+Simulations are split by aim rather than one shared script: `code/ror-sim-aim1.R` (renamed from `ror-sim-deviation.R`) and `code/ror-sim-aim2.R`, which adds applicant gender/career stage with real, recoverable interaction effects baked in. Aim 3's simulation hasn't been started — it needs an intervention/counterfactual design (partial randomization near a funding threshold, or similar) that isn't settled yet, not just an extension of Aims 1–2's structure.
 
-**Before setting `FIT_MODELS <- TRUE` and actually fitting anything**, still need to:
-1. Confirm CIHR's execution environment can actually compile/run Stan (`cmdstanr` needs a C++ toolchain) — biggest practical risk to the whole remote-execution plan, worth raising with the Funding Analytics Team early.
-2. Prior-predictive check both models on the simulated data (mirror `u2-sibs`'s `u2s-analysis-priors.R` pattern) before trusting the priors in `code/ror-analysis-score-models.R` — they're first-guess placeholders.
-3. Decide `re_formula = NULL` vs. `NA` for the headline `marginaleffects` estimate (conditional on these committees vs. population-average across committees) — see the TODO block at the bottom of `code/ror-analysis-score-models.R`.
-4. Write the draw-level combination step (`E[deviation] = P(deviate) × E[deviation | deviate]`) once both models are actually fit.
+Both Aim 1 and Aim 2 scripts now also include member-level heterogeneity in scoring leniency/harshness (`u0m_bias`, via `add_ranef("cid", ...)`, SD = 0.1, recovered at ~0.11–0.12 empirically) — this was missing until Sam caught it by plotting mean score by `memno` and noticing it was flat. Full story, including a real gotcha about `faux::add_ranef("member", ...)` silently reusing draws across committees, in `code/ror-research-log.qmd`.
 
-A good next-session prompt: *"Let's continue the RoR Bayesian modeling work — pick up from `code/ror-analysis-score-models.R`."*
+**Bigger change, same day:** consensus is no longer simulated directly — it's now the mean of 3 independently-generated initial reviewer scores (`init_score`, new field, kept in the output — CIHR confirmed this is extractable), each a noisy read of the application's true underlying quality (`b0`/`u0c`/`u0a`, relabeled — they no longer mean "consensus level"). Guaranteed by construction (and checked via `stopifnot()`) to never fall outside the 3 reviewers' own range. This is a real structural fix, not cosmetic — required reordering the pipeline so committee/application random effects exist before reviewers are assigned.
+
+CIHR's Funding Analytics Team confirmed the data-sharing workflow and field-by-field availability by email (2025-12-04, reviewed 2026-08-04) — full details and a follow-up-questions list in `code/ror-research-log.qmd`. Headline: applicant gender/career stage (Aim 2's whole basis) will never be extractable, even as CIHR-generated dummy data, so Aim 2's simulation is the only rehearsal that code gets.
+
+Wrote `writing/ror-modeling-strategy.qmd` — a design/validation memo (not a full pre-analysis plan) meant for Arijit's review first, then a revision to send to CIHR. Renders cleanly to both HTML (folded code, self-contained) and typst/PDF. **Doubly out of date now** relative to the simulation scripts — written before both the member-level heterogeneity and the consensus-derivation change. Needs a refresh before sending to Arijit.
+
+**Next steps:**
+1. Refresh `writing/ror-modeling-strategy.qmd` for both changes above before sending to Arijit.
+2. Send it to Arijit for feedback (open questions for him are listed in the doc itself).
+3. Write an Aim-2-specific version of `code/ror-analysis-score-models.R` — the simulation has the `job:gender`/`exp:career_stage` interactions now, but no `brm()` formula includes them yet.
+4. Send CIHR (Matt Hogel) the three follow-up questions logged in the research log and the modeling-strategy doc (synthetic dummy data for non-extractable fields? cohort start year given resubmission-status's 2023+ cutoff? how to define "reviewer experience"?).
+5. Still open from before: confirm CIHR's environment can compile/run Stan; prior-predictive checks before ever setting `FIT_MODELS <- TRUE`; `re_formula = NULL` vs. `NA` decision; the `E[deviation] = P(deviate) × E[deviation | deviate]` combination step.
+
+A good next-session prompt: *"Let's continue the RoR Bayesian modeling work — pick up from the Aim 2 model script."*
 
 ## Grant basics
 
@@ -59,8 +68,10 @@ Overall aim: investigate how the CIHR Project Grant peer review process affects 
 | [data/sim-data.csv](data/sim-data.csv) | Simulated dataset (18,000 rows) matching the parameters in `sim-data.qmd` |
 | [reviews/](reviews/) | SSHRC administrative award package: Notice of Award, Notice of Decision (scores/ranking), Results Letter, Terms & Conditions. These are **award/decision documents**, not detailed peer-review comments — no reviewer-by-reviewer narrative feedback was included in this package. |
 | [writing/ror.bib](writing/ror.bib) | Bibliography for the proposal |
-| [code/ror-sim-deviation.R](code/ror-sim-deviation.R) | Extends the committee/application/member simulation with a per-application `consensus` score and a two-part (any-deviation × signed magnitude) process for how each member's final score departs from it. Writes `data/sim-deviation-data.csv`. Additive — doesn't touch `sim-data.qmd`/`sim-data.csv`. |
-| [code/ror-analysis-score-models.R](code/ror-analysis-score-models.R) | **Draft, unfit.** Sets up the two-part Bayesian model (`m1_deviate`: bernoulli "did they deviate", `m1_magnitude`: `student_t()` magnitude among deviators) on the simulated deviation data, following `u2-sibs` conventions. `FIT_MODELS <- FALSE` gates the actual `brm()` calls off. |
+| [code/ror-sim-aim1.R](code/ror-sim-aim1.R) | **Aim 1 simulation** (renamed from `ror-sim-deviation.R`). Extends the committee/application/member simulation with a per-application `consensus` score, a two-part (any-deviation × signed magnitude) process for how each member's final score departs from it, and member-level leniency/harshness heterogeneity (`u0m_bias`, keyed to `cid`). Writes `data/sim-data-aim1.csv`. Additive — doesn't touch `sim-data.qmd`/`sim-data.csv`. |
+| [code/ror-sim-aim2.R](code/ror-sim-aim2.R) | **Aim 2 simulation.** Builds on Aim 1's structure, adds application-level `gender`/`career_stage` with real, deliberately-recoverable `job:gender` and `exp:career_stage` interaction effects. Writes `data/sim-aim2-data.csv`. Self-contained (doesn't source Aim 1's script). |
+| [code/ror-analysis-score-models.R](code/ror-analysis-score-models.R) | **Draft, unfit, Aim 1 only.** Sets up the two-part Bayesian model (`m1_deviate`: bernoulli "did they deviate", `m1_magnitude`: ordinal `cumulative()` magnitude among deviators — CIHR scores are one-decimal-place, so magnitude is a 10-category discrete outcome, not continuous) on the simulated deviation data, following `u2-sibs` conventions. `FIT_MODELS <- FALSE` gates the actual `brm()` calls off. No Aim 2 version exists yet. |
+| [writing/ror-modeling-strategy.qmd](writing/ror-modeling-strategy.qmd) | Design/validation memo for Arijit → CIHR: the simulated data-generating process, the two-part model, empirical recovery checks (live-evaluated against the existing simulated CSVs), and open questions. Renders to `.html` (folded code, self-contained) and `.pdf` (typst). Supersedes the old `sim-data.qmd` note sent to CIHR. |
 
 ## Open questions / next steps
 

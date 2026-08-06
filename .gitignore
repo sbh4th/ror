@@ -48,3 +48,8 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 .positai
+
+# brms/cmdstanr model fits -- large binaries, refit often, sync via OSF
+# instead of git (see u2-sibs's code/u2s-push-to-OSF.R / -pull-from-OSF.R
+# for the pattern to adopt here once there's something worth syncing)
+code/fits/

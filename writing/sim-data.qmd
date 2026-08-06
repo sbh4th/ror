@@ -1,9 +1,13 @@
 ---
 title: Hypothetical Analysis and Questions
-author: Sam Harper
+author: Sam Harper and Arijit Nandi
 format: # html
   typst: 
-    mainfont: "Helvetica"
+    mainfont: "C059"
+    fontsize: "11pt"
+    font-paths:
+      - fonts
+      - writing/fonts
     margin:
       x: "1in"
       y: "1in"

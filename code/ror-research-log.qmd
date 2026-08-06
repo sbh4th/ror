@@ -294,3 +294,283 @@ Modeling implications flagged for the Funding Analytics Team meeting
 5. Given the March 2026 consultation is unresolved, worth asking directly
    whether committee mandates or review format are likely to change again
    within our data-collection window.
+
+## CIHR Funding Analytics Team confirmed data availability and workflow
+
+Matthew Hogel (CIHR Funding Analytics) replied by email on 2025-12-04 to an
+earlier question about administrative data, working from the `sim-data`
+report we'd shared. Reviewed with Claude on 2026-08-04.
+
+**Confirmed 4-step workflow:** (1) we send CIHR the cohort of interest
+(competitions/years) and a variable list; (2) CIHR sends back dummy data
+"aligned as much as possible to the true distribution" for the extractable
+variables in that cohort; (3) we send CIHR the R/python analysis code,
+built against the dummy data; (4) CIHR runs that code on the real data and
+returns results. This confirms the confidentiality workflow assumed in
+`PROJECT.md`, with one addition not previously nailed down: **CIHR will
+supply their own distribution-matched dummy data** for extractable fields,
+which is a real (if partial) alternative/complement to our own
+from-scratch simulation once step 1 happens.
+
+**Field-by-field availability, as extracts:**
+
+| Available (extract) | Not available as extract, but usable via in-house CIHR-run analysis |
+|---|---|
+| Committee #, application #, member #, cid | Applicant gender |
+| Job (identifies who did the at-home/primary review) | Applicant career stage |
+| Experience (can be split into binary columns) | Applicant scientific productivity ("unlikely") |
+| Score (voted/final score) | Reviewer gender |
+| Funding result | Reviewer "experience" (Matt asked us to clarify how we'd measure this) |
+| Initial reviewer scores | Keywords/domain, # investigators, funding requested (all refused -- identifiability risk) |
+| Consensus score | |
+| Resubmission status (**2023 onward only**) | |
+| Applicant prior funding success (binary) | |
+| Reviewer past funding success (binary) | |
+| Reviewer conflicts of interest (probably -- bundled with expertise data) | |
+
+The right-hand column isn't a dead end: Matt explicitly committed a CIHR
+analyst to prep and run analysis in-house on those fields, using code and
+preprocessing instructions we supply -- same remote-execution model, just
+without a dummy-data step first (still to be confirmed -- see open
+questions below).
+
+**Implication for Aim 2:** applicant gender and career stage -- the two
+variables Aim 2 is built on -- both fall in the "in-house only" column.
+We will very likely never see even distribution-matched dummy versions of
+them, meaning the simulation is the *only* dry run we get before code runs
+once, unsupervised by us, against live confidential data. Raises the bar
+on getting `code/ror-analysis-score-models.R`'s handling of these
+covariates right before ever proposing a variable list to CIHR.
+
+**Decision needed, not yet made:** whether/how to extend
+`code/ror-sim-deviation.R` with applicant-level `gender`/`career_stage`
+(application-level attributes) so Aim 2's model structure can be
+pressure-tested the same way Aim 1's already has been. Discussed with Sam
+2026-08-04; proposal on the table (not yet implemented) is two categorical
+application-level covariates with both main effects and interactions with
+`job`/`exp` in both submodels, mirroring `u2-sibs`'s `treated:female`
+pattern -- see chat for the open design questions (category counts,
+whether to bake in a true interaction effect for the simulation to
+recover).
+
+**Follow-up questions for Matt/CIHR, not yet sent:**
+
+1. For the fields in the "no extract" column -- can CIHR's dummy-data step
+   (workflow step 2) still include *synthetic* gender/career-stage columns
+   (not real values) so we can pipeline-test against something, even
+   though the real columns never leave CIHR? Or is the in-house-run path
+   truly a black box until the real run?
+2. "Resubmission status data only from 2023 onward" -- does this mean our
+   proposed cohort effectively has to start at the 2023 competition if we
+   want that field, or can we request it from CIHR's raw records dated
+   from 2023 forward for the years and let us handle it as a partially-
+   missing covariate?
+3. Clarify how we'd want "reviewer experience" measured, since Matt
+   flagged that as the blocker to answering yes/no on it.
+
+## Simulations split by aim; Aim 2 simulation adds applicant characteristics
+
+Decided to stop growing one shared simulation and instead give each aim
+its own, progressively more complex script: `ror-sim-deviation.R` stays as
+Aim 1's simulation, untouched; `ror-sim-aim2.R` is new and builds on it.
+Aim 3 is deliberately not started yet -- it's a different kind of
+simulation (an intervention/counterfactual on top of the funding decision
+itself, e.g. partial randomization conditional on a funding threshold),
+not just an extension of the same generative process, and the design
+isn't settled.
+
+`ror-sim-aim2.R` adds applicant-level `gender` (female/male) and
+`career_stage` (early/established) -- one draw per application, constant
+across all of that application's member-rows, matching how `consensus` is
+already application-level. Motivated directly by the CIHR email above:
+since these two fields will never be extractable, not even as CIHR's own
+distribution-matched dummy data, this simulation is the only rehearsal the
+Aim 2 code gets before it runs once, unsupervised, on real data.
+
+Per Sam's direction, baked in **real, sizeable interaction effects** for
+Aim 2 to detect (deliberately large -- not estimates of real bias, purely
+to confirm the model machinery can recover an interaction if one exists):
+`job(panelist) x gender(female)` = 0.5 and `exp(none) x
+career_stage(early)` = 0.6, both on the P(deviate) logit scale. Applicant
+main effects included too but kept modest (0.1, -0.1) since they aren't
+the effects of interest. Consistent with the Aim 1 finding above (signal
+lives in *whether* someone deviates, not magnitude), all new signal goes
+into the deviation-probability part only; the magnitude submodel stays
+null for applicant terms.
+
+Added an empirical check at the bottom of the script (mirrors the Aim 1
+lm/glm check): `glm(deviated ~ job*gender + exp*career_stage)` on the
+simulated data recovers both interactions cleanly at n=18,000
+(`jobreviewer:gendermale` = 0.569, `expnone:career_stageestablished` =
+-0.576 -- sign flips vs. the parameters above are just R's alphabetical
+reference-level choice, magnitudes match). Confirms the two-part model
+structure validated for Aim 1 also has the sensitivity to pick up an Aim 2
+interaction, not just an Aim 1 main effect.
+
+Not yet done: an Aim-2-specific version of
+`code/ror-analysis-score-models.R` (i.e. a `brm()` formula that actually
+includes the `job:gender`/`exp:career_stage` terms) -- the two-part
+*simulation* is ready, the two-part *model script* for Aim 2 still needs
+to be written.
+
+## New document: `writing/ror-modeling-strategy.qmd`
+
+Wrote a design/validation memo pulling together everything above into one
+document, per Sam's request: describes the simulated data-generating
+process and the two-part model for Aim 1, the Aim 2 extension, the
+empirical recovery checks (embedded live -- reads the existing simulated
+CSVs and re-runs the lm/glm checks, does not regenerate data or fit any
+`brm()` models), and open questions for both Arijit and CIHR. Explicitly
+framed as design + validation, not a full pre-analysis plan.
+
+Dual output (`format: html` with `code-fold: true`/`code-tools: true`/
+`embed-resources: true`, and `format: typst` matching
+`cihr-ror-proposal.qmd`'s C059 template) so it can be read either as a
+single self-contained HTML file or a typeset PDF; both render cleanly
+(`quarto render --to html` / `--to typst`, zero warnings after fixing two
+duplicate chunk-label warnings). Intended audience order: Arijit first for
+feedback, then a revision to CIHR's Funding Analytics Team, superseding
+the pre-Bayesian `sim-data.qmd` note sent to them in 2025.
+
+Results section is a placeholder ("What comes next") rather than actual
+posterior marginal effects, since no current `brms` fits exist -- the two
+committed `.rds` files were already identified as stale (fit under the
+pre-ordinal `student()` spec) and untracked from git on 2026-08-04.
+
+## Missing member-level heterogeneity (caught by Sam looking at a diagnostic plot)
+
+Sam plotted mean score +/- SD by `memno` on the simulated data and noticed
+it was essentially flat -- no member-level variation at all, beyond what
+role/expertise already account for. Real reviewers plausibly have a stable
+personal tendency (some habitually score more leniently, some more
+harshly) that's independent of their assigned role or self-described
+expertise. Checked the DGP: correct, there was no such term anywhere.
+`p_dev` depends only on `panelist`/`exp_*`, and `dev_bias` (the mean of
+the deviation-magnitude draw) was a single constant (0) shared by every
+member -- no source of a stable per-member identity across their multiple
+reviews.
+
+Two things made this worth fixing rather than just noting: (1) both
+`brm()` formulas in `ror-analysis-score-models.R` already have `(1 | cid)`
+-- the model has been "listening" for member heterogeneity the simulation
+never produced, so fitting it today would just show that variance
+component shrinking to ~0, which doesn't test anything (unlike the
+job/exp/gender/career_stage checks already validated); (2) the *original*
+`writing/sim-data.qmd`, before the consensus/deviation reframing, actually
+had this (`u0m_sd = 0.2`, a member-level random intercept on raw score) --
+it silently dropped out when the DGP was rebuilt around
+`consensus + deviation`.
+
+Discussed two conceptually distinct traits this could be: **propensity**
+(some members break from consensus more often, regardless of direction --
+would enter `p_dev`) vs. **direction/bias** (some members, when they do
+deviate, consistently lean harsh or lenient -- would enter `dev_bias`).
+Sam's description matched the second. Also confirmed explicitly: this
+should be *heterogeneity* (a distribution of member-level tendencies,
+population average still 0, consistent with the earlier symmetric-deviation
+finding), not a single fixed direction applied to everyone -- that would
+just be `dev_bias != 0`, a different and much stronger claim.
+
+**Implementation, in both `ror-sim-aim1.R` and `ror-sim-aim2.R`**
+(independent scripts, so the fix had to go in twice): added
+`u0m_bias_sd = 0.1`, and a per-member draw `u0m_bias ~ N(0, u0m_bias_sd)`,
+generated with `group_by(cid) |> mutate(u0m_bias = rnorm(1, 0, u0m_bias_sd))`
+-- deliberately *not* `faux::add_ranef("member", ...)`, which was checked
+and confirmed to assign by the raw crossed "member" factor (1..24) and
+give the *identical* draw to every committee's "member 07", silently
+conflating 50 different people who happen to share a slot number. `cid`
+(committee + member number) is the actual unique identity; grouping by it
+avoids that bug. `u0m_bias` enters the deviation-magnitude draw's mean
+(`dev_bias + u0m_bias`) in both the main draw and the rejection-sampling
+redraw loop, then gets dropped before writing output, same as `u0c`/`u0a`.
+
+Added an `lmer(deviation ~ 1 + (1 | cid))` check to both scripts (mirrors
+the existing lm/glm recovery checks) -- recovers a `cid`-level SD of 0.111
+(Aim 1) and 0.115 (Aim 2) against a true value of 0.1, with residual SD
+~0.166-0.166 against `dev_sd = 0.15` (the small inflation in both is
+expected, from the tenth-rounding discretization).
+
+**A plotting subtlety worth remembering:** Sam's original diagnostic plot
+grouped by `memno` alone, which pools 50 different real people per x-axis
+category (memno is recycled 1-24 *within* every committee, `cid` is the
+true unique identifier). Checked empirically: even now that real
+member-level heterogeneity exists, the SD of `memno`-grouped mean scores
+is 0.006 (averaging 50 people together erases it), vs. 0.097 when grouped
+by `cid` instead. The original flat plot was real -- there was no effect
+yet -- but the same plot re-run today would *still* look flat regardless,
+for an unrelated reason (wrong grouping variable), which would be an easy
+false-negative trap when checking this kind of fix in the future.
+
+Also fixed in passing: `ror-sim-aim1.R`'s `write_csv()` still pointed at
+the old filename `sim-deviation-data.csv` after the script itself was
+renamed from `ror-sim-deviation.R` -- the header comment said
+`sim-data-aim1.csv` but the code didn't match. Now both agree.
+
+**Correction to the above, same day:** Sam asked why `faux` couldn't be
+used at all for the member effect. Tested directly (`add_ranef("cid",
+u0m_bias = u0m_bias_sd)` on data that already has the `cid` column) --
+it works correctly, giving one independent draw per unique `cid`, same
+result as the manual `group_by(cid) |> mutate(rnorm(1, ...))` version
+(confirmed identical recovery numbers on rerun). The actual problem was
+never "faux can't do this" -- it was specifically that `add_ranef("member",
+...)` groups by the wrong column (the factor `add_random()` created,
+crossed with committee at only 24 levels total). `add_ranef()` handles an
+arbitrary existing column fine once pointed at the right one. Simplified
+both scripts to use `add_ranef("cid", ...)` instead of the manual
+`group_by`/`ungroup()`, matching the style already used for `u0c`/`u0a`.
+
+## Consensus was simulated directly instead of being derived from reviewers
+
+Sam pointed out a real structural gap: consensus is supposed to come from
+the 3 assigned reviewers (they read, score, discuss, and agree a number),
+but the simulation had been generating `consensus` directly as
+`b0 + u0c + u0a` -- a committee/application random effect with no
+connection to any actual reviewer score. Real consensus negotiation is
+more textured than a plain average (Sam's example: R1 scores 3.9 and is
+persuasive but has "a hard stop at 4.0," R2/R3 are both around 4.3 --
+consensus could land at 4.0, not the mean of 3.9/4.3/4.3). Agreed a plain
+mean is a reasonable simulation-level stand-in, with one hard requirement:
+consensus must never fall outside the range of what the 3 reviewers
+actually said.
+
+**Implementation, both `ror-sim-aim1.R` and `ror-sim-aim2.R`:** relabeled
+`b0`/`u0c_sd`/`u0a_sd` as the application's *true underlying quality*
+(not consensus itself) -- this is what the 3 assigned reviewers each
+independently perceive, with their own pre-discussion noise
+(new parameter `init_sd = 0.3`, an illustrative placeholder like
+everything else, chosen roughly to match the spread in Sam's example).
+`init_score` (initial reviewer score) is generated only for the 3
+`job == "reviewer"` rows per application (`NA` for panelists, matching
+reality -- panelists never submit an initial score); `consensus` is the
+rounded mean of those 3. Using `mean()` makes "never falls outside the
+3 reviewers' range" true by construction -- no extra clamping code needed,
+since the mean of 3 bounded numbers can't exceed their own bounds.
+Verified anyway with an explicit `stopifnot()` check across all 750
+simulated applications per script, plus a check that exactly 3 non-missing
+`init_score` values exist per application. Required reordering the
+pipeline: `add_ranef("cmte", u0c)`/`add_ranef("application", u0a)` now
+happen *before* reviewer assignment (previously after), since
+`init_score` needs `u0c`/`u0a` to exist.
+
+This also fills in a field CIHR confirmed is extractable ("Initial reviewer
+scores -- yes," per the 2025-12-04 email) that the simulation wasn't
+producing before -- `init_score` is kept in the output, not dropped like
+the latent `u0c`/`u0a`/`u0m_bias` terms are, since it's a real observable
+field, not a DGP internal.
+
+Reran both scripts' existing recovery checks after the change (job/exp
+and job:gender/exp:career_stage interactions, member-level `cid` variance)
+-- all still recover cleanly, confirming the consensus restructuring
+didn't disturb anything downstream of it.
+
+Not implemented, flagged as a natural future extension but out of scope
+for what was asked: a reviewer's own `init_score` currently has no
+influence on their own later `deviated`/`deviation` draw (e.g. anchoring
+-- a reviewer who scored well below the eventual consensus might be more
+likely to pull their final score back toward their own original view).
+Worth considering once the current, simpler version is validated further.
+
+**`writing/ror-modeling-strategy.qmd` is now doubly out of date** (already
+flagged stale after the `u0m_bias` addition, now also missing the
+consensus-derivation change) -- still needs a refresh before it goes to
+Arijit.
