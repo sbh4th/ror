@@ -574,3 +574,102 @@ Worth considering once the current, simpler version is validated further.
 flagged stale after the `u0m_bias` addition, now also missing the
 consensus-derivation change) -- still needs a refresh before it goes to
 Arijit.
+
+# 2026-08-06
+
+## `score_min` was conflating two different things; streamlining moved to a selection filter
+
+Re-examined the `score_min = 3.5` clamp used on `init_score` and final
+`score` and concluded it was doing two unrelated jobs at once: (1) a true
+scale bound on an individual score, and (2) the streamlining/discussion-
+eligibility threshold. Those aren't the same thing -- in practice an
+individual reviewer's initial score can land below 3.5 on an application
+that still gets discussed (e.g. `[3.4, 4.1, 4.1]`, mean clears the bar
+even though one score didn't). Clamping every individual score at 3.5 was
+wrong on that basis alone, but it also had a concrete, checkable
+consequence: examining the simulated output directly showed an artificial
+pileup of values sitting at exactly 3.5 (a delta-function spike with zero
+variance among the piled-up rows -- the signature of a clamp, not a real
+mode), rather than a smooth tail the way a genuinely bounded-but-not-
+clamped distribution should look.
+
+**Fix, in both `ror-sim-aim1.R` and `ror-sim-aim2.R`:**
+
+- Split the single `score_min`/`score_max` pair into `scale_min` (0, the
+  scale's true floor) plus `score_min`/`score_max` (3.5/4.9, now used
+  *only* as the eligibility range for the eligibility filter below --
+  never as a per-score clamp). `score_max` legitimately does double duty
+  as both the true ceiling and the eligibility ceiling, since 4.9 really
+  is both.
+- `init_score` is now clamped only at `[scale_min, score_max]` -- individual
+  reviewers are free to land below 3.5.
+- Added an actual selection step: applications are generated in a
+  candidate pool (`app_n_candidates = app_n * 2` per committee) with
+  `u0c`/`u0a`/reviewer `init_score`/`consensus` as before, then filtered
+  to those whose rounded `consensus` (mean of the 3 initial scores) falls
+  in `[score_min, score_max]`; `slice_sample(n = app_n)` per committee
+  keeps exactly the target count. A `stopifnot()` before the sampling
+  step fails loudly and specifically if a committee ever has fewer than
+  `app_n` eligible candidates, rather than letting `slice_sample()` error
+  opaquely -- 2x oversampling is comfortable headroom for the current
+  parameters but is a real assumption that could need revisiting if
+  `b0`/variance parameters change a lot later.
+- Final `score` is now clamped at `[scale_min, score_max]` (0/4.9), not
+  `[score_min, score_max]` (3.5/4.9) -- the +/-0.5 rule around consensus
+  is a real administrative constraint and can legitimately push a score
+  below 3.5 or (near the ceiling) above 4.9, so only the true scale bounds
+  should ever clamp it.
+- `consensus` itself needs no clamp at all now -- it's guaranteed to fall
+  in `[score_min, score_max]` by construction of the selection filter,
+  and the existing `stopifnot()` check confirming that range still holds
+  as a check on the filter rather than a description of a clamp.
+
+Verified the pileup is gone: re-checked the distribution of `consensus`
+values immediately around 3.5 in the regenerated data and confirmed 3.5 is
+no longer disproportionately common relative to its neighbors (e.g. 3.6) --
+consistent with a smooth, naturally-truncated distribution rather than an
+artificial spike.
+
+**Also bumped `init_sd` from 0.3 to 0.4** in both scripts -- a modest
+increase to better reflect plausible reviewer-to-reviewer disagreement on
+the same application. `u0c_sd`/`u0a_sd` (between-application variance)
+left untouched this round.
+
+Both scripts' existing recovery checks (job/exp, job:gender/exp:career_stage
+interactions, member-level `cid` variance) all still pass after the change.
+
+**`writing/ror-modeling-strategy.qmd` is now triply out of date** -- still
+needs a refresh, now also for this change.
+
+## Decided not to simulate variable committee/application counts
+
+Sam raised whether `app_n` (applications discussed per committee) and
+`mem_n` (members per committee) should vary across committees, rather than
+being fixed at 15 and 24 -- both plausible in reality, and Bayesian partial
+pooling is well-suited to handling the resulting imbalance. Discussed
+without implementing; landed on leaving both fixed for now, for three
+reasons:
+
+1. **Nothing in the analysis code depends on it.** `brms`/`lme4` handle
+   unequal group sizes natively -- the `(1 | cmte)`, `(1 | app)`, `(1 |
+   cid)` random-effects specification doesn't change based on whether the
+   simulated data happens to be balanced. Unlike the tenths-discretization
+   or two-part-model choices, there's no code path that would behave
+   differently or need to be caught by testing against imbalanced data.
+2. **Real engineering cost.** The pipeline leans on `faux::add_random()`'s
+   fully-crossed balanced-grid generation throughout; genuine imbalance
+   would mean replacing that with per-committee manual generation
+   (`purrr::map_dfr()`-style), and would compound with the streamlining
+   filter added earlier today, which currently targets a fixed `app_n`
+   per committee.
+3. **No real basis for the imbalance parameters yet** (Sam's own framing:
+   "I don't actually have much data on this, but I'm guessing..."), and
+   committee #/application #/member # are all fields CIHR already
+   confirmed as extractable -- the true distribution will just be there
+   in the real data once it arrives, without needing to guess at it now.
+
+Flagged one legitimate future reason to revisit: a one-off illustrative
+exhibit (e.g. a shrinkage plot for Arijit, or a methods-section argument
+for why the hierarchical approach was chosen) would be a different
+motivation than pressure-testing the pipeline, and wouldn't need to be
+baked into `ror-sim-aim1.R`/`ror-sim-aim2.R` themselves.

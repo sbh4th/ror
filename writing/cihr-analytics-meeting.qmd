@@ -85,7 +85,7 @@ for the $i$th panel member, $j$th application, $k$th committee
 ## Simulated data structure
 
 ```{r sim-data-table}
-d <- read_csv(here("data", "sim-deviation-data.csv"), show_col_types = FALSE)
+d <- read_csv(here("data", "sim-data-aim1.csv"), show_col_types = FALSE)
 
 d |>
   select(cmte, app, memno, job, exp, consensus, deviated, deviation, score) |>

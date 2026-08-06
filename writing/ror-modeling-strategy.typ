@@ -179,8 +179,6 @@
   abstract: none,
   abstract-title: none,
   cols: 1,
-  margin: (x: 1.25in, y: 1.25in),
-  paper: "us-letter",
   lang: "en",
   region: "US",
   font: "libertinus serif",
@@ -193,18 +191,12 @@
   heading-color: black,
   heading-line-height: 0.65em,
   sectionnumbering: none,
-  pagenumbering: "1",
   toc: false,
   toc_title: none,
   toc_depth: none,
   toc_indent: 1.5em,
   doc,
 ) = {
-  set page(
-    paper: paper,
-    margin: margin,
-    numbering: pagenumbering,
-  )
   set par(justify: true)
   set text(lang: lang,
            region: region,
@@ -215,8 +207,7 @@
     align(center)[#block(inset: 2em)[
       #set par(leading: heading-line-height)
       #if (heading-family != none or heading-weight != "bold" or heading-style != "normal"
-           or heading-color != black or heading-decoration == "underline"
-           or heading-background-color != none) {
+           or heading-color != black) {
         set text(font: heading-family, weight: heading-weight, style: heading-style, fill: heading-color)
         text(size: title-size)[#title]
         if subtitle != none {
@@ -287,9 +278,12 @@
   inset: 6pt,
   stroke: none
 )
-#show heading.where(level: 1): set text(size: 1.25em)
-#show heading.where(level: 2): set text(size: 1.1em)
-#show heading.where(level: 3): set text(size: 1em)
+
+#set page(
+  paper: "us-letter",
+  margin: (x: 1.87cm,y: 1.87cm,),
+  numbering: "1",
+)
 
 #show: doc => article(
   title: [Simulation Design and Modeling Strategy],
@@ -299,12 +293,9 @@
       affiliation: [],
       email: [] ),
     ),
-  date: [2026-08-05],
-  margin: (x: 1.87cm,y: 1.87cm,),
+  date: [2026-08-06],
   font: ("C059",),
   fontsize: 11pt,
-  pagenumbering: "1",
-  toc: true,
   toc_title: [Table of contents],
   toc_depth: 3,
   cols: 1,
@@ -313,7 +304,7 @@
 
 = Purpose of this document
 <purpose-of-this-document>
-This is a design and validation memo, not a data analysis: nothing here uses real CIHR data, and this document does not itself generate simulated data or fit the Bayesian models it describes (those live in `code/` and are run separately). What it does is lay out, in one place: the data-generating process we believe matches CIHR's Project Grant peer review, the model we intend to fit against it, and evidence -- from the simulation -- that the model actually recovers effects when we know they're there.
+This is a design and validation exercise for a project that aims to assess how reviewer engagement and expertise may affect grant scores during CIHR peer review. Given the restrictive nature of CIHR funding data, this document does not use real CIHR data; rather it lays out the data-generating process we believe matches CIHR's Project Grant peer review, the model we intend to fit against it, and evidence that the models we will use can actually recover simulated effects.
 
 It is not a full pre-analysis plan (no pre-specified hypotheses, stopping rules, or multiplicity strategy yet), but it's close in spirit, and a subsequent revision could become one.
 
@@ -366,7 +357,7 @@ $ E [d_(i j k)] = P (upright("deviate")) times E [upright("magnitude") divides u
 This isn't just theoretically motivated -- we checked it empirically before committing to the extra complexity. If most of the covariate signal about reviewer engagement/expertise actually lived in the #emph[average size] of the deviation rather than #emph[whether] a deviation happens, a single linear model on $d_(i j k)$ would be simpler and would suffice.
 
 ```r
-d1 <- read_csv(here("data", "sim-deviation-data.csv"), show_col_types = FALSE)
+d1 <- read_csv(here("data", "sim-data-aim1.csv"), show_col_types = FALSE)
 
 m_linear <- lm(deviation ~ job + exp, data = d1)
 m_logistic <- glm(deviated ~ job + exp, data = d1, family = binomial())
@@ -436,8 +427,8 @@ modelsummary(
     },
  table.hline(y: 1, start: 0, end: 3, stroke: 0.05em + black),
  table.hline(y: 11, start: 0, end: 3, stroke: 0.05em + black),
- table.hline(y: 12, start: 0, end: 3, stroke: 0.08em + black),
- table.hline(y: 0, start: 0, end: 3, stroke: 0.08em + black),
+ table.hline(y: 12, start: 0, end: 3, stroke: 0.1em + black),
+ table.hline(y: 0, start: 0, end: 3, stroke: 0.1em + black),
     // tinytable lines before
 
     // tinytable header start
@@ -448,15 +439,15 @@ modelsummary(
     // tinytable header end
 
     // tinytable cell content after
-[(Intercept)], [\-0.002], [\-0.920],
+[(Intercept)], [\-0.000], [\-0.890],
 [], [(0.002)], [(0.034)],
-[jobreviewer], [\-0.001], [\-0.260],
-[], [(0.002)], [(0.048)],
-[explow], [0.004], [0.663],
+[jobreviewer], [0.002], [\-0.335],
+[], [(0.003)], [(0.049)],
+[explow], [0.001], [0.646],
 [], [(0.003)], [(0.050)],
-[expmed], [0.002], [0.424],
+[expmed], [0.001], [0.392],
 [], [(0.002)], [(0.041)],
-[expnone], [0.005], [0.864],
+[expnone], [0.003], [0.889],
 [], [(0.003)], [(0.049)],
 [Num.Obs.], [18000], [18000],
 
@@ -668,8 +659,8 @@ coefs[grepl(":", rownames(coefs)), ] |>
       if style != none and "background" in style { style.background }
     },
  table.hline(y: 1, start: 0, end: 5, stroke: 0.05em + black),
- table.hline(y: 5, start: 0, end: 5, stroke: 0.08em + black),
- table.hline(y: 0, start: 0, end: 5, stroke: 0.08em + black),
+ table.hline(y: 5, start: 0, end: 5, stroke: 0.1em + black),
+ table.hline(y: 0, start: 0, end: 5, stroke: 0.1em + black),
     // tinytable lines before
 
     // tinytable header start
@@ -680,10 +671,10 @@ coefs[grepl(":", rownames(coefs)), ] |>
     // tinytable header end
 
     // tinytable cell content after
-[jobreviewer:gendermale], [0.5686], [0.0971], [5.858], [0.00000000468],
-[explow:career_stageestablished], [0.0811], [0.0982], [0.826], [0.40857463935],
-[expmed:career_stageestablished], [-0.122], [0.0798], [-1.53], [0.12600529348],
-[expnone:career_stageestablished], [-0.5764], [0.0997], [-5.782], [0.00000000737],
+[jobreviewer:gendermale], [0.5292], [0.0963], [5.498], [0.0000000384],
+[explow:career_stageestablished], [-0.0749], [0.0978], [-0.766], [0.443663424],
+[expmed:career_stageestablished], [-0.0596], [0.0794], [-0.751], [0.4526429242],
+[expnone:career_stageestablished], [-0.5359], [0.0993], [-5.396], [0.0000000681],
 
     // tinytable footer after
 
@@ -727,6 +718,8 @@ It does #strong[not] tell us anything about the true size, direction, or even ex
 + Resubmission status is only available from 2023 onward -- does that mean our cohort has to start at the 2023 competition if we want that field, or can it be requested as a partially-missing covariate over a longer window?
 + How should we define/measure "reviewer experience" for the fields where that's the blocker to a yes/no on extractability?
 + Can you confirm our understanding of the review process itself (the $plus.minus 0.5$ rule, one-decimal-place scoring, equal-weight averaging into the funding decision) is accurate?
++ How much variation exists in the number of members across committees, applications per committee, and scores per application (given conflicts)?
++ Discussion time? Do we know how long the discussion period goes at the application level?
 
 = What comes next
 <what-comes-next>

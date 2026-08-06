@@ -33,12 +33,7 @@ format:
     keep-typ: true
     citeproc: true
     bibliographystyle: vancouver.csl
-    toc: true
-    include-in-header:
-      text: |
-        #show heading.where(level: 1): set text(size: 1.25em)
-        #show heading.where(level: 2): set text(size: 1.1em)
-        #show heading.where(level: 3): set text(size: 1em)
+    toc: false
 bibliography: ror.bib
 ---
 
@@ -175,7 +170,7 @@ on $d_{ijk}$ would be simpler and would suffice.
 ```{r aim1-linear-vs-two-part}
 #| tbl-cap: "Aim 1: a linear model on raw deviation vs. a logistic model on whether any deviation occurred, same covariates, same simulated data"
 
-d1 <- read_csv(here("data", "sim-deviation-data.csv"), show_col_types = FALSE)
+d1 <- read_csv(here("data", "sim-data-aim1.csv"), show_col_types = FALSE)
 
 m_linear <- lm(deviation ~ job + exp, data = d1)
 m_logistic <- glm(deviated ~ job + exp, data = d1, family = binomial())
@@ -262,6 +257,10 @@ Every parameter above is an illustrative placeholder, not an estimate from
 real data -- there is no real data yet. The point of the simulation is
 structural (does our modeling approach recover a known effect of a given
 size?), not predictive of what CIHR's actual numbers will look like.
+
+## Simulated data
+
+What did we generate with the parameters above? [Include some descriptives here, score variation, consensus variation, variation across committee, etc.]
 
 ## Part 1: did this member deviate?
 

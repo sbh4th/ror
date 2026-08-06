@@ -2363,6 +2363,16 @@ window.Quarto = {
   <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">2026-08-04</a>
   <ul class="collapse">
   <li><a href="#cihr-policy-changes-relevant-to-historicaltrend-data" id="toc-cihr-policy-changes-relevant-to-historicaltrend-data" class="nav-link" data-scroll-target="#cihr-policy-changes-relevant-to-historicaltrend-data">CIHR policy changes relevant to historical/trend data</a></li>
+  <li><a href="#cihr-funding-analytics-team-confirmed-data-availability-and-workflow" id="toc-cihr-funding-analytics-team-confirmed-data-availability-and-workflow" class="nav-link" data-scroll-target="#cihr-funding-analytics-team-confirmed-data-availability-and-workflow">CIHR Funding Analytics Team confirmed data availability and workflow</a></li>
+  <li><a href="#simulations-split-by-aim-aim-2-simulation-adds-applicant-characteristics" id="toc-simulations-split-by-aim-aim-2-simulation-adds-applicant-characteristics" class="nav-link" data-scroll-target="#simulations-split-by-aim-aim-2-simulation-adds-applicant-characteristics">Simulations split by aim; Aim 2 simulation adds applicant characteristics</a></li>
+  <li><a href="#new-document-writingror-modeling-strategy.qmd" id="toc-new-document-writingror-modeling-strategy.qmd" class="nav-link" data-scroll-target="#new-document-writingror-modeling-strategy.qmd">New document: <code>writing/ror-modeling-strategy.qmd</code></a></li>
+  <li><a href="#missing-member-level-heterogeneity-caught-by-sam-looking-at-a-diagnostic-plot" id="toc-missing-member-level-heterogeneity-caught-by-sam-looking-at-a-diagnostic-plot" class="nav-link" data-scroll-target="#missing-member-level-heterogeneity-caught-by-sam-looking-at-a-diagnostic-plot">Missing member-level heterogeneity (caught by Sam looking at a diagnostic plot)</a></li>
+  <li><a href="#consensus-was-simulated-directly-instead-of-being-derived-from-reviewers" id="toc-consensus-was-simulated-directly-instead-of-being-derived-from-reviewers" class="nav-link" data-scroll-target="#consensus-was-simulated-directly-instead-of-being-derived-from-reviewers">Consensus was simulated directly instead of being derived from reviewers</a></li>
+  </ul></li>
+  <li><a href="#section-3" id="toc-section-3" class="nav-link" data-scroll-target="#section-3">2026-08-06</a>
+  <ul class="collapse">
+  <li><a href="#score_min-was-conflating-two-different-things-streamlining-moved-to-a-selection-filter" id="toc-score_min-was-conflating-two-different-things-streamlining-moved-to-a-selection-filter" class="nav-link" data-scroll-target="#score_min-was-conflating-two-different-things-streamlining-moved-to-a-selection-filter"><code>score_min</code> was conflating two different things; streamlining moved to a selection filter</a></li>
+  <li><a href="#decided-not-to-simulate-variable-committeeapplication-counts" id="toc-decided-not-to-simulate-variable-committeeapplication-counts" class="nav-link" data-scroll-target="#decided-not-to-simulate-variable-committeeapplication-counts">Decided not to simulate variable committee/application counts</a></li>
   </ul></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="ror-research-log.pdf"><i class="bi bi-file-pdf"></i>Typst</a></li></ul></div></nav>
@@ -2494,6 +2504,142 @@ window.Quarto = {
 <li>Fall 2024 is a hard structural break for anything about the funding cutoff/grey zone – the definition of “grey zone” itself changed.</li>
 <li>Given the March 2026 consultation is unresolved, worth asking directly whether committee mandates or review format are likely to change again within our data-collection window.</li>
 </ol>
+</section>
+<section id="cihr-funding-analytics-team-confirmed-data-availability-and-workflow" class="level2">
+<h2 class="anchored" data-anchor-id="cihr-funding-analytics-team-confirmed-data-availability-and-workflow">CIHR Funding Analytics Team confirmed data availability and workflow</h2>
+<p>Matthew Hogel (CIHR Funding Analytics) replied by email on 2025-12-04 to an earlier question about administrative data, working from the <code>sim-data</code> report we’d shared. Reviewed with Claude on 2026-08-04.</p>
+<p><strong>Confirmed 4-step workflow:</strong> (1) we send CIHR the cohort of interest (competitions/years) and a variable list; (2) CIHR sends back dummy data “aligned as much as possible to the true distribution” for the extractable variables in that cohort; (3) we send CIHR the R/python analysis code, built against the dummy data; (4) CIHR runs that code on the real data and returns results. This confirms the confidentiality workflow assumed in <code>PROJECT.md</code>, with one addition not previously nailed down: <strong>CIHR will supply their own distribution-matched dummy data</strong> for extractable fields, which is a real (if partial) alternative/complement to our own from-scratch simulation once step 1 happens.</p>
+<p><strong>Field-by-field availability, as extracts:</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Available (extract)</th>
+<th>Not available as extract, but usable via in-house CIHR-run analysis</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Committee #, application #, member #, cid</td>
+<td>Applicant gender</td>
+</tr>
+<tr class="even">
+<td>Job (identifies who did the at-home/primary review)</td>
+<td>Applicant career stage</td>
+</tr>
+<tr class="odd">
+<td>Experience (can be split into binary columns)</td>
+<td>Applicant scientific productivity (“unlikely”)</td>
+</tr>
+<tr class="even">
+<td>Score (voted/final score)</td>
+<td>Reviewer gender</td>
+</tr>
+<tr class="odd">
+<td>Funding result</td>
+<td>Reviewer “experience” (Matt asked us to clarify how we’d measure this)</td>
+</tr>
+<tr class="even">
+<td>Initial reviewer scores</td>
+<td>Keywords/domain, # investigators, funding requested (all refused – identifiability risk)</td>
+</tr>
+<tr class="odd">
+<td>Consensus score</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Resubmission status (<strong>2023 onward only</strong>)</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Applicant prior funding success (binary)</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Reviewer past funding success (binary)</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Reviewer conflicts of interest (probably – bundled with expertise data)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The right-hand column isn’t a dead end: Matt explicitly committed a CIHR analyst to prep and run analysis in-house on those fields, using code and preprocessing instructions we supply – same remote-execution model, just without a dummy-data step first (still to be confirmed – see open questions below).</p>
+<p><strong>Implication for Aim 2:</strong> applicant gender and career stage – the two variables Aim 2 is built on – both fall in the “in-house only” column. We will very likely never see even distribution-matched dummy versions of them, meaning the simulation is the <em>only</em> dry run we get before code runs once, unsupervised by us, against live confidential data. Raises the bar on getting <code>code/ror-analysis-score-models.R</code>’s handling of these covariates right before ever proposing a variable list to CIHR.</p>
+<p><strong>Decision needed, not yet made:</strong> whether/how to extend <code>code/ror-sim-deviation.R</code> with applicant-level <code>gender</code>/<code>career_stage</code> (application-level attributes) so Aim 2’s model structure can be pressure-tested the same way Aim 1’s already has been. Discussed with Sam 2026-08-04; proposal on the table (not yet implemented) is two categorical application-level covariates with both main effects and interactions with <code>job</code>/<code>exp</code> in both submodels, mirroring <code>u2-sibs</code>’s <code>treated:female</code> pattern – see chat for the open design questions (category counts, whether to bake in a true interaction effect for the simulation to recover).</p>
+<p><strong>Follow-up questions for Matt/CIHR, not yet sent:</strong></p>
+<ol type="1">
+<li>For the fields in the “no extract” column – can CIHR’s dummy-data step (workflow step 2) still include <em>synthetic</em> gender/career-stage columns (not real values) so we can pipeline-test against something, even though the real columns never leave CIHR? Or is the in-house-run path truly a black box until the real run?</li>
+<li>“Resubmission status data only from 2023 onward” – does this mean our proposed cohort effectively has to start at the 2023 competition if we want that field, or can we request it from CIHR’s raw records dated from 2023 forward for the years and let us handle it as a partially- missing covariate?</li>
+<li>Clarify how we’d want “reviewer experience” measured, since Matt flagged that as the blocker to answering yes/no on it.</li>
+</ol>
+</section>
+<section id="simulations-split-by-aim-aim-2-simulation-adds-applicant-characteristics" class="level2">
+<h2 class="anchored" data-anchor-id="simulations-split-by-aim-aim-2-simulation-adds-applicant-characteristics">Simulations split by aim; Aim 2 simulation adds applicant characteristics</h2>
+<p>Decided to stop growing one shared simulation and instead give each aim its own, progressively more complex script: <code>ror-sim-deviation.R</code> stays as Aim 1’s simulation, untouched; <code>ror-sim-aim2.R</code> is new and builds on it. Aim 3 is deliberately not started yet – it’s a different kind of simulation (an intervention/counterfactual on top of the funding decision itself, e.g. partial randomization conditional on a funding threshold), not just an extension of the same generative process, and the design isn’t settled.</p>
+<p><code>ror-sim-aim2.R</code> adds applicant-level <code>gender</code> (female/male) and <code>career_stage</code> (early/established) – one draw per application, constant across all of that application’s member-rows, matching how <code>consensus</code> is already application-level. Motivated directly by the CIHR email above: since these two fields will never be extractable, not even as CIHR’s own distribution-matched dummy data, this simulation is the only rehearsal the Aim 2 code gets before it runs once, unsupervised, on real data.</p>
+<p>Per Sam’s direction, baked in <strong>real, sizeable interaction effects</strong> for Aim 2 to detect (deliberately large – not estimates of real bias, purely to confirm the model machinery can recover an interaction if one exists): <code>job(panelist) x gender(female)</code> = 0.5 and <code>exp(none) x career_stage(early)</code> = 0.6, both on the P(deviate) logit scale. Applicant main effects included too but kept modest (0.1, -0.1) since they aren’t the effects of interest. Consistent with the Aim 1 finding above (signal lives in <em>whether</em> someone deviates, not magnitude), all new signal goes into the deviation-probability part only; the magnitude submodel stays null for applicant terms.</p>
+<p>Added an empirical check at the bottom of the script (mirrors the Aim 1 lm/glm check): <code>glm(deviated ~ job*gender + exp*career_stage)</code> on the simulated data recovers both interactions cleanly at n=18,000 (<code>jobreviewer:gendermale</code> = 0.569, <code>expnone:career_stageestablished</code> = -0.576 – sign flips vs. the parameters above are just R’s alphabetical reference-level choice, magnitudes match). Confirms the two-part model structure validated for Aim 1 also has the sensitivity to pick up an Aim 2 interaction, not just an Aim 1 main effect.</p>
+<p>Not yet done: an Aim-2-specific version of <code>code/ror-analysis-score-models.R</code> (i.e. a <code>brm()</code> formula that actually includes the <code>job:gender</code>/<code>exp:career_stage</code> terms) – the two-part <em>simulation</em> is ready, the two-part <em>model script</em> for Aim 2 still needs to be written.</p>
+</section>
+<section id="new-document-writingror-modeling-strategy.qmd" class="level2">
+<h2 class="anchored" data-anchor-id="new-document-writingror-modeling-strategy.qmd">New document: <code>writing/ror-modeling-strategy.qmd</code></h2>
+<p>Wrote a design/validation memo pulling together everything above into one document, per Sam’s request: describes the simulated data-generating process and the two-part model for Aim 1, the Aim 2 extension, the empirical recovery checks (embedded live – reads the existing simulated CSVs and re-runs the lm/glm checks, does not regenerate data or fit any <code>brm()</code> models), and open questions for both Arijit and CIHR. Explicitly framed as design + validation, not a full pre-analysis plan.</p>
+<p>Dual output (<code>format: html</code> with <code>code-fold: true</code>/<code>code-tools: true</code>/ <code>embed-resources: true</code>, and <code>format: typst</code> matching <code>cihr-ror-proposal.qmd</code>’s C059 template) so it can be read either as a single self-contained HTML file or a typeset PDF; both render cleanly (<code>quarto render --to html</code> / <code>--to typst</code>, zero warnings after fixing two duplicate chunk-label warnings). Intended audience order: Arijit first for feedback, then a revision to CIHR’s Funding Analytics Team, superseding the pre-Bayesian <code>sim-data.qmd</code> note sent to them in 2025.</p>
+<p>Results section is a placeholder (“What comes next”) rather than actual posterior marginal effects, since no current <code>brms</code> fits exist – the two committed <code>.rds</code> files were already identified as stale (fit under the pre-ordinal <code>student()</code> spec) and untracked from git on 2026-08-04.</p>
+</section>
+<section id="missing-member-level-heterogeneity-caught-by-sam-looking-at-a-diagnostic-plot" class="level2">
+<h2 class="anchored" data-anchor-id="missing-member-level-heterogeneity-caught-by-sam-looking-at-a-diagnostic-plot">Missing member-level heterogeneity (caught by Sam looking at a diagnostic plot)</h2>
+<p>Sam plotted mean score +/- SD by <code>memno</code> on the simulated data and noticed it was essentially flat – no member-level variation at all, beyond what role/expertise already account for. Real reviewers plausibly have a stable personal tendency (some habitually score more leniently, some more harshly) that’s independent of their assigned role or self-described expertise. Checked the DGP: correct, there was no such term anywhere. <code>p_dev</code> depends only on <code>panelist</code>/<code>exp_*</code>, and <code>dev_bias</code> (the mean of the deviation-magnitude draw) was a single constant (0) shared by every member – no source of a stable per-member identity across their multiple reviews.</p>
+<p>Two things made this worth fixing rather than just noting: (1) both <code>brm()</code> formulas in <code>ror-analysis-score-models.R</code> already have <code>(1 | cid)</code> – the model has been “listening” for member heterogeneity the simulation never produced, so fitting it today would just show that variance component shrinking to ~0, which doesn’t test anything (unlike the job/exp/gender/career_stage checks already validated); (2) the <em>original</em> <code>writing/sim-data.qmd</code>, before the consensus/deviation reframing, actually had this (<code>u0m_sd = 0.2</code>, a member-level random intercept on raw score) – it silently dropped out when the DGP was rebuilt around <code>consensus + deviation</code>.</p>
+<p>Discussed two conceptually distinct traits this could be: <strong>propensity</strong> (some members break from consensus more often, regardless of direction – would enter <code>p_dev</code>) vs. <strong>direction/bias</strong> (some members, when they do deviate, consistently lean harsh or lenient – would enter <code>dev_bias</code>). Sam’s description matched the second. Also confirmed explicitly: this should be <em>heterogeneity</em> (a distribution of member-level tendencies, population average still 0, consistent with the earlier symmetric-deviation finding), not a single fixed direction applied to everyone – that would just be <code>dev_bias != 0</code>, a different and much stronger claim.</p>
+<p><strong>Implementation, in both <code>ror-sim-aim1.R</code> and <code>ror-sim-aim2.R</code></strong> (independent scripts, so the fix had to go in twice): added <code>u0m_bias_sd = 0.1</code>, and a per-member draw <code>u0m_bias ~ N(0, u0m_bias_sd)</code>, generated with <code>group_by(cid) |&gt; mutate(u0m_bias = rnorm(1, 0, u0m_bias_sd))</code> – deliberately <em>not</em> <code>faux::add_ranef(&quot;member&quot;, ...)</code>, which was checked and confirmed to assign by the raw crossed “member” factor (1..24) and give the <em>identical</em> draw to every committee’s “member 07”, silently conflating 50 different people who happen to share a slot number. <code>cid</code> (committee + member number) is the actual unique identity; grouping by it avoids that bug. <code>u0m_bias</code> enters the deviation-magnitude draw’s mean (<code>dev_bias + u0m_bias</code>) in both the main draw and the rejection-sampling redraw loop, then gets dropped before writing output, same as <code>u0c</code>/<code>u0a</code>.</p>
+<p>Added an <code>lmer(deviation ~ 1 + (1 | cid))</code> check to both scripts (mirrors the existing lm/glm recovery checks) – recovers a <code>cid</code>-level SD of 0.111 (Aim 1) and 0.115 (Aim 2) against a true value of 0.1, with residual SD ~0.166-0.166 against <code>dev_sd = 0.15</code> (the small inflation in both is expected, from the tenth-rounding discretization).</p>
+<p><strong>A plotting subtlety worth remembering:</strong> Sam’s original diagnostic plot grouped by <code>memno</code> alone, which pools 50 different real people per x-axis category (memno is recycled 1-24 <em>within</em> every committee, <code>cid</code> is the true unique identifier). Checked empirically: even now that real member-level heterogeneity exists, the SD of <code>memno</code>-grouped mean scores is 0.006 (averaging 50 people together erases it), vs. 0.097 when grouped by <code>cid</code> instead. The original flat plot was real – there was no effect yet – but the same plot re-run today would <em>still</em> look flat regardless, for an unrelated reason (wrong grouping variable), which would be an easy false-negative trap when checking this kind of fix in the future.</p>
+<p>Also fixed in passing: <code>ror-sim-aim1.R</code>’s <code>write_csv()</code> still pointed at the old filename <code>sim-deviation-data.csv</code> after the script itself was renamed from <code>ror-sim-deviation.R</code> – the header comment said <code>sim-data-aim1.csv</code> but the code didn’t match. Now both agree.</p>
+<p><strong>Correction to the above, same day:</strong> Sam asked why <code>faux</code> couldn’t be used at all for the member effect. Tested directly (<code>add_ranef(&quot;cid&quot;, u0m_bias = u0m_bias_sd)</code> on data that already has the <code>cid</code> column) – it works correctly, giving one independent draw per unique <code>cid</code>, same result as the manual <code>group_by(cid) |&gt; mutate(rnorm(1, ...))</code> version (confirmed identical recovery numbers on rerun). The actual problem was never “faux can’t do this” – it was specifically that <code>add_ranef(&quot;member&quot;, ...)</code> groups by the wrong column (the factor <code>add_random()</code> created, crossed with committee at only 24 levels total). <code>add_ranef()</code> handles an arbitrary existing column fine once pointed at the right one. Simplified both scripts to use <code>add_ranef(&quot;cid&quot;, ...)</code> instead of the manual <code>group_by</code>/<code>ungroup()</code>, matching the style already used for <code>u0c</code>/<code>u0a</code>.</p>
+</section>
+<section id="consensus-was-simulated-directly-instead-of-being-derived-from-reviewers" class="level2">
+<h2 class="anchored" data-anchor-id="consensus-was-simulated-directly-instead-of-being-derived-from-reviewers">Consensus was simulated directly instead of being derived from reviewers</h2>
+<p>Sam pointed out a real structural gap: consensus is supposed to come from the 3 assigned reviewers (they read, score, discuss, and agree a number), but the simulation had been generating <code>consensus</code> directly as <code>b0 + u0c + u0a</code> – a committee/application random effect with no connection to any actual reviewer score. Real consensus negotiation is more textured than a plain average (Sam’s example: R1 scores 3.9 and is persuasive but has “a hard stop at 4.0,” R2/R3 are both around 4.3 – consensus could land at 4.0, not the mean of 3.9/4.3/4.3). Agreed a plain mean is a reasonable simulation-level stand-in, with one hard requirement: consensus must never fall outside the range of what the 3 reviewers actually said.</p>
+<p><strong>Implementation, both <code>ror-sim-aim1.R</code> and <code>ror-sim-aim2.R</code>:</strong> relabeled <code>b0</code>/<code>u0c_sd</code>/<code>u0a_sd</code> as the application’s <em>true underlying quality</em> (not consensus itself) – this is what the 3 assigned reviewers each independently perceive, with their own pre-discussion noise (new parameter <code>init_sd = 0.3</code>, an illustrative placeholder like everything else, chosen roughly to match the spread in Sam’s example). <code>init_score</code> (initial reviewer score) is generated only for the 3 <code>job == &quot;reviewer&quot;</code> rows per application (<code>NA</code> for panelists, matching reality – panelists never submit an initial score); <code>consensus</code> is the rounded mean of those 3. Using <code>mean()</code> makes “never falls outside the 3 reviewers’ range” true by construction – no extra clamping code needed, since the mean of 3 bounded numbers can’t exceed their own bounds. Verified anyway with an explicit <code>stopifnot()</code> check across all 750 simulated applications per script, plus a check that exactly 3 non-missing <code>init_score</code> values exist per application. Required reordering the pipeline: <code>add_ranef(&quot;cmte&quot;, u0c)</code>/<code>add_ranef(&quot;application&quot;, u0a)</code> now happen <em>before</em> reviewer assignment (previously after), since <code>init_score</code> needs <code>u0c</code>/<code>u0a</code> to exist.</p>
+<p>This also fills in a field CIHR confirmed is extractable (“Initial reviewer scores – yes,” per the 2025-12-04 email) that the simulation wasn’t producing before – <code>init_score</code> is kept in the output, not dropped like the latent <code>u0c</code>/<code>u0a</code>/<code>u0m_bias</code> terms are, since it’s a real observable field, not a DGP internal.</p>
+<p>Reran both scripts’ existing recovery checks after the change (job/exp and job:gender/exp:career_stage interactions, member-level <code>cid</code> variance) – all still recover cleanly, confirming the consensus restructuring didn’t disturb anything downstream of it.</p>
+<p>Not implemented, flagged as a natural future extension but out of scope for what was asked: a reviewer’s own <code>init_score</code> currently has no influence on their own later <code>deviated</code>/<code>deviation</code> draw (e.g. anchoring – a reviewer who scored well below the eventual consensus might be more likely to pull their final score back toward their own original view). Worth considering once the current, simpler version is validated further.</p>
+<p><strong><code>writing/ror-modeling-strategy.qmd</code> is now doubly out of date</strong> (already flagged stale after the <code>u0m_bias</code> addition, now also missing the consensus-derivation change) – still needs a refresh before it goes to Arijit.</p>
+</section>
+</section>
+<section id="section-3" class="level1">
+<h1>2026-08-06</h1>
+<section id="score_min-was-conflating-two-different-things-streamlining-moved-to-a-selection-filter" class="level2">
+<h2 class="anchored" data-anchor-id="score_min-was-conflating-two-different-things-streamlining-moved-to-a-selection-filter"><code>score_min</code> was conflating two different things; streamlining moved to a selection filter</h2>
+<p>Re-examined the <code>score_min = 3.5</code> clamp used on <code>init_score</code> and final <code>score</code> and concluded it was doing two unrelated jobs at once: (1) a true scale bound on an individual score, and (2) the streamlining/discussion- eligibility threshold. Those aren’t the same thing – in practice an individual reviewer’s initial score can land below 3.5 on an application that still gets discussed (e.g. <code>[3.4, 4.1, 4.1]</code>, mean clears the bar even though one score didn’t). Clamping every individual score at 3.5 was wrong on that basis alone, but it also had a concrete, checkable consequence: examining the simulated output directly showed an artificial pileup of values sitting at exactly 3.5 (a delta-function spike with zero variance among the piled-up rows – the signature of a clamp, not a real mode), rather than a smooth tail the way a genuinely bounded-but-not- clamped distribution should look.</p>
+<p><strong>Fix, in both <code>ror-sim-aim1.R</code> and <code>ror-sim-aim2.R</code>:</strong></p>
+<ul>
+<li>Split the single <code>score_min</code>/<code>score_max</code> pair into <code>scale_min</code> (0, the scale’s true floor) plus <code>score_min</code>/<code>score_max</code> (3.5/4.9, now used <em>only</em> as the eligibility range for the eligibility filter below – never as a per-score clamp). <code>score_max</code> legitimately does double duty as both the true ceiling and the eligibility ceiling, since 4.9 really is both.</li>
+<li><code>init_score</code> is now clamped only at <code>[scale_min, score_max]</code> – individual reviewers are free to land below 3.5.</li>
+<li>Added an actual selection step: applications are generated in a candidate pool (<code>app_n_candidates = app_n * 2</code> per committee) with <code>u0c</code>/<code>u0a</code>/reviewer <code>init_score</code>/<code>consensus</code> as before, then filtered to those whose rounded <code>consensus</code> (mean of the 3 initial scores) falls in <code>[score_min, score_max]</code>; <code>slice_sample(n = app_n)</code> per committee keeps exactly the target count. A <code>stopifnot()</code> before the sampling step fails loudly and specifically if a committee ever has fewer than <code>app_n</code> eligible candidates, rather than letting <code>slice_sample()</code> error opaquely – 2x oversampling is comfortable headroom for the current parameters but is a real assumption that could need revisiting if <code>b0</code>/variance parameters change a lot later.</li>
+<li>Final <code>score</code> is now clamped at <code>[scale_min, score_max]</code> (0/4.9), not <code>[score_min, score_max]</code> (3.5/4.9) – the +/-0.5 rule around consensus is a real administrative constraint and can legitimately push a score below 3.5 or (near the ceiling) above 4.9, so only the true scale bounds should ever clamp it.</li>
+<li><code>consensus</code> itself needs no clamp at all now – it’s guaranteed to fall in <code>[score_min, score_max]</code> by construction of the selection filter, and the existing <code>stopifnot()</code> check confirming that range still holds as a check on the filter rather than a description of a clamp.</li>
+</ul>
+<p>Verified the pileup is gone: re-checked the distribution of <code>consensus</code> values immediately around 3.5 in the regenerated data and confirmed 3.5 is no longer disproportionately common relative to its neighbors (e.g. 3.6) – consistent with a smooth, naturally-truncated distribution rather than an artificial spike.</p>
+<p><strong>Also bumped <code>init_sd</code> from 0.3 to 0.4</strong> in both scripts – a modest increase to better reflect plausible reviewer-to-reviewer disagreement on the same application. <code>u0c_sd</code>/<code>u0a_sd</code> (between-application variance) left untouched this round.</p>
+<p>Both scripts’ existing recovery checks (job/exp, job:gender/exp:career_stage interactions, member-level <code>cid</code> variance) all still pass after the change.</p>
+<p><strong><code>writing/ror-modeling-strategy.qmd</code> is now triply out of date</strong> – still needs a refresh, now also for this change.</p>
+</section>
+<section id="decided-not-to-simulate-variable-committeeapplication-counts" class="level2">
+<h2 class="anchored" data-anchor-id="decided-not-to-simulate-variable-committeeapplication-counts">Decided not to simulate variable committee/application counts</h2>
+<p>Sam raised whether <code>app_n</code> (applications discussed per committee) and <code>mem_n</code> (members per committee) should vary across committees, rather than being fixed at 15 and 24 – both plausible in reality, and Bayesian partial pooling is well-suited to handling the resulting imbalance. Discussed without implementing; landed on leaving both fixed for now, for three reasons:</p>
+<ol type="1">
+<li><strong>Nothing in the analysis code depends on it.</strong> <code>brms</code>/<code>lme4</code> handle unequal group sizes natively – the <code>(1 | cmte)</code>, <code>(1 | app)</code>, <code>(1 |    cid)</code> random-effects specification doesn’t change based on whether the simulated data happens to be balanced. Unlike the tenths-discretization or two-part-model choices, there’s no code path that would behave differently or need to be caught by testing against imbalanced data.</li>
+<li><strong>Real engineering cost.</strong> The pipeline leans on <code>faux::add_random()</code>’s fully-crossed balanced-grid generation throughout; genuine imbalance would mean replacing that with per-committee manual generation (<code>purrr::map_dfr()</code>-style), and would compound with the streamlining filter added earlier today, which currently targets a fixed <code>app_n</code> per committee.</li>
+<li><strong>No real basis for the imbalance parameters yet</strong> (Sam’s own framing: “I don’t actually have much data on this, but I’m guessing…”), and committee #/application #/member # are all fields CIHR already confirmed as extractable – the true distribution will just be there in the real data once it arrives, without needing to guess at it now.</li>
+</ol>
+<p>Flagged one legitimate future reason to revisit: a one-off illustrative exhibit (e.g. a shrinkage plot for Arijit, or a methods-section argument for why the hierarchical approach was chosen) would be a different motivation than pressure-testing the pipeline, and wouldn’t need to be baked into <code>ror-sim-aim1.R</code>/<code>ror-sim-aim2.R</code> themselves.</p>
 </section>
 </section>
 

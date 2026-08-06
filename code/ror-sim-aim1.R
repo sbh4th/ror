@@ -6,7 +6,7 @@
 #  input:    none (simulated from scratch)
 #  output:   data/sim-data-aim1.csv
 #  project:  RoR
-#  author:   sam harper \ 2026-08-05
+#  author:   sam harper \ 2026-08-06
 
 ##  0 Load needed packages ----
 library(here)
@@ -23,6 +23,13 @@ cmte_n   = 50     # number of committees
 app_n    = 15     # number of discussed applications per committee
 mem_n    = 24     # number of committee members per committee
 
+# candidate applications generated per committee before the streamlining
+# filter below is applied (~2x is a comfortable margin given the
+# parameters here -- see the stopifnot() at the filter step, which fails
+# loudly and specifically if this margin is ever too thin for whatever
+# parameters end up being used)
+app_n_candidates = app_n * 2
+
 b0       = 4.1    # intercept for application's true underlying quality
 u0c_sd   = 0.1    # random intercept SD for committee (quality level)
 u0a_sd   = 0.3    # random intercept SD for application (quality level)
@@ -36,10 +43,10 @@ u0a_sd   = 0.3    # random intercept SD for application (quality level)
 # reasonable simulation-level stand-in and guarantees, by construction,
 # that consensus never falls outside the range of what the 3 reviewers
 # actually said.
-init_sd  = 0.3
+init_sd  = 0.4
 
 # probability of *any* deviation from consensus (logit scale) --
-# this is the "hu"-equivalent part
+# this is the "hurdle"-equivalent part
 a0       = -0.8   # baseline logit prob. of deviating
 a1       =  0.3   # panelist vs. reviewer
 a2       = -0.4   # high expertise
@@ -48,7 +55,7 @@ a4       =  0.5   # no expertise
 
 # signed magnitude of deviation, given deviation occurs, truncated to
 # +/- 0.5 (CIHR's stated bound on final vs. consensus score)
-dev_bias = 0      # population-average bias: still none (see u0m_bias_sd
+dev_bias = 0       # population-average bias: still none (see u0m_bias_sd
                    # below for between-member variation around this)
 dev_sd   = 0.15
 dev_min  = -0.5
@@ -62,8 +69,20 @@ dev_max  =  0.5
 # unique cid, not per raw member-slot -- see note where it's generated.
 u0m_bias_sd = 0.1
 
-score_min = 3.5   # lower bound for overall score (streamlining cutoff)
-score_max = 4.9   # upper bound for overall score
+# scale_min/score_max are the true, hard bounds of an individual score
+# (0 "poor" to 4.9 "outstanding") -- they clamp individual init_score and
+# final score values. score_min is a different kind of thing: it's the
+# streamlining/discussion-eligibility threshold applied to the rounded
+# *mean* of the 3 initial scores, not a floor on any individual score --
+# individual reviewers can and do score below it (see the filter step in
+# section 2). Both score_min and score_max double as the eligibility
+# range for that filter, since 4.9 is the true ceiling either way.
+scale_min = 0     # true lower bound of the scoring scale
+score_min = 3.5   # streamlining/discussion-eligibility threshold (on the
+                   # rounded mean of the 3 initial scores, not individual
+                   # scores)
+score_max = 4.9   # true upper bound of the scoring scale (and therefore
+                   # also the eligibility ceiling)
 
 # CIHR scores are entered to one decimal place only
 round_tenth <- function(x) round(x * 10) / 10
@@ -71,10 +90,10 @@ round_tenth <- function(x) round(x * 10) / 10
 ##  2 Set up multilevel structure (mirrors writing/sim-data.qmd) ----
 
 data <- add_random(committee = cmte_n,
-  application = app_n, member = mem_n) |>
+  application = app_n_candidates, member = mem_n) |>
 
   add_between("committee", cmte = sprintf("%02d", 1:cmte_n)) |>
-  add_between("application", app = 1:app_n) |>
+  add_between("application", app = 1:app_n_candidates) |>
   add_between("member", memno = sprintf("%02d", 1:mem_n)) |>
 
   mutate(cid = paste0(cmte, "_", memno)) |>
@@ -93,7 +112,10 @@ data <- add_random(committee = cmte_n,
   # their range. rnorm(n(), ...) draws one value per row in the group
   # (24) even though only the 3 "reviewer" rows use one, via if_else --
   # simpler than hand-generating exactly 3, and each used draw is still
-  # an independent N(0, init_sd) value.
+  # an independent N(0, init_sd) value. Individual init_score is clamped
+  # only at the scale's true bounds (scale_min/score_max) -- a reviewer
+  # is free to land below the score_min streamlining threshold; whether
+  # the application clears that threshold is decided next, on the mean.
   group_by(cmte, app) |>
   mutate(
     job = sample(c(rep("reviewer", 3),
@@ -102,12 +124,36 @@ data <- add_random(committee = cmte_n,
       rep("med", 10), rep("low", 4),
       rep("none", 4))),
     init_score = if_else(job == "reviewer",
-      round_tenth(pmax(score_min, pmin(score_max,
+      round_tenth(pmax(scale_min, pmin(score_max,
         b0 + u0c + u0a + rnorm(n(), mean = 0, sd = init_sd)))),
       NA_real_),
     consensus = round_tenth(mean(init_score, na.rm = TRUE))
   ) |>
+  ungroup()
+
+# streamlining filter: an application is discussed if the rounded *mean*
+# of its 3 initial scores clears score_min, even if one or more of the
+# individual scores didn't -- e.g. [3.4, 4.1, 4.1] still discusses. Keep
+# exactly app_n eligible candidates per committee; the stopifnot() below
+# fails loudly (rather than slice_sample() erroring opaquely) if
+# app_n_candidates wasn't a big enough pool for some committee.
+eligible <- data |>
+  distinct(cmte, app, consensus) |>
+  filter(consensus >= score_min & consensus <= score_max)
+
+stopifnot(
+  "app_n_candidates too small -- some committee has fewer than app_n eligible (consensus-in-range) candidates" =
+    eligible |> count(cmte) |> pull(n) |> min() >= app_n
+)
+
+kept <- eligible |>
+  group_by(cmte) |>
+  slice_sample(n = app_n) |>
   ungroup() |>
+  select(cmte, app)
+
+data <- data |>
+  semi_join(kept, by = c("cmte", "app")) |>
 
   mutate(
     panelist = if_else(job == "panelist", 1, 0),
@@ -157,7 +203,7 @@ while (length(zero_idx) > 0) {
 
 data <- data |>
   mutate(
-    score = round_tenth(pmax(score_min, pmin(score_max, consensus + deviation)))
+    score = round_tenth(pmax(scale_min, pmin(score_max, consensus + deviation)))
   ) |>
   select(-committee, -application, -member, -u0c, -u0a, -u0m_bias, -p_dev)
 
@@ -185,8 +231,8 @@ stopifnot(
     all(data$deviated %in% c(0, 1)),
   "deviation should be exactly 0 when deviated == 0" =
     all(data$deviation[data$deviated == 0] == 0),
-  "score should stay within [score_min, score_max]" =
-    all(data$score >= score_min & data$score <= score_max),
+  "score should stay within [scale_min, score_max]" =
+    all(data$score >= scale_min & data$score <= score_max),
   "consensus should stay within [score_min, score_max]" =
     all(data$consensus >= score_min & data$consensus <= score_max),
   "consensus should be rounded to the nearest tenth" =
