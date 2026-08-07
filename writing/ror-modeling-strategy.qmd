@@ -42,6 +42,8 @@ library(here)
 library(tidyverse)
 library(modelsummary)
 library(tinytable)
+library(patchwork)
+library(marginaleffects)
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
 ```
 
@@ -260,7 +262,40 @@ size?), not predictive of what CIHR's actual numbers will look like.
 
 ## Simulated data
 
-What did we generate with the parameters above? [Include some descriptives here, score variation, consensus variation, variation across committee, etc.]
+What did we generate with the parameters above? @fig-scores shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations.  [Include some descriptives here, score variation, consensus variation, variation across committee, etc.]
+
+
+
+```{r aim1-desc}
+#| echo: false
+#| label: fig-scores
+#| fig-cap: Distribution of simulated intial, consensus, and overall scores 
+
+d <- read_csv(here("data", "sim-data-aim1.csv"))
+
+init_hist <- ggplot(d, aes(x = init_score)) +
+  geom_histogram(binwidth = 0.1, 
+  boundary = 0, color = "white", fill = "#377eb8") + 
+  scale_x_continuous(limits = c(2.5, 5.0), 
+  breaks = seq(2.5, 5.0, 0.5)) +
+  labs(x = "Initial scores") + theme_classic()
+
+consensus_hist <- ggplot(d, aes(x = consensus)) +
+  geom_histogram(binwidth = 0.1, 
+  boundary = 0, color = "white", fill = "#377eb8") + 
+  scale_x_continuous(limits = c(2.5, 5.0), 
+  breaks = seq(2.5, 5.0, 0.5)) + 
+  labs(x = "Consensus scores") + theme_classic()
+
+score_hist <- ggplot(d, aes(x = score)) +
+  geom_histogram(binwidth = 0.1, 
+  boundary = 0, color = "white", fill = "#377eb8") +
+  scale_x_continuous(limits = c(2.5, 5.0), 
+  breaks = seq(2.5, 5.0, 0.5)) +
+  labs(x = "Overall scores") + theme_classic()
+
+init_hist / consensus_hist / score_hist
+```
 
 ## Part 1: did this member deviate?
 

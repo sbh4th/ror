@@ -53,9 +53,11 @@ u0c_sd   = 0.1    # random intercept SD for committee (quality level)
 u0a_sd   = 0.3    # random intercept SD for application (quality level)
 
 # consensus is not simulated directly -- it's the mean of the 3 assigned
-# reviewers' own initial scores around the true quality above, same
-# addition and rationale as ror-sim-aim1.R (2026-08-05)
-init_sd  = 0.4
+# reviewers' own initial scores around the true quality above.
+# init_sd_lo/init_sd_hi: asymmetric (two-piece normal) reviewer noise --
+# see ror-sim-aim1.R for the full rationale and calibration (2026-08-06)
+init_sd_lo = 0.40   # SD below the true-quality center
+init_sd_hi = 0.15   # SD above the true-quality center (tighter)
 
 # probability of *any* deviation from consensus (logit scale) -- same
 # Aim 1 main effects as ror-sim-deviation.R, plus applicant-level terms
@@ -124,11 +126,12 @@ data <- add_random(committee = cmte_n,
   add_ranef("cmte", u0c = u0c_sd) |>
   add_ranef("application", u0a = u0a_sd) |>
 
-  # assign reviewers uniquely within each application, have the 3
-  # assigned reviewers independently score it (noisy reads of the true
-  # quality above), consensus = mean of those 3 -- see ror-sim-aim1.R
-  # for the full rationale, including why init_score is only clamped at
-  # the scale's true bounds, not score_min
+  # assign reviewers uniquely within each application, and draw each of
+  # the 3 reviewers' initial score as true quality + asymmetric
+  # (split-normal) noise -- see ror-sim-aim1.R for the full rationale,
+  # including why init_score is deliberately left unclamped here (the
+  # redraw loop right after this block handles the scale's true bounds
+  # properly instead of piling excess probability up at the edge)
   group_by(cmte, app) |>
   mutate(
     job = sample(c(rep("reviewer", 3),
@@ -136,16 +139,36 @@ data <- add_random(committee = cmte_n,
     exp = sample(c(rep("high", 6),
       rep("med", 10), rep("low", 4),
       rep("none", 4))),
+    z_init = rnorm(n()),
     init_score = if_else(job == "reviewer",
-      round_tenth(pmax(scale_min, pmin(score_max,
-        b0 + u0c + u0a + rnorm(n(), mean = 0, sd = init_sd)))),
+      round_tenth(b0 + u0c + u0a +
+        if_else(z_init < 0, z_init * init_sd_lo, z_init * init_sd_hi)),
       NA_real_),
-    consensus = round_tenth(mean(init_score, na.rm = TRUE)),
     # applicant-level attributes: one draw per application, recycled
     # across all member-rows for that application (dplyr recycles a
     # length-1 mutate() result across the group)
     gender = sample(c("female", "male"), 1),
     career_stage = sample(c("early", "established"), 1)) |>
+  ungroup() |>
+  select(-z_init)
+
+# redraw any reviewer's init_score that landed outside the scale's true
+# bounds, rather than clamping it -- see ror-sim-aim1.R
+out_idx <- which(!is.na(data$init_score) &
+  (data$init_score < scale_min | data$init_score > score_max))
+while (length(out_idx) > 0) {
+  z <- rnorm(length(out_idx))
+  noise <- if_else(z < 0, z * init_sd_lo, z * init_sd_hi)
+  data$init_score[out_idx] <- round_tenth(
+    b0 + data$u0c[out_idx] + data$u0a[out_idx] + noise)
+  out_idx <- which(!is.na(data$init_score) &
+    (data$init_score < scale_min | data$init_score > score_max))
+}
+
+# consensus is the mean of the 3 (now-finalized) initial reviewer scores
+data <- data |>
+  group_by(cmte, app) |>
+  mutate(consensus = round_tenth(mean(init_score, na.rm = TRUE))) |>
   ungroup()
 
 # streamlining filter -- see ror-sim-aim1.R for the full rationale: an

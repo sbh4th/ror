@@ -673,3 +673,59 @@ exhibit (e.g. a shrinkage plot for Arijit, or a methods-section argument
 for why the hierarchical approach was chosen) would be a different
 motivation than pressure-testing the pipeline, and wouldn't need to be
 baked into `ror-sim-aim1.R`/`ror-sim-aim2.R` themselves.
+
+## Initial reviewer scores: too many very high values, tails asymmetric
+
+Even after the truncation fix above, Sam flagged (from his own reviewing
+experience) that `init_score` still had far too much mass near the
+ceiling -- 150/2250 reviewers (6.7%) at exactly 4.9, ~220 (9.8%) above
+4.7. Diagnosed two separate causes: (1) a real remaining clamp artifact
+-- `init_score` was still `pmin(score_max, ...)`-clamped, which piles any
+raw draw above 4.9 into a spike exactly at the boundary, same mechanism
+as the `score_min` bug just fixed, just not yet applied here; (2) more
+fundamentally, a *symmetric* normal is probably the wrong shape --
+reviewers are much more reluctant to award near-ceiling scores than they
+are to spread toward the floor.
+
+Sam supplied an illustrative reference distribution (`ex_long$score`,
+approximates his experience, not real data, not meant to be matched
+exactly): `skewness = -0.97`, `kurtosis = 5.16` (b2 convention, so
+excess ~2.16 -- notably more peaked/heavier-tailed than normal), mean
+4.10, median 4.1, SD ~0.42. Notable: mean and median are nearly
+identical despite the strong negative skew, which means the skew is
+driven by a *thin* tail of unusually low outlier scores rather than a
+broad leftward shift of the bulk of the distribution -- a shape a simple
+two-piece normal can approximate the *direction* of but not the
+peakedness/kurtosis. Explicitly agreed not to chase the reference
+exactly ("no need to match directly... leave some room for
+uncertainty").
+
+**Implementation, both `ror-sim-aim1.R`/`ror-sim-aim2.R`:** kept the
+two-piece (split) normal for reviewer noise (SD below the true-quality
+center vs. SD above it), but **replaced the `pmin()`/`pmax()` clamp with
+proper rejection sampling** -- `init_score` is generated unclamped, then
+any reviewer whose draw lands outside `[scale_min, score_max]` is
+redrawn (same while-loop idiom already used for the deviation-collapse
+fix), so out-of-range mass gets redistributed by redrawing rather than
+piling up at the edge. Grid-searched `init_sd_lo`/`init_sd_hi` against
+the illustrative target (accounting for `u0c_sd`/`u0a_sd` stacking on
+top of reviewer noise, which was inflating the tail more than reviewer
+noise alone would suggest) -- landed on **`init_sd_lo = 0.40`,
+`init_sd_hi = 0.15`** (down from the symmetric `init_sd = 0.4`/`0.3`
+tried earlier same day). Resulting shape on the actual regenerated data:
+mean ~4.0-4.05, SD ~0.37-0.39 (slightly tighter than the pre-streamlining
+grid search predicted -- the eligibility filter selectively excludes
+applications where reviewers scored low, which trims the observed lower
+tail too), median 4.1, `P(score > 4.7)` ~1.5-3%, `P(score == 4.9)`
+~0.6-1.3%. Skewness of the resulting distribution (~-0.37, checked in a
+standalone grid-search script, not saved) is directionally correct but
+milder than the -0.97 reference -- accepted per Sam's explicit "don't
+chase this exactly."
+
+Both existing recovery checks (Aim 2 interactions, member-level `cid`
+variance) still pass on the regenerated data in both scripts.
+
+Confirmed before starting this round of changes: the prior state
+(symmetric `init_sd`, clamped, streamlining-filter-only fix) was already
+committed and pushed (`9fedfc7`), so this was a safe experiment to make
+with a clean rollback point if the calibration hadn't worked out.

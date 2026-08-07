@@ -36,14 +36,26 @@ u0a_sd   = 0.3    # random intercept SD for application (quality level)
 
 # consensus is not simulated directly -- it's the mean of the 3 assigned
 # reviewers' own initial scores, each an independent noisy read of the
-# application's true quality (b0 + u0c + u0a) before discussion. init_sd
-# is how much reviewers initially disagree; a real negotiation is more
-# textured than a plain average (e.g. a persuasive low scorer holding a
-# "hard stop" a bit below where the other two land), but the mean is a
-# reasonable simulation-level stand-in and guarantees, by construction,
-# that consensus never falls outside the range of what the 3 reviewers
-# actually said.
-init_sd  = 0.4
+# application's true quality (b0 + u0c + u0a) before discussion. A real
+# negotiation is more textured than a plain average (e.g. a persuasive
+# low scorer holding a "hard stop" a bit below where the other two
+# land), but the mean is a reasonable simulation-level stand-in and
+# guarantees, by construction, that consensus never falls outside the
+# range of what the 3 reviewers actually said.
+#
+# init_sd_lo/init_sd_hi: reviewer disagreement is NOT symmetric around
+# the true-quality center -- in practice, initial scores above ~4.7 are
+# rare and 4.9 is very rare, whereas scores well below the center are
+# comparatively common (a persuadable-but-critical reviewer). Modeled as
+# a two-piece ("split") normal: draws below the center use init_sd_lo,
+# draws above it use the tighter init_sd_hi. Calibrated by grid search
+# against a rough illustrative target (mean ~4.1, SD ~0.42, left-skewed,
+# P(score > 4.7) low single digits -- not real data, and deliberately
+# not fit tightly to it; see ror-research-log.qmd, 2026-08-06) --
+# revisit once real initial-reviewer-score data exists (CIHR confirmed
+# this field is extractable).
+init_sd_lo = 0.40   # SD below the true-quality center
+init_sd_hi = 0.15   # SD above the true-quality center (tighter)
 
 # probability of *any* deviation from consensus (logit scale) --
 # this is the "hurdle"-equivalent part
@@ -105,17 +117,18 @@ data <- add_random(committee = cmte_n,
   add_ranef("cmte", u0c = u0c_sd) |>
   add_ranef("application", u0a = u0a_sd) |>
 
-  # assign reviewers uniquely within each application, have the 3
-  # assign reviewers independently score it before discussion (noisy
-  # reads of the true quality above), and set consensus to the mean of
-  # those 3 initial scores -- guaranteed by construction to fall within
-  # their range. rnorm(n(), ...) draws one value per row in the group
-  # (24) even though only the 3 "reviewer" rows use one, via if_else --
-  # simpler than hand-generating exactly 3, and each used draw is still
-  # an independent N(0, init_sd) value. Individual init_score is clamped
-  # only at the scale's true bounds (scale_min/score_max) -- a reviewer
-  # is free to land below the score_min streamlining threshold; whether
-  # the application clears that threshold is decided next, on the mean.
+  # assign reviewers uniquely within each application, and draw each of
+  # the 3 reviewers' initial score as true quality + asymmetric
+  # (split-normal) noise -- see init_sd_lo/init_sd_hi above. rnorm(n(),
+  # ...) draws one value per row in the group (24) even though only the
+  # 3 "reviewer" rows use one, via if_else -- simpler than hand-
+  # generating exactly 3, and each used draw is still independent.
+  # init_score is deliberately left unclamped here: see the redraw loop
+  # right after this block, which keeps every reviewer's score properly
+  # *within* [scale_min, score_max] by redrawing rather than piling
+  # excess probability up as a spike at the boundary (the same problem
+  # score_min had before being split into a proper eligibility filter,
+  # see the 2026-08-06 research log entry -- same fix, applied here too).
   group_by(cmte, app) |>
   mutate(
     job = sample(c(rep("reviewer", 3),
@@ -123,12 +136,33 @@ data <- add_random(committee = cmte_n,
     exp = sample(c(rep("high", 6),
       rep("med", 10), rep("low", 4),
       rep("none", 4))),
+    z_init = rnorm(n()),
     init_score = if_else(job == "reviewer",
-      round_tenth(pmax(scale_min, pmin(score_max,
-        b0 + u0c + u0a + rnorm(n(), mean = 0, sd = init_sd)))),
-      NA_real_),
-    consensus = round_tenth(mean(init_score, na.rm = TRUE))
+      round_tenth(b0 + u0c + u0a +
+        if_else(z_init < 0, z_init * init_sd_lo, z_init * init_sd_hi)),
+      NA_real_)
   ) |>
+  ungroup() |>
+  select(-z_init)
+
+# redraw any reviewer's init_score that landed outside the scale's true
+# bounds, rather than clamping it
+out_idx <- which(!is.na(data$init_score) &
+  (data$init_score < scale_min | data$init_score > score_max))
+while (length(out_idx) > 0) {
+  z <- rnorm(length(out_idx))
+  noise <- if_else(z < 0, z * init_sd_lo, z * init_sd_hi)
+  data$init_score[out_idx] <- round_tenth(
+    b0 + data$u0c[out_idx] + data$u0a[out_idx] + noise)
+  out_idx <- which(!is.na(data$init_score) &
+    (data$init_score < scale_min | data$init_score > score_max))
+}
+
+# consensus is the mean of the 3 (now-finalized) initial reviewer
+# scores, guaranteed by construction to fall within their range
+data <- data |>
+  group_by(cmte, app) |>
+  mutate(consensus = round_tenth(mean(init_score, na.rm = TRUE))) |>
   ungroup()
 
 # streamlining filter: an application is discussed if the rounded *mean*
