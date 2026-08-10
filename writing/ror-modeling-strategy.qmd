@@ -44,6 +44,7 @@ library(modelsummary)
 library(tinytable)
 library(patchwork)
 library(marginaleffects)
+library(ggridges)
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
 ```
 
@@ -90,15 +91,12 @@ Full detail is in the funded proposal (`cihr-ror-proposal.qmd`); briefly:
 - The (equally weighted) average of final scores across all panel members
   feeds the funding decision.
 
-Confirming this understanding is correct is itself one of the open items
-for CIHR (see below) -- everything downstream depends on it.
-
 # Data structure
 
 We're assuming a three-level structure: committees, discussed applications
 nested in committees, and panel members nested in committees (crossed with
 applications, since a member reviews many applications within a cycle).
-Based on 2024 Project Grant committee sizes, our working numbers are
+Based on recent Project Grant committee sizes, our working numbers are
 **50 committees &times; 15 discussed applications per committee &times; 24
 members per committee**.
 
@@ -114,7 +112,7 @@ and won't appear even in CIHR's own distribution-matched dummy data. That
 constraint is why this document exists: the simulation below is the only
 rehearsal Aim 2's code gets before it runs once, unsupervised, on real data.
 
-# Primary outcome: modeling the change, not the level
+# Primary outcome: modeling the difference, not the level
 
 Let $d_{ijk}$ be the final score minus the consensus score, for the
 $i$th panel member on the $j$th application in the $k$th committee:
@@ -124,23 +122,21 @@ $$d_{ijk} = \text{final score}_{ijk} - \text{consensus score}_{jk}$$
 We model $d_{ijk}$ directly, rather than modeling the final score with
 consensus score as a covariate, for three reasons:
 
-1. **The point mass at zero doesn't disappear if you model the final score
-   instead -- it just stops being a fixed reference.** A member who doesn't
+1. **Point mass at zero** Hypothesizing that most or many members will go with the consensus score, which leads to a mass either at the consensus (if you modeled the score) or a mass at zero if you model the difference. A member who doesn't
    move from consensus has $d_{ijk}=0$ regardless of which application
    they're scoring; a `final_score ~ consensus_score + ...` model still has
    that spike, just relocated to wherever a given application's consensus
    happened to land. Differencing standardizes the spike's location across
    every application, which is what makes a shared two-part model
    tractable.
-2. **Avoids reintroducing a confound.** A freely estimated slope on
+2. **Avoids reintroducing confounding.** A freely estimated slope on
    consensus in a `final_score ~ consensus + ...` model has to recover
    something close to 1 from the data; if reviewer composition happens to
    correlate with consensus level across committees, that estimation can
    leak into the coefficients we actually care about. Differencing with an
    implicit slope of exactly 1 -- the true administrative rule, not an
    assumption -- removes that channel by construction.
-3. **Matches the actual research question.** Aim 1 is about the *change*
-   induced by discussion, not the *level* of the final score (driven mostly
+3. **Matches the actual research question.** Aim 1 is about the *change from consensus* induced by discussion, not the *level* of the final score (driven mostly
    by application quality, which isn't under study here). Nothing is lost:
    $\text{final score} = \text{consensus} + d_{ijk}$ is a trivial identity,
    so anything Aim 3 needs at the score level for funding-decision
@@ -148,16 +144,13 @@ consensus score as a covariate, for three reasons:
 
 # Why a two-part model
 
-We expect $d_{ijk}$ to have a spike at exactly zero -- members who simply
-adopt the consensus score -- plus continuous variation among those who
-depart from it. `brms` has no single native family for "point mass at an
-interior value plus continuous elsewhere" the way `hurdle_poisson()`
-handles zero counts, since $d_{ijk}$ is signed and bounded
-($\pm 0.5$), not non-negative. So the outcome is split into two linked
+We expect $d_{ijk}$ to have a spike at exactly zero (members who simply
+adopt the consensus score) plus variation among those who
+depart from it. So the outcome is split into two linked
 models:
 
 1. **Did this member deviate at all?** A Bernoulli model on
-   $\mathbb{1}[d_{ijk} \neq 0]$.
+   $1[d_{ijk} \neq 0]$.
 2. **If they deviated, by how much?** A model for the (signed) magnitude,
    conditional on deviating.
 
@@ -266,7 +259,7 @@ What did we generate with the parameters above? @fig-scores shows the distributi
 
 
 
-```{r aim1-desc}
+```{r}
 #| echo: false
 #| label: fig-scores
 #| fig-cap: Distribution of simulated intial, consensus, and overall scores 
@@ -297,6 +290,37 @@ score_hist <- ggplot(d, aes(x = score)) +
 init_hist / consensus_hist / score_hist
 ```
 
+@fig-var shows how our initial simulation incorporates a small degree of variation across committees in the overall scores, as well as the average variation within committees across applications.
+
+```{r}
+#| echo: false
+#| label: fig-var
+#| fig-cap: Distribution of score variation by committee and application
+
+by_cmte <- ggplot(d, aes(x = cmte, y = score)) + 
+  geom_boxplot(fill = "#377eb8") + 
+  labs(x = "Committee", y = "Score") + theme_classic()
+
+app_ranks <- d |>
+    distinct(cmte, app, consensus) |>
+    group_by(cmte) |>
+    mutate(consensus_rank = rank(consensus, ties.method = "first")) |>
+    ungroup() |>
+    select(cmte, app, consensus_rank)
+
+app_summary <- d |> left_join(app_ranks, by = c("cmte", "app"))
+
+by_app <- ggplot(app_summary, 
+  aes(x = score, y = factor(consensus_rank), fill = consensus_rank)) +
+  geom_density_ridges(scale = 1.5, rel_min_height = 0.01) +
+  labs(x = "Score",
+       y = "Application rank") +
+    theme_ridges() +
+    theme(legend.position = "none") + scale_y_discrete(limits = rev)
+
+by_cmte / by_app
+```
+
 ## Part 1: did this member deviate?
 
 ```{r aim1-m1}
@@ -318,9 +342,7 @@ m1_deviate <-
 Random intercepts for committee, member (`cid`), and application; fixed
 effects for role and expertise. Weakly informative priors throughout --
 `normal(0, 1.5)` on the (logit-scale) intercept, `normal(0, 0.5)` on
-coefficients, `exponential(1)` on group-level SDs -- matching the
-conventions established in our other multilevel Bayesian work
-[e.g. @nandi2020]. `sample_prior = "yes"` so we always have prior-predictive
+coefficients, `exponential(1)` on group-level SDs. `sample_prior = "yes"` so we always have prior-predictive
 draws to check against before trusting the posterior.
 
 ## Part 2: how large, given a deviation?
