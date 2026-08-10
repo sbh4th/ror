@@ -37,12 +37,7 @@
 #            See PROJECT.md for the fuller rationale.
 #
 #  status:   DRAFT. FIT_MODELS is FALSE below -- this script defines the
-#            data prep and model calls but does not run brm() yet. This
-#            is deliberate: priors and formulas below are first guesses,
-#            not reviewed, and the compute + cmdstan setup should be
-#            confirmed as available in CIHR's execution environment
-#            before we invest time fitting anything (see PROJECT.md,
-#            "Where we left off").
+#            data prep and model calls but does not run brm() yet).
 
 ##  0 Load needed packages ----
 library(here)
@@ -70,7 +65,7 @@ FIT_MODELS <- FALSE
 
 ## 1 Read in simulated dataset ----
 
-d <- read_csv(here("data", "sim-deviation-data.csv"),
+d <- read_csv(here("data", "sim-data-aim1.csv"),
   show_col_types = FALSE)
 
 # Sanity checks on the simulated analytic sample
@@ -80,7 +75,7 @@ stopifnot(
   "deviated should be 0/1" =
     all(d$deviated %in% c(0, 1)),
   "score should stay within [3.5, 4.9]" =
-    all(d$score >= 3.5 & d$score <= 4.9)
+    all(d$consensus >= 3.5 & d$score <= 4.9)
 )
 
 d1 <- d |>
@@ -152,6 +147,11 @@ if (FIT_MODELS) {
         seed = 8253,
         control = list(adapt_delta = 0.95),
         file = here("code/fits/ror-magnitude-m1"))
+  
+  
+  avg_predictions(m1_deviate, variables = "exp", ndraws = 200)
+  
+  avg_predictions(m1_deviate, variables = "job", ndraws = 200)
 
 }
 
