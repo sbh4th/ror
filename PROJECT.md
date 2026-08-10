@@ -20,12 +20,14 @@ The `score_min = 3.5` clamp was conflating a true scale bound with the streamlin
 
 `writing/ror-modeling-strategy.qmd` — the design/validation memo for Arijit → CIHR — is being actively revised (font/styling changes, new content) outside this thread; last known status was **triply out of date** relative to the simulations (member-level heterogeneity, consensus-derivation, and streamlining-filter changes all postdate it), and this latest init_score change makes it a fourth thing to reconcile. Check its current state before assuming it's ready to send.
 
+**Resolved:** `re_formula = NULL` (evaluated on the full dataset), not `NA`, is now the settled convention for headline marginal-effects estimates (`avg_predictions()` etc.) — `NULL` averaged over the full observed data already gives a population-average estimate by marginalizing over random effects empirically, whereas `NA` zeroes them out, which under our logit link gives the "typical cluster" prediction, not the population average (Jensen's inequality). Matches the precedent already set in `u2-sibs`. Full rationale in the research log. Practical tip that's orthogonal to this decision: `ndraws = 200` (or similar) in `marginaleffects` calls speeds up iteration substantially during model-checking without changing what's being estimated — use small `ndraws` while iterating, full draws for a number actually being reported.
+
 **Next steps:**
 1. Confirm `writing/ror-modeling-strategy.qmd` reflects all four simulation changes above before it goes to Arijit.
 2. Send it to Arijit for feedback (open questions for him are listed in the doc itself).
-3. Write an Aim-2-specific version of `code/ror-analysis-score-models.R` — the simulation has the `job:gender`/`exp:career_stage` interactions now, but no `brm()` formula includes them yet.
+3. Write an Aim-2-specific version of `code/ror-analysis-score-models.R` — the simulation has the `job:gender`/`exp:career_stage` interactions now, but no `brm()` formula includes them yet. Now that `re_formula` is resolved, the marginal-effects/combination step below can use it directly.
 4. Send CIHR (Matt Hogel) the three follow-up questions logged in the research log and the modeling-strategy doc (synthetic dummy data for non-extractable fields? cohort start year given resubmission-status's 2023+ cutoff? how to define "reviewer experience"?).
-5. Still open from before: confirm CIHR's environment can compile/run Stan; prior-predictive checks before ever setting `FIT_MODELS <- TRUE`; `re_formula = NULL` vs. `NA` decision; the `E[deviation] = P(deviate) × E[deviation | deviate]` combination step.
+5. Still open from before: confirm CIHR's environment can compile/run Stan; prior-predictive checks before ever setting `FIT_MODELS <- TRUE`; the `E[deviation] = P(deviate) × E[deviation | deviate]` combination step.
 
 A good next-session prompt: *"Let's continue the RoR Bayesian modeling work — pick up from the Aim 2 model script."*
 

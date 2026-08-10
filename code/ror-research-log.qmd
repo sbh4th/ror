@@ -676,15 +676,11 @@ baked into `ror-sim-aim1.R`/`ror-sim-aim2.R` themselves.
 
 ## Initial reviewer scores: too many very high values, tails asymmetric
 
-Even after the truncation fix above, Sam flagged (from his own reviewing
-experience) that `init_score` still had far too much mass near the
-ceiling -- 150/2250 reviewers (6.7%) at exactly 4.9, ~220 (9.8%) above
+Even after the truncation fix above, `init_score` still had far too much mass near the ceiling -- 150/2250 reviewers (6.7%) at exactly 4.9, ~220 (9.8%) above
 4.7. Diagnosed two separate causes: (1) a real remaining clamp artifact
 -- `init_score` was still `pmin(score_max, ...)`-clamped, which piles any
 raw draw above 4.9 into a spike exactly at the boundary, same mechanism
-as the `score_min` bug just fixed, just not yet applied here; (2) more
-fundamentally, a *symmetric* normal is probably the wrong shape --
-reviewers are much more reluctant to award near-ceiling scores than they
+as the `score_min` bug just fixed, just not yet applied here; (2) seems like a *symmetric* normal is probably the wrong shape since in my experience reviewers are much more reluctant to award near-ceiling scores than they
 are to spread toward the floor.
 
 Sam supplied an illustrative reference distribution (`ex_long$score`,
@@ -725,7 +721,43 @@ chase this exactly."
 Both existing recovery checks (Aim 2 interactions, member-level `cid`
 variance) still pass on the regenerated data in both scripts.
 
-Confirmed before starting this round of changes: the prior state
-(symmetric `init_sd`, clamped, streamlining-filter-only fix) was already
-committed and pushed (`9fedfc7`), so this was a safe experiment to make
-with a clean rollback point if the calibration hadn't worked out.
+## Resolved: `re_formula = NULL` (on full data), not `NA`, for marginal effects
+
+The `re_formula = NULL` vs. `NA` choice flagged as an open TODO since the
+first draft of `code/ror-analysis-score-models.R` is now decided:
+**`re_formula = NULL`, evaluated on the full dataset**, is the convention
+for headline marginal-effects estimates (e.g. `avg_predictions()`) in this
+project, not `re_formula = NA` with a synthetic covariate grid. Two
+reasons:
+
+1. Aim 1/2's research question is about the general reviewer-expertise/
+   engagement relationship, not the specific 50 sampled committees --
+   which sounds like an argument for `NA` (population-average), but
+   `re_formula = NULL` averaged across the *full* observed data already
+   *is* a population-average estimate -- it marginalizes over random
+   effects empirically, using the actual observed distribution of
+   committees/members/applications, rather than analytically zeroing them
+   out.
+2. `re_formula = NA` is not a safe shortcut to "population-average" under
+   a nonlinear (logit) link: zeroing random effects on the latent scale
+   and then transforming gives the prediction for a *hypothetical
+   median/typical* cluster, not the *average* prediction across the
+   cluster distribution -- those differ under any nonlinear link
+   (Jensen's inequality), which is exactly our situation (bernoulli +
+   ordinal-cumulative, both logit-linked).
+
+Matches the precedent already set in `u2-sibs` (see that project's
+`code/u2s-research-log.Rmd`, 2025-05-27 entry) -- same fork was worked
+through there, landing on marginalizing over the observed random effects
+(`re_formula = NULL` on real data) rather than integrating them out via
+hypothetical new levels.
+
+Orthogonal to this: `ndraws = <n>` (e.g. 200) in `marginaleffects` calls
+is a good way to speed up iteration during model-checking/simulation
+tweaking -- confirmed working well in practice. That knob controls how
+many posterior draws get averaged over, not *what* is being estimated, so
+it's fine to use a small `ndraws` for quick iteration and the full draw
+count for a number actually being reported. The `re_formula = NA` +
+small-`datagrid()` shortcut discussed alongside `ndraws` is fine for a
+fast approximate look during iteration, but the headline number should
+come from `re_formula = NULL` on the real data, per above.
