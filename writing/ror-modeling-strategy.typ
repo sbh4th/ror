@@ -179,6 +179,8 @@
   abstract: none,
   abstract-title: none,
   cols: 1,
+  margin: (x: 1.25in, y: 1.25in),
+  paper: "us-letter",
   lang: "en",
   region: "US",
   font: "libertinus serif",
@@ -191,12 +193,18 @@
   heading-color: black,
   heading-line-height: 0.65em,
   sectionnumbering: none,
+  pagenumbering: "1",
   toc: false,
   toc_title: none,
   toc_depth: none,
   toc_indent: 1.5em,
   doc,
 ) = {
+  set page(
+    paper: paper,
+    margin: margin,
+    numbering: pagenumbering,
+  )
   set par(justify: true)
   set text(lang: lang,
            region: region,
@@ -207,7 +215,8 @@
     align(center)[#block(inset: 2em)[
       #set par(leading: heading-line-height)
       #if (heading-family != none or heading-weight != "bold" or heading-style != "normal"
-           or heading-color != black) {
+           or heading-color != black or heading-decoration == "underline"
+           or heading-background-color != none) {
         set text(font: heading-family, weight: heading-weight, style: heading-style, fill: heading-color)
         text(size: title-size)[#title]
         if subtitle != none {
@@ -279,12 +288,6 @@
   stroke: none
 )
 
-#set page(
-  paper: "us-letter",
-  margin: (x: 1.87cm,y: 1.87cm,),
-  numbering: "1",
-)
-
 #show: doc => article(
   title: [Simulation Design and Modeling Strategy],
   subtitle: [The Influence of Reviewer Expertise and Engagement on Peer Review of Grants],
@@ -293,9 +296,11 @@
       affiliation: [],
       email: [] ),
     ),
-  date: [2026-08-06],
+  date: [2026-08-10],
+  margin: (x: 1.87cm,y: 1.87cm,),
   font: ("C059",),
   fontsize: 11pt,
+  pagenumbering: "1",
   toc_title: [Table of contents],
   toc_depth: 3,
   cols: 1,
@@ -325,31 +330,29 @@ Full detail is in the funded proposal (`cihr-ror-proposal.qmd`); briefly:
 - The final score must fall within #strong[±0.5] of the consensus score, and is entered to #strong[one decimal place];.
 - The (equally weighted) average of final scores across all panel members feeds the funding decision.
 
-Confirming this understanding is correct is itself one of the open items for CIHR (see below) -- everything downstream depends on it.
-
 = Data structure
 <data-structure>
-We're assuming a three-level structure: committees, discussed applications nested in committees, and panel members nested in committees (crossed with applications, since a member reviews many applications within a cycle). Based on 2024 Project Grant committee sizes, our working numbers are #strong[50 committees × 15 discussed applications per committee × 24 members per committee];.
+We're assuming a three-level structure: committees, discussed applications nested in committees, and panel members nested in committees (crossed with applications, since a member reviews many applications within a cycle). Based on recent Project Grant committee sizes, our working numbers are #strong[50 committees × 15 discussed applications per committee × 24 members per committee];.
 
 CIHR's Funding Analytics Team confirmed by email (2025-12-04) which fields are actually extractable for a data pull, versus fields that can only ever be touched by a CIHR analyst running our code in-house on the real data (full table and follow-up questions in `code/ror-research-log.qmd`). Headline for this document: committee/application/member identifiers, role (reviewer vs.~panelist), self-described expertise, initial reviewer scores, consensus score, final scores, and funding result are all extractable. #strong[Applicant gender and career stage -- Aim 2's entire basis -- are not];, and won't appear even in CIHR's own distribution-matched dummy data. That constraint is why this document exists: the simulation below is the only rehearsal Aim 2's code gets before it runs once, unsupervised, on real data.
 
-= Primary outcome: modeling the change, not the level
-<primary-outcome-modeling-the-change-not-the-level>
+= Primary outcome: modeling the difference, not the level
+<primary-outcome-modeling-the-difference-not-the-level>
 Let $d_(i j k)$ be the final score minus the consensus score, for the $i$th panel member on the $j$th application in the $k$th committee:
 
 $ d_(i j k) = upright("final score")_(i j k) - upright("consensus score")_(j k) $
 
 We model $d_(i j k)$ directly, rather than modeling the final score with consensus score as a covariate, for three reasons:
 
-+ #strong[The point mass at zero doesn't disappear if you model the final score instead -- it just stops being a fixed reference.] A member who doesn't move from consensus has $d_(i j k) = 0$ regardless of which application they're scoring; a `final_score ~ consensus_score + ...` model still has that spike, just relocated to wherever a given application's consensus happened to land. Differencing standardizes the spike's location across every application, which is what makes a shared two-part model tractable.
-+ #strong[Avoids reintroducing a confound.] A freely estimated slope on consensus in a `final_score ~ consensus + ...` model has to recover something close to 1 from the data; if reviewer composition happens to correlate with consensus level across committees, that estimation can leak into the coefficients we actually care about. Differencing with an implicit slope of exactly 1 -- the true administrative rule, not an assumption -- removes that channel by construction.
-+ #strong[Matches the actual research question.] Aim 1 is about the #emph[change] induced by discussion, not the #emph[level] of the final score (driven mostly by application quality, which isn't under study here). Nothing is lost: $upright("final score") = upright("consensus") + d_(i j k)$ is a trivial identity, so anything Aim 3 needs at the score level for funding-decision simulations can be reconstructed downstream.
++ #strong[Point mass at zero] Hypothesizing that most or many members will go with the consensus score, which leads to a mass either at the consensus (if you modeled the score) or a mass at zero if you model the difference. A member who doesn't move from consensus has $d_(i j k) = 0$ regardless of which application they're scoring; a `final_score ~ consensus_score + ...` model still has that spike, just relocated to wherever a given application's consensus happened to land. Differencing standardizes the spike's location across every application, which is what makes a shared two-part model tractable.
++ #strong[Avoids reintroducing confounding.] A freely estimated slope on consensus in a `final_score ~ consensus + ...` model has to recover something close to 1 from the data; if reviewer composition happens to correlate with consensus level across committees, that estimation can leak into the coefficients we actually care about. Differencing with an implicit slope of exactly 1 -- the true administrative rule, not an assumption -- removes that channel by construction.
++ #strong[Matches the actual research question.] Aim 1 is about the #emph[change from consensus] induced by discussion, not the #emph[level] of the final score (driven mostly by application quality, which isn't under study here). Nothing is lost: $upright("final score") = upright("consensus") + d_(i j k)$ is a trivial identity, so anything Aim 3 needs at the score level for funding-decision simulations can be reconstructed downstream.
 
 = Why a two-part model
 <why-a-two-part-model>
-We expect $d_(i j k)$ to have a spike at exactly zero -- members who simply adopt the consensus score -- plus continuous variation among those who depart from it. `brms` has no single native family for "point mass at an interior value plus continuous elsewhere" the way `hurdle_poisson()` handles zero counts, since $d_(i j k)$ is signed and bounded ($plus.minus 0.5$), not non-negative. So the outcome is split into two linked models:
+We expect $d_(i j k)$ to have a spike at exactly zero (members who simply adopt the consensus score) plus variation among those who depart from it. So the outcome is split into two linked models:
 
-+ #strong[Did this member deviate at all?] A Bernoulli model on $bb(1) [d_(i j k) eq.not 0]$.
++ #strong[Did this member deviate at all?] A Bernoulli model on $1 [d_(i j k) eq.not 0]$.
 + #strong[If they deviated, by how much?] A model for the (signed) magnitude, conditional on deviating.
 
 $ E [d_(i j k)] = P (upright("deviate")) times E [upright("magnitude") divides upright("deviate")] $
@@ -427,8 +430,8 @@ modelsummary(
     },
  table.hline(y: 1, start: 0, end: 3, stroke: 0.05em + black),
  table.hline(y: 11, start: 0, end: 3, stroke: 0.05em + black),
- table.hline(y: 12, start: 0, end: 3, stroke: 0.1em + black),
- table.hline(y: 0, start: 0, end: 3, stroke: 0.1em + black),
+ table.hline(y: 12, start: 0, end: 3, stroke: 0.08em + black),
+ table.hline(y: 0, start: 0, end: 3, stroke: 0.08em + black),
     // tinytable lines before
 
     // tinytable header start
@@ -439,16 +442,16 @@ modelsummary(
     // tinytable header end
 
     // tinytable cell content after
-[(Intercept)], [\-0.000], [\-0.890],
+[(Intercept)], [\-0.001], [\-0.964],
 [], [(0.002)], [(0.034)],
-[jobreviewer], [0.002], [\-0.335],
+[jobreviewer], [\-0.004], [\-0.274],
 [], [(0.003)], [(0.049)],
-[explow], [0.001], [0.646],
+[explow], [0.004], [0.654],
 [], [(0.003)], [(0.050)],
-[expmed], [0.001], [0.392],
+[expmed], [0.000], [0.447],
 [], [(0.002)], [(0.041)],
-[expnone], [0.003], [0.889],
-[], [(0.003)], [(0.049)],
+[expnone], [0.001], [0.938],
+[], [(0.003)], [(0.050)],
 [Num.Obs.], [18000], [18000],
 
     // tinytable footer after
@@ -512,6 +515,38 @@ data <- data |>
 ]
 Every parameter above is an illustrative placeholder, not an estimate from real data -- there is no real data yet. The point of the simulation is structural (does our modeling approach recover a known effect of a given size?), not predictive of what CIHR's actual numbers will look like.
 
+== Simulated data
+<simulated-data>
+What did we generate with the parameters above? #ref(<fig-scores>, supplement: [Figure]) shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations. \[Include some descriptives here, score variation, consensus variation, variation across committee, etc.\]
+
+#figure([
+#box(image("ror-modeling-strategy_files/figure-typst/fig-scores-1.svg"))
+], caption: figure.caption(
+position: bottom, 
+[
+Distribution of simulated intial, consensus, and overall scores
+]), 
+kind: "quarto-float-fig", 
+supplement: "Figure", 
+)
+<fig-scores>
+
+
+#ref(<fig-var>, supplement: [Figure]) shows how our initial simulation incorporates a small degree of variation across committees in the overall scores, as well as the average variation within committees across applications.
+
+#figure([
+#box(image("ror-modeling-strategy_files/figure-typst/fig-var-1.svg"))
+], caption: figure.caption(
+position: bottom, 
+[
+Distribution of score variation by committee and application
+]), 
+kind: "quarto-float-fig", 
+supplement: "Figure", 
+)
+<fig-var>
+
+
 == Part 1: did this member deviate?
 <part-1-did-this-member-deviate>
 #block[
@@ -529,7 +564,7 @@ m1_deviate <-
 ```
 
 ]
-Random intercepts for committee, member (`cid`), and application; fixed effects for role and expertise. Weakly informative priors throughout -- `normal(0, 1.5)` on the (logit-scale) intercept, `normal(0, 0.5)` on coefficients, `exponential(1)` on group-level SDs -- matching the conventions established in our other multilevel Bayesian work (e.g. Nandi et al. 2020). `sample_prior = "yes"` so we always have prior-predictive draws to check against before trusting the posterior.
+Random intercepts for committee, member (`cid`), and application; fixed effects for role and expertise. Weakly informative priors throughout -- `normal(0, 1.5)` on the (logit-scale) intercept, `normal(0, 0.5)` on coefficients, `exponential(1)` on group-level SDs. `sample_prior = "yes"` so we always have prior-predictive draws to check against before trusting the posterior.
 
 == Part 2: how large, given a deviation?
 <part-2-how-large-given-a-deviation>
@@ -659,8 +694,8 @@ coefs[grepl(":", rownames(coefs)), ] |>
       if style != none and "background" in style { style.background }
     },
  table.hline(y: 1, start: 0, end: 5, stroke: 0.05em + black),
- table.hline(y: 5, start: 0, end: 5, stroke: 0.1em + black),
- table.hline(y: 0, start: 0, end: 5, stroke: 0.1em + black),
+ table.hline(y: 5, start: 0, end: 5, stroke: 0.08em + black),
+ table.hline(y: 0, start: 0, end: 5, stroke: 0.08em + black),
     // tinytable lines before
 
     // tinytable header start
@@ -671,10 +706,10 @@ coefs[grepl(":", rownames(coefs)), ] |>
     // tinytable header end
 
     // tinytable cell content after
-[jobreviewer:gendermale], [0.5292], [0.0963], [5.498], [0.0000000384],
-[explow:career_stageestablished], [-0.0749], [0.0978], [-0.766], [0.443663424],
-[expmed:career_stageestablished], [-0.0596], [0.0794], [-0.751], [0.4526429242],
-[expnone:career_stageestablished], [-0.5359], [0.0993], [-5.396], [0.0000000681],
+[jobreviewer:gendermale], [0.51164], [0.0966], [5.2955], [0.00000011866],
+[explow:career_stageestablished], [-0.00456], [0.0977], [-0.0466], [0.96280257387],
+[expmed:career_stageestablished], [0.00247], [0.0793], [0.0311], [0.97516026324],
+[expnone:career_stageestablished], [-0.6084], [0.0999], [-6.0914], [0.00000000112],
 
     // tinytable footer after
 
@@ -728,10 +763,6 @@ Once the Aim 2 model script exists and `FIT_MODELS` is switched on -- after conf
 = References
 <references>
 #block[
-#block[
-Nandi, Arijit, Parul Agarwal, Anoushaka Chandrashekar, and Sam Harper. 2020. “Access to Affordable Daycare and Women's Economic Opportunities: Evidence from a Cluster-Randomised Intervention in India.” #emph[Journal of Development Effectiveness] 12 (3): 219--39. #link("https://doi.org/10.1080/19439342.2020.1773898");.
-
-] <ref-nandi2020>
 ] <refs>
 
 

@@ -192,37 +192,28 @@ complexity for its own sake.
 
 ## Simulating the data-generating process
 
-Fifty committees, 15 discussed applications per committee, 24 members per
-committee; 3 of the 24 members on each application are the assigned
-reviewers, the rest are non-reviewing panelists. A consensus score is drawn
+For the basic structure we use 50 committees, 15 discussed applications per committee, 24 members per committee. We also simulate another 15 applications that will end up being streamlined. For the assignments we have 3 of the 24 members on each application as the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn
 per application (committee- and application-level random effects only, no
 member-level noise, since it's agreed before any individual scoring
-happens). Whether each member deviates from that consensus is a function of
-their role and self-described expertise; if they deviate, the signed
-magnitude is drawn from a truncated distribution and rounded to the nearest
-tenth, matching CIHR's one-decimal-place scoring (with rejection sampling
-so a "deviated" row can never round down to a contradictory zero).
+happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed
+magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR's one-decimal-place scoring (with rejection sampling so a "deviated" row can never round down to a contradictory zero).
 
-```{r aim1-params}
+```{r}
 #| eval: false
-#| code-summary: "code/ror-sim-deviation.R -- parameters and generative process"
+#| label: aim1-params
+#| code-summary: "code/ror-sim-aim1.R -- parameters and generative process"
 
 # define parameters
 cmte_n   = 50     # number of committees
 app_n    = 15     # number of discussed applications per committee
 mem_n    = 24     # number of committee members per committee
 
-b0       = 4.1    # intercept for consensus score
-u0c_sd   = 0.1    # random intercept SD for committee (consensus level)
-u0a_sd   = 0.3    # random intercept SD for application (consensus level)
+# candidate applications generated per committee before streamlining
+app_n_candidates = app_n * 2
 
-# probability of *any* deviation from consensus (logit scale) --
-# this is the "hu"-equivalent part
-a0       = -0.8   # baseline logit prob. of deviating
-a1       =  0.3   # panelist vs. reviewer
-a2       = -0.4   # high expertise
-a3       =  0.2   # low expertise
-a4       =  0.5   # no expertise
+b0       = 4.1    # intercept for application's true underlying quality
+u0c_sd   = 0.1    # random intercept SD for committee (quality level)
+u0a_sd   = 0.3    # random intercept SD for application (quality level)
 
 # signed magnitude of deviation, given deviation occurs, truncated to
 # +/- 0.5 (CIHR's stated bound on final vs. consensus score)
@@ -232,7 +223,7 @@ dev_min  = -0.5
 dev_max  =  0.5
 
 # ... committee/application/member structure, reviewer assignment, and
-# expertise assignment omitted here -- see code/ror-sim-deviation.R for
+# expertise assignment omitted here -- see code/ror-sim-aim1.R for
 # the complete script
 
 data <- data |>
@@ -243,21 +234,16 @@ data <- data |>
     deviation = if_else(
       deviated == 1,
       round_tenth(rtruncnorm(n(), a = dev_min, b = dev_max,
-        mean = dev_bias, sd = dev_sd)),
+        mean = dev_bias + u0m_bias, sd = dev_sd)),
       0)
   )
 ```
 
-Every parameter above is an illustrative placeholder, not an estimate from
-real data -- there is no real data yet. The point of the simulation is
-structural (does our modeling approach recover a known effect of a given
-size?), not predictive of what CIHR's actual numbers will look like.
+Every parameter above is at this point just an educated guess and a placeholder, since the point of the simulation is to see whether our modeling approach recovers a known effects, not predictive of what CIHR's actual numbers will look like.
 
 ## Simulated data
 
-What did we generate with the parameters above? @fig-scores shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations.  [Include some descriptives here, score variation, consensus variation, variation across committee, etc.]
-
-
+What did we generate with the parameters above? @fig-scores shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations.
 
 ```{r}
 #| echo: false
@@ -290,7 +276,7 @@ score_hist <- ggplot(d, aes(x = score)) +
 init_hist / consensus_hist / score_hist
 ```
 
-@fig-var shows how our initial simulation incorporates a small degree of variation across committees in the overall scores, as well as the average variation within committees across applications.
+@fig-var shows how our initial simulation incorporates a small degree of variation across committees in the overall scores, as well as the average variation within committees across applications. For the application-level variation we average over committee by within-committee application rank. 
 
 ```{r}
 #| echo: false
