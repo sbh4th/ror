@@ -34,6 +34,10 @@ format:
     citeproc: true
     bibliographystyle: vancouver.csl
     toc: false
+  docx:
+    toc: false
+    execute:
+      echo: false
 bibliography: ror.bib
 ---
 
@@ -55,16 +59,6 @@ This is a design and validation exercise for a project that aims to assess how r
 It is not a full pre-analysis plan (no pre-specified hypotheses, stopping
 rules, or multiplicity strategy yet), but it's close in spirit, and a
 subsequent revision could become one.
-
-**Status and audience.** This draft is for Arijit first -- comments on the
-outcome definition, the two-part model structure, the Aim 2 interaction
-specification, or the priors are all welcome before this goes anywhere else.
-A revised version will go to CIHR's Funding Analytics Team (Matt Hogel and
-colleagues) as part of finalizing the data-sharing and analysis-plan
-agreement. It supersedes the `sim-data.qmd` note shared with CIHR earlier,
-which predates the move to a Bayesian framework and the current two-part,
-ordinal outcome model -- the underlying data structure it simulates is very
-different from what follows here.
 
 # Research questions
 
@@ -118,11 +112,29 @@ rehearsal Aim 2's code gets before it runs once, unsupervised, on real data.
 
 Our main quantity of interest in this project is the value that a given application score ($Y_{i}$) would take if a particular reviewer characteristic (role or experience) were set to a specific value, averaged over the entire population of applications. We can write an example of, say, the difference between final scores for an application if it were assigned to a panelist or reviewer:
 
+::: {.content-visible when-format="html"}
 $$
-\underbrace{\frac{1}{n}\sum^{n}_{i=1}}_{\substack{\text{Mean over } i \\ \text{applications}}} \underbrace{\bigg({Y_{i}(1) - Y_{i}(0)}\bigg)}_{\substack{\text{Score if assigned} \\ \text{to panelist(1)} \\ \text{or reviewer(0)}}}
+\underbrace{\frac{1}{n}\sum^{n}_{i=1}}_{\substack{\text{Mean over } i \\ \text{applications}}} \underbrace{\left(Y_{i}(1) - Y_{i}(0)\right)\vphantom{\sum^{n}_{i=1}}}_{\substack{\text{Score if assigned} \\ \text{to panelist(1)} \\ \text{or reviewer(0)}}}
 $$
+:::
 
-Leaving aside for the moment the assumptions needed to credibly estimate this quantity, the specific data generating process for application scores, where there is a consensus score that members can deviate from, leads to considering an alternative outcome, which is the difference between 
+::: {.content-visible when-format="docx"}
+$$
+\underbrace{\frac{1}{n}\sum^{n}_{i=1}}_{\substack{\text{Mean over } i \\ \text{applications}}} \underbrace{\left(Y_{i}(1) - Y_{i}(0)\right)}_{\substack{\text{Score if assigned} \\ \text{to panelist(1)} \\ \text{or reviewer(0)}}}
+$$
+:::
+
+::: {.content-visible when-format="typst"}
+```{=typst}
+#let phantom_tall = box(width: 0pt, hide[$1 / n sum_(i = 1)^n$])
+$ underbrace(1 / n sum_(i = 1)^n, upright("Mean over ") i \
+upright("applications")) underbrace(#stack(dir: ltr, phantom_tall, $(Y_i (1) - Y_i (0))$), upright("Score if assigned") \
+upright("to panelist(1)") \
+upright("or reviewer(0)")) $
+```
+:::
+
+Leaving aside for the moment the assumptions needed to credibly estimate this quantity, the specific data generating process for application scores, where there is a consensus score that members can deviate from, leads to considering an alternative outcome, which is the difference between the consensus score and each member's score. However, this leads to challenges since we might expect many members to just go with and agree on the consensus score.  
 
 Let $d_{ijk}$ be the final score minus the consensus score, for the
 $i$th panel member on the $j$th application in the $k$th committee:
@@ -132,13 +144,9 @@ $$d_{ijk} = \text{final score}_{ijk} - \text{consensus score}_{jk}$$
 We model $d_{ijk}$ directly, rather than modeling the final score with
 consensus score as a covariate, for three reasons:
 
-1. **Point mass at zero** Hypothesizing that most or many members will go with the consensus score, which leads to a mass either at the consensus (if you modeled the score) or a mass at zero if you model the difference. A member who doesn't
+1. **Point mass at zero.** We hypothesize that most or many members will go with the consensus score, which leads to a mass either at the consensus (if you modeled the score) or a mass at zero if you model the difference. A member who doesn't
    move from consensus has $d_{ijk}=0$ regardless of which application
-   they're scoring; a `final_score ~ consensus_score + ...` model still has
-   that spike, just relocated to wherever a given application's consensus
-   happened to land. Differencing standardizes the spike's location across
-   every application, which is what makes a shared two-part model
-   tractable.
+   they're scoring. So even if you model the final score conditional on the consensus you will still have a spike, just relocated to wherever a given application's consensus happened to land. Differencing standardizes the spike's location across every application and makes a shared two-part model feasible. 
 2. **Avoids reintroducing confounding.** A freely estimated slope on
    consensus in a `final_score ~ consensus + ...` model has to recover
    something close to 1 from the data; if reviewer composition happens to
@@ -169,8 +177,6 @@ E[d_{ijk}] = \underbrace{P(\text{deviate})}_{\substack{\text{Part 1: any} \\ \te
 \times
 \underbrace{E[\text{magnitude} \mid \text{deviate}]}_{\substack{\text{Part 2: size} \\ \text{given deviation}}}
 $$
-
-$$E[d_{ijk}] = P(\text{deviate}) \times E[\text{magnitude} \mid \text{deviate}]$$
 
 This isn't just theoretically motivated -- we checked it empirically before
 committing to the extra complexity. If most of the covariate signal about
@@ -258,7 +264,7 @@ Every parameter above is at this point just an educated guess and a placeholder,
 
 ## Simulated data
 
-What did we generate with the parameters above? @fig-scores shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations.
+What did we generate with the parameters above? @fig-scores shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations. Since the likely true consensus scores are not necessarily an average of the 3 reviewer scores (depending on calibration, etc.) we see a small excess in the left tail near 3.5. In practice a consensus score of 3.5 *among discussed applications* is likely more rare, but this seems a reasonable approximation. 
 
 ```{r}
 #| echo: false
@@ -269,26 +275,42 @@ d <- read_csv(here("data", "sim-data-aim1.csv"))
 
 init_hist <- ggplot(d, aes(x = init_score)) +
   geom_histogram(binwidth = 0.1, 
-  boundary = 0, color = "white", fill = "#377eb8") + 
+  center = 0, color = "white", fill = "#377eb8") + 
   scale_x_continuous(limits = c(2.5, 5.0), 
   breaks = seq(2.5, 5.0, 0.5)) +
   labs(x = "Initial scores") + theme_classic()
 
 consensus_hist <- ggplot(d, aes(x = consensus)) +
   geom_histogram(binwidth = 0.1, 
-  boundary = 0, color = "white", fill = "#377eb8") + 
+  center = 0, color = "white", fill = "#377eb8") + 
   scale_x_continuous(limits = c(2.5, 5.0), 
   breaks = seq(2.5, 5.0, 0.5)) + 
   labs(x = "Consensus scores") + theme_classic()
 
 score_hist <- ggplot(d, aes(x = score)) +
   geom_histogram(binwidth = 0.1, 
-  boundary = 0, color = "white", fill = "#377eb8") +
+  center = 0, color = "white", fill = "#377eb8") +
   scale_x_continuous(limits = c(2.5, 5.0), 
   breaks = seq(2.5, 5.0, 0.5)) +
   labs(x = "Overall scores") + theme_classic()
 
 init_hist / consensus_hist / score_hist
+```
+
+@fig-dev also shows the odd distribution of deviations from the overall consensus score, with a large spike at zero (roughly 2/3rds of committee members going with the consensus): 
+
+```{r}
+#| echo: false
+#| label: fig-dev
+#| fig-cap: Distribution of deviations from overall consensus scores
+
+ggplot(d, aes(x = deviation)) + 
+  geom_histogram(binwidth = 0.1, center = 0, 
+  color = "white", fill = "#377eb8") +
+  scale_x_continuous(limits = c(-0.5, 0.5),
+    breaks = seq(-0.5, 0.5, 0.1)) +
+  labs(x = "Deviation from consensus score") +
+  theme_classic()
 ```
 
 @fig-var shows how our initial simulation incorporates a small degree of variation across committees in the overall scores, as well as the average variation within committees across applications. For the application-level variation we average over committee by within-committee application rank. 
@@ -300,7 +322,9 @@ init_hist / consensus_hist / score_hist
 
 by_cmte <- ggplot(d, aes(x = cmte, y = score)) + 
   geom_boxplot(fill = "#377eb8") + 
-  labs(x = "Committee", y = "Score") + theme_classic()
+  labs(x = "Committee", y = "Score") + 
+  scale_x_discrete(breaks = c(10,20,30,40,50)) + 
+  theme_classic()
 
 app_ranks <- d |>
     distinct(cmte, app, consensus) |>
@@ -317,7 +341,8 @@ by_app <- ggplot(app_summary,
   labs(x = "Score",
        y = "Application rank") +
     theme_ridges() +
-    theme(legend.position = "none") + scale_y_discrete(limits = rev)
+    theme(legend.position = "none") + 
+  scale_y_discrete(limits = rev, breaks = c(5, 10, 15))
 
 by_cmte / by_app
 ```
@@ -332,7 +357,7 @@ m1_deviate <-
   brm(data = d1,
       family = bernoulli(),
       deviated ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | app),
-      prior = c(prior(normal(0, 1.5), class = Intercept),
+      prior = c(prior(normal(0, 1.0), class = Intercept),
                 prior(normal(0, 0.5), class = b),
                 prior(exponential(1), class = sd)),
       iter = 2000, warmup = 1000, chains = 4, cores = 4,
@@ -345,6 +370,30 @@ effects for role and expertise. Weakly informative priors throughout --
 `normal(0, 1.5)` on the (logit-scale) intercept, `normal(0, 0.5)` on
 coefficients, `exponential(1)` on group-level SDs. `sample_prior = "yes"` so we always have prior-predictive
 draws to check against before trusting the posterior.
+
+This model run on the simulated data gives the following estimates, shown in @tbl-m1-deviate:
+
+```{r}
+#| echo: false
+#| label: tbl-m1-deviate
+#| fig-cap: Estimates from deviation model
+
+tab <- readRDS(here("output", "m1-deviate-table.rds"))
+
+fixed_start  <- which(tab$group == "Fixed effects")[1]
+random_start <- which(tab$group == "Random effects (SD)")[1]
+
+tab |>
+  select(term, estimate, mad, conf.low, conf.high) |>
+  setNames(c("Parameter", "Estimate", "Error", 
+             "95% CrI Lower", "95% CrI Upper")) |>
+  tt(caption = "Posterior estimates: m1_deviate") |>
+  group_tt(i = list("Fixed effects (log odds)" = fixed_start, 
+                    "Random effects (SD)" = random_start)) |>
+  style_tt(i = c(1,7), italic = TRUE)
+```
+
+From the fixed effects we see that we generally recover the simulated parameters. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package
 
 ## Part 2: how large, given a deviation?
 

@@ -179,8 +179,6 @@
   abstract: none,
   abstract-title: none,
   cols: 1,
-  margin: (x: 1.25in, y: 1.25in),
-  paper: "us-letter",
   lang: "en",
   region: "US",
   font: "libertinus serif",
@@ -193,18 +191,12 @@
   heading-color: black,
   heading-line-height: 0.65em,
   sectionnumbering: none,
-  pagenumbering: "1",
   toc: false,
   toc_title: none,
   toc_depth: none,
   toc_indent: 1.5em,
   doc,
 ) = {
-  set page(
-    paper: paper,
-    margin: margin,
-    numbering: pagenumbering,
-  )
   set par(justify: true)
   set text(lang: lang,
            region: region,
@@ -215,8 +207,7 @@
     align(center)[#block(inset: 2em)[
       #set par(leading: heading-line-height)
       #if (heading-family != none or heading-weight != "bold" or heading-style != "normal"
-           or heading-color != black or heading-decoration == "underline"
-           or heading-background-color != none) {
+           or heading-color != black) {
         set text(font: heading-family, weight: heading-weight, style: heading-style, fill: heading-color)
         text(size: title-size)[#title]
         if subtitle != none {
@@ -288,6 +279,12 @@
   stroke: none
 )
 
+#set page(
+  paper: "us-letter",
+  margin: (x: 1.87cm,y: 1.87cm,),
+  numbering: "1",
+)
+
 #show: doc => article(
   title: [Simulation Design and Modeling Strategy],
   subtitle: [The Influence of Reviewer Expertise and Engagement on Peer Review of Grants],
@@ -296,11 +293,9 @@
       affiliation: [],
       email: [] ),
     ),
-  date: [2026-08-10],
-  margin: (x: 1.87cm,y: 1.87cm,),
+  date: [2026-08-12],
   font: ("C059",),
   fontsize: 11pt,
-  pagenumbering: "1",
   toc_title: [Table of contents],
   toc_depth: 3,
   cols: 1,
@@ -312,8 +307,6 @@
 This is a design and validation exercise for a project that aims to assess how reviewer engagement and expertise may affect grant scores during CIHR peer review. Given the restrictive nature of CIHR funding data, this document does not use real CIHR data; rather it lays out the data-generating process we believe matches CIHR's Project Grant peer review, the model we intend to fit against it, and evidence that the models we will use can actually recover simulated effects.
 
 It is not a full pre-analysis plan (no pre-specified hypotheses, stopping rules, or multiplicity strategy yet), but it's close in spirit, and a subsequent revision could become one.
-
-#strong[Status and audience.] This draft is for Arijit first -- comments on the outcome definition, the two-part model structure, the Aim 2 interaction specification, or the priors are all welcome before this goes anywhere else. A revised version will go to CIHR's Funding Analytics Team (Matt Hogel and colleagues) as part of finalizing the data-sharing and analysis-plan agreement. It supersedes the `sim-data.qmd` note shared with CIHR earlier, which predates the move to a Bayesian framework and the current two-part, ordinal outcome model -- the underlying data structure it simulates is very different from what follows here.
 
 = Research questions
 <research-questions>
@@ -338,13 +331,24 @@ CIHR's Funding Analytics Team confirmed by email (2025-12-04) which fields are a
 
 = Primary outcome: modeling the difference, not the level
 <primary-outcome-modeling-the-difference-not-the-level>
+== Estimand of interest
+<estimand-of-interest>
+Our main quantity of interest in this project is the value that a given application score ($Y_i$) would take if a particular reviewer characteristic (role or experience) were set to a specific value, averaged over the entire population of applications. We can write an example of, say, the difference between final scores for an application if it were assigned to a panelist or reviewer:
+
+#let phantom_tall = box(width: 0pt, hide[$1 / n sum_(i = 1)^n$])
+$ underbrace(1 / n sum_(i = 1)^n, upright("Mean over ") i \
+upright("applications")) underbrace(#stack(dir: ltr, phantom_tall, $(Y_i (1) - Y_i (0))$), upright("Score if assigned") \
+upright("to panelist(1)") \
+upright("or reviewer(0)")) $
+Leaving aside for the moment the assumptions needed to credibly estimate this quantity, the specific data generating process for application scores, where there is a consensus score that members can deviate from, leads to considering an alternative outcome, which is the difference between the consensus score and each member's score. However, this leads to challenges since we might expect many members to just go with and agree on the consensus score.
+
 Let $d_(i j k)$ be the final score minus the consensus score, for the $i$th panel member on the $j$th application in the $k$th committee:
 
 $ d_(i j k) = upright("final score")_(i j k) - upright("consensus score")_(j k) $
 
 We model $d_(i j k)$ directly, rather than modeling the final score with consensus score as a covariate, for three reasons:
 
-+ #strong[Point mass at zero] Hypothesizing that most or many members will go with the consensus score, which leads to a mass either at the consensus (if you modeled the score) or a mass at zero if you model the difference. A member who doesn't move from consensus has $d_(i j k) = 0$ regardless of which application they're scoring; a `final_score ~ consensus_score + ...` model still has that spike, just relocated to wherever a given application's consensus happened to land. Differencing standardizes the spike's location across every application, which is what makes a shared two-part model tractable.
++ #strong[Point mass at zero] We hypothesize that most or many members will go with the consensus score, which leads to a mass either at the consensus (if you modeled the score) or a mass at zero if you model the difference. A member who doesn't move from consensus has $d_(i j k) = 0$ regardless of which application they're scoring. So even if you model the final score conditional on the consensus you will still have a spike, just relocated to wherever a given application's consensus happened to land. Differencing standardizes the spike's location across every application and makes a shared two-part model feasible.
 + #strong[Avoids reintroducing confounding.] A freely estimated slope on consensus in a `final_score ~ consensus + ...` model has to recover something close to 1 from the data; if reviewer composition happens to correlate with consensus level across committees, that estimation can leak into the coefficients we actually care about. Differencing with an implicit slope of exactly 1 -- the true administrative rule, not an assumption -- removes that channel by construction.
 + #strong[Matches the actual research question.] Aim 1 is about the #emph[change from consensus] induced by discussion, not the #emph[level] of the final score (driven mostly by application quality, which isn't under study here). Nothing is lost: $upright("final score") = upright("consensus") + d_(i j k)$ is a trivial identity, so anything Aim 3 needs at the score level for funding-decision simulations can be reconstructed downstream.
 
@@ -355,7 +359,9 @@ We expect $d_(i j k)$ to have a spike at exactly zero (members who simply adopt 
 + #strong[Did this member deviate at all?] A Bernoulli model on $1 [d_(i j k) eq.not 0]$.
 + #strong[If they deviated, by how much?] A model for the (signed) magnitude, conditional on deviating.
 
-$ E [d_(i j k)] = P (upright("deviate")) times E [upright("magnitude") divides upright("deviate")] $
+$ E [d_(i j k)] = underbrace(P (upright("deviate")), upright("Part 1: any")\
+upright("deviation at all")) times underbrace(E [upright("magnitude") divides upright("deviate")], upright("Part 2: size")\
+upright("given deviation")) $
 
 This isn't just theoretically motivated -- we checked it empirically before committing to the extra complexity. If most of the covariate signal about reviewer engagement/expertise actually lived in the #emph[average size] of the deviation rather than #emph[whether] a deviation happens, a single linear model on $d_(i j k)$ would be simpler and would suffice.
 
@@ -430,8 +436,8 @@ modelsummary(
     },
  table.hline(y: 1, start: 0, end: 3, stroke: 0.05em + black),
  table.hline(y: 11, start: 0, end: 3, stroke: 0.05em + black),
- table.hline(y: 12, start: 0, end: 3, stroke: 0.08em + black),
- table.hline(y: 0, start: 0, end: 3, stroke: 0.08em + black),
+ table.hline(y: 12, start: 0, end: 3, stroke: 0.1em + black),
+ table.hline(y: 0, start: 0, end: 3, stroke: 0.1em + black),
     // tinytable lines before
 
     // tinytable header start
@@ -467,7 +473,7 @@ The linear model's coefficients on `job`/`exp` are tiny and mostly non-significa
 <model-specification-aim-1>
 == Simulating the data-generating process
 <simulating-the-data-generating-process>
-Fifty committees, 15 discussed applications per committee, 24 members per committee; 3 of the 24 members on each application are the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn per application (committee- and application-level random effects only, no member-level noise, since it's agreed before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR's one-decimal-place scoring (with rejection sampling so a "deviated" row can never round down to a contradictory zero).
+For the basic structure we use 50 committees, 15 discussed applications per committee, 24 members per committee. We also simulate another 15 applications that will end up being streamlined. For the assignments we have 3 of the 24 members on each application as the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn per application (committee- and application-level random effects only, no member-level variation yet, since this is before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR's one-decimal-place scoring (with rejection sampling so a "deviated" row can never round down to a contradictory zero).
 
 #block[
 ```r
@@ -476,17 +482,12 @@ cmte_n   = 50     # number of committees
 app_n    = 15     # number of discussed applications per committee
 mem_n    = 24     # number of committee members per committee
 
-b0       = 4.1    # intercept for consensus score
-u0c_sd   = 0.1    # random intercept SD for committee (consensus level)
-u0a_sd   = 0.3    # random intercept SD for application (consensus level)
+# candidate applications generated per committee before streamlining
+app_n_candidates = app_n * 2
 
-# probability of *any* deviation from consensus (logit scale) --
-# this is the "hu"-equivalent part
-a0       = -0.8   # baseline logit prob. of deviating
-a1       =  0.3   # panelist vs. reviewer
-a2       = -0.4   # high expertise
-a3       =  0.2   # low expertise
-a4       =  0.5   # no expertise
+b0       = 4.1    # intercept for application's true underlying quality
+u0c_sd   = 0.1    # random intercept SD for committee (quality level)
+u0a_sd   = 0.3    # random intercept SD for application (quality level)
 
 # signed magnitude of deviation, given deviation occurs, truncated to
 # +/- 0.5 (CIHR's stated bound on final vs. consensus score)
@@ -496,7 +497,7 @@ dev_min  = -0.5
 dev_max  =  0.5
 
 # ... committee/application/member structure, reviewer assignment, and
-# expertise assignment omitted here -- see code/ror-sim-deviation.R for
+# expertise assignment omitted here -- see code/ror-sim-aim1.R for
 # the complete script
 
 data <- data |>
@@ -507,17 +508,17 @@ data <- data |>
     deviation = if_else(
       deviated == 1,
       round_tenth(rtruncnorm(n(), a = dev_min, b = dev_max,
-        mean = dev_bias, sd = dev_sd)),
+        mean = dev_bias + u0m_bias, sd = dev_sd)),
       0)
   )
 ```
 
 ]
-Every parameter above is an illustrative placeholder, not an estimate from real data -- there is no real data yet. The point of the simulation is structural (does our modeling approach recover a known effect of a given size?), not predictive of what CIHR's actual numbers will look like.
+Every parameter above is at this point just an educated guess and a placeholder, since the point of the simulation is to see whether our modeling approach recovers a known effects, not predictive of what CIHR's actual numbers will look like.
 
 == Simulated data
 <simulated-data>
-What did we generate with the parameters above? #ref(<fig-scores>, supplement: [Figure]) shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations. \[Include some descriptives here, score variation, consensus variation, variation across committee, etc.\]
+What did we generate with the parameters above? #ref(<fig-scores>, supplement: [Figure]) shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations. Since the likely true consensus scores are not necessarily an average of the 3 reviewer scores (depending on calibration, etc.) we see a small excess in the left tail near 3.5. In practice a consensus score of 3.5 #emph[among discussed applications] is likely more rare, but this seems a reasonable approximation.
 
 #figure([
 #box(image("ror-modeling-strategy_files/figure-typst/fig-scores-1.svg"))
@@ -532,7 +533,22 @@ supplement: "Figure",
 <fig-scores>
 
 
-#ref(<fig-var>, supplement: [Figure]) shows how our initial simulation incorporates a small degree of variation across committees in the overall scores, as well as the average variation within committees across applications.
+#ref(<fig-dev>, supplement: [Figure]) also shows the odd distribution of deviations from the overall consensus score, with a large spike at zero (roughly 2/3rds of committee members going with the consensus):
+
+#figure([
+#box(image("ror-modeling-strategy_files/figure-typst/fig-dev-1.svg"))
+], caption: figure.caption(
+position: bottom, 
+[
+Distribution of deviations from overall consensus scores
+]), 
+kind: "quarto-float-fig", 
+supplement: "Figure", 
+)
+<fig-dev>
+
+
+#ref(<fig-var>, supplement: [Figure]) shows how our initial simulation incorporates a small degree of variation across committees in the overall scores, as well as the average variation within committees across applications. For the application-level variation we average over committee by within-committee application rank.
 
 #figure([
 #box(image("ror-modeling-strategy_files/figure-typst/fig-var-1.svg"))
@@ -694,8 +710,8 @@ coefs[grepl(":", rownames(coefs)), ] |>
       if style != none and "background" in style { style.background }
     },
  table.hline(y: 1, start: 0, end: 5, stroke: 0.05em + black),
- table.hline(y: 5, start: 0, end: 5, stroke: 0.08em + black),
- table.hline(y: 0, start: 0, end: 5, stroke: 0.08em + black),
+ table.hline(y: 5, start: 0, end: 5, stroke: 0.1em + black),
+ table.hline(y: 0, start: 0, end: 5, stroke: 0.1em + black),
     // tinytable lines before
 
     // tinytable header start
