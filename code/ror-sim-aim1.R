@@ -30,7 +30,7 @@ mem_n    = 24     # number of committee members per committee
 # parameters end up being used)
 app_n_candidates = app_n * 2
 
-b0       = 4.1    # intercept for application's true underlying quality
+b0       = 4.0    # intercept for application's true underlying quality
 u0c_sd   = 0.1    # random intercept SD for committee (quality level)
 u0a_sd   = 0.3    # random intercept SD for application (quality level)
 
@@ -54,7 +54,7 @@ u0a_sd   = 0.3    # random intercept SD for application (quality level)
 # not fit tightly to it; see ror-research-log.qmd, 2026-08-06) --
 # revisit once real initial-reviewer-score data exists (CIHR confirmed
 # this field is extractable).
-init_sd_lo = 0.40   # SD below the true-quality center
+init_sd_lo = 0.30   # SD below the true-quality center
 init_sd_hi = 0.15   # SD above the true-quality center (tighter)
 
 # probability of *any* deviation from consensus (logit scale) --
