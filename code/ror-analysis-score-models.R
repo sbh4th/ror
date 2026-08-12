@@ -47,6 +47,7 @@ library(brms)
 library(cmdstanr)
 library(marginaleffects)
 library(bayesplot)
+library(tinytable)
 
 # Use the cmdstanr backend for Stan
 # You need to install the cmdstanr package first
@@ -58,10 +59,6 @@ options(mc.cores = 4,
 # fits/ must exist before any brm(file = ...) call, or brms errors before
 # it even checks the cache (same footgun noted in u2-sibs's README)
 dir.create(here("code", "fits"), showWarnings = FALSE, recursive = TRUE)
-
-# Set to TRUE once priors/formulas below have been reviewed and cmdstan
-# is confirmed to work in the target execution environment.
-FIT_MODELS <- FALSE
 
 ## 1 Read in simulated dataset ----
 
@@ -92,6 +89,51 @@ d1 <- d |>
 # rounds values and how a plain numeric factor() call would compare them.
 dev_levels <- sprintf("%.1f", setdiff((-5:5) / 10, 0))
 
+## 2 Priors for Model 1
+
+check_prior <- function(n = 4000, 
+  sd_intercept = 1.5, sd_b = 0.5) {
+  tibble(
+    Intercept = rnorm(n, 0, sd_intercept),
+    b         = rnorm(n, 0, sd_b)
+  ) |>
+    mutate(
+      p1_s   = plogis(Intercept),
+      p2_s   = plogis(Intercept + b),
+      diff_s = p2_s - p1_s
+    )
+}
+
+check_prior(sd_intercept = 1.5, sd_b = 0.5) |>
+  ggplot(aes(diff_s)) + geom_density()
+
+scenarios <- list(
+  "SD = 0.5" = list(sd_intercept = 0.5, sd_b = 0.5),
+  "SD = 1.0" = list(sd_intercept = 1.0, sd_b = 1.0),
+  "SD = 1.5" = list(sd_intercept = 1.5, sd_b = 1.5)
+)
+
+pr_int <- map_dfr(scenarios, ~check_prior(
+  sd_intercept = .x$sd_intercept, sd_b = .x$sd_b),
+        .id = "scenario") |>
+  ggplot(aes(p1_s, color = scenario)) + geom_density() +
+  labs(x = "Probability of deviating (baseline)", y = NULL,
+       title = "Prior for baseline P(deviate)") +
+  theme_minimal()
+
+pr_b <- map_dfr(scenarios, ~check_prior(
+  sd_intercept = .x$sd_intercept, sd_b = .x$sd_b),
+  .id = "scenario") |>
+  ggplot(aes(diff_s, color = scenario)) + geom_density() +
+  labs(x = "Difference in P(deviate)", y = NULL,
+       title = "Prior for treatment effect") +
+  theme_minimal()
+
+pr_int / pr_b
+
+## Overall looks like SD of 1.0 for the intercept and 
+## 0.5 for the treatment effect seem reasonable
+
 ## 2 Model 1: did this member deviate from consensus at all? ----
 ## (bernoulli "any deviation" model -- the hu-equivalent part)
 
@@ -99,13 +141,11 @@ dev_levels <- sprintf("%.1f", setdiff((-5:5) / 10, 0))
 if (file.exists(here("code/fits/ror-deviate-m1.rds"))) {
   file.remove(here("code/fits/ror-deviate-m1.rds"))}
 
-if (FIT_MODELS) {
-
   m1_deviate <-
     brm(data = d1,
         family = bernoulli(),
         deviated ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | app),
-        prior = c(prior(normal(0, 1.5), class = Intercept),  # bar alpha
+        prior = c(prior(normal(0, 1.0), class = Intercept),   # bar alpha
                   prior(normal(0, 0.5), class = b),           # betas
                   prior(exponential(1), class = sd)),         # sigma
         iter = 2000, warmup = 1000, chains = 4, cores = 4,
@@ -113,16 +153,63 @@ if (FIT_MODELS) {
         seed = 4102,
         control = list(adapt_delta = 0.95),
         file = here("code/fits/ror-deviate-m1"))
+  
+## Model 1 table
 
-}
+# named lookup: names = stripped term, values = display label.
+# add to this as new terms show up (e.g. Aim 2 interactions).
+term_labels <- c(
+  "Intercept"   = "Intercept",
+  "jobpanelist" = "Panelist vs. Reviewer",
+  "exphigh"     = "High vs. Medium Expertise",
+  "explow"      = "Low vs. Medium Expertise",
+  "expnone"     = "No Expertise vs. Medium",
+  "app"         = "Application",
+  "cid"         = "Committee Member",
+  "cmte"        = "Committee"
+)
+
+tab <- get_estimates(m1_deviate) |>
+  select(term, estimate, mad, conf.low, conf.high) |>
+  mutate(
+    group = if_else(str_starts(term, "b_"), 
+      "Fixed effects", "Random effects (SD)"),
+    term  = term |> 
+  str_remove("^b_") |> 
+  str_remove("^sd_") |> 
+  str_remove("__Intercept$")
+  )
+
+# fails loudly if a term shows up that term_labels hasn't been told about,
+# rather than silently printing NA in the final table
+stopifnot("term_labels is missing an entry for at least one term" =
+  all(tab$term %in% names(term_labels)))
+
+tab <- tab |>
+  mutate(
+    term = term_labels[term],
+    across(c(estimate, mad, conf.low, conf.high), 
+      ~sprintf("%.3f", .x))
+  )
+
+saveRDS(tab, here("output", "m1-deviate-table.rds"))
+
+fixed_start  <- which(tab$group == "Fixed effects")[1]
+random_start <- which(tab$group == "Random effects (SD)")[1]
+
+tab |>
+  select(term, estimate, mad, conf.low, conf.high) |>
+  setNames(c("Parameter", "Estimate", "Error", 
+             "95% CrI Lower", "95% CrI Upper")) |>
+  tt(caption = "Posterior estimates: m1_deviate") |>
+  group_tt(i = list("Fixed effects (log odds)" = fixed_start, 
+                    "Random effects (SD)" = random_start)) |>
+  style_tt(i = c(1,7), italic = TRUE)
 
 ## 3 Model 2: signed magnitude of deviation, among deviators ----
 ## ordinal cumulative() model over the 10 discrete +/-0.1 ... +/-0.5
-## steps -- see header note above for why this replaced student().
-## Thresholds default to "flexible" (not "equidistant"), so the model
-## does not assume the 10 steps are equally likely -- important given
-## how concentrated the simulated deviations are near +/-0.1 (see
-## PROJECT.md / session log).
+## steps. Thresholds default to "flexible" (not "equidistant"), 
+## so the model does not assume the 10 steps are equally likely
 
 #delete model if it exists
 if (file.exists(here("code/fits/ror-magnitude-m1.rds"))) {
