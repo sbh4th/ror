@@ -114,6 +114,16 @@ rehearsal Aim 2's code gets before it runs once, unsupervised, on real data.
 
 # Primary outcome: modeling the difference, not the level
 
+## Estimand of interest
+
+Our main quantity of interest in this project is the value that a given application score ($Y_{i}$) would take if a particular reviewer characteristic (role or experience) were set to a specific value, averaged over the entire population of applications. We can write an example of, say, the difference between final scores for an application if it were assigned to a panelist or reviewer:
+
+$$
+\underbrace{\frac{1}{n}\sum^{n}_{i=1}}_{\substack{\text{Mean over } i \\ \text{applications}}} \underbrace{\bigg({Y_{i}(1) - Y_{i}(0)}\bigg)}_{\substack{\text{Score if assigned} \\ \text{to panelist(1)} \\ \text{or reviewer(0)}}}
+$$
+
+Leaving aside for the moment the assumptions needed to credibly estimate this quantity, the specific data generating process for application scores, where there is a consensus score that members can deviate from, leads to considering an alternative outcome, which is the difference between 
+
 Let $d_{ijk}$ be the final score minus the consensus score, for the
 $i$th panel member on the $j$th application in the $k$th committee:
 
@@ -153,6 +163,12 @@ models:
    $1[d_{ijk} \neq 0]$.
 2. **If they deviated, by how much?** A model for the (signed) magnitude,
    conditional on deviating.
+   
+$$
+E[d_{ijk}] = \underbrace{P(\text{deviate})}_{\substack{\text{Part 1: any} \\ \text{deviation at all}}}
+\times
+\underbrace{E[\text{magnitude} \mid \text{deviate}]}_{\substack{\text{Part 2: size} \\ \text{given deviation}}}
+$$
 
 $$E[d_{ijk}] = P(\text{deviate}) \times E[\text{magnitude} \mid \text{deviate}]$$
 
@@ -194,8 +210,7 @@ complexity for its own sake.
 
 For the basic structure we use 50 committees, 15 discussed applications per committee, 24 members per committee. We also simulate another 15 applications that will end up being streamlined. For the assignments we have 3 of the 24 members on each application as the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn
 per application (committee- and application-level random effects only, no
-member-level noise, since it's agreed before any individual scoring
-happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed
+member-level variation yet, since this is before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed
 magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR's one-decimal-place scoring (with rejection sampling so a "deviated" row can never round down to a contradictory zero).
 
 ```{r}

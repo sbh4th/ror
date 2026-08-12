@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Sam Harper &amp; Arijit Nandi">
-<meta name="dcterms.date" content="2026-08-10">
+<meta name="dcterms.date" content="2026-08-11">
 
 <title>Simulation Design and Modeling Strategy</title>
 <style>
@@ -3640,7 +3640,10 @@ window.Quarto = {
   <li><a href="#research-questions" id="toc-research-questions" class="nav-link" data-scroll-target="#research-questions">Research questions</a></li>
   <li><a href="#the-review-process-were-modeling" id="toc-the-review-process-were-modeling" class="nav-link" data-scroll-target="#the-review-process-were-modeling">The review process we’re modeling</a></li>
   <li><a href="#data-structure" id="toc-data-structure" class="nav-link" data-scroll-target="#data-structure">Data structure</a></li>
-  <li><a href="#primary-outcome-modeling-the-difference-not-the-level" id="toc-primary-outcome-modeling-the-difference-not-the-level" class="nav-link" data-scroll-target="#primary-outcome-modeling-the-difference-not-the-level">Primary outcome: modeling the difference, not the level</a></li>
+  <li><a href="#primary-outcome-modeling-the-difference-not-the-level" id="toc-primary-outcome-modeling-the-difference-not-the-level" class="nav-link" data-scroll-target="#primary-outcome-modeling-the-difference-not-the-level">Primary outcome: modeling the difference, not the level</a>
+  <ul class="collapse">
+  <li><a href="#estimand-of-interest" id="toc-estimand-of-interest" class="nav-link" data-scroll-target="#estimand-of-interest">Estimand of interest</a></li>
+  </ul></li>
   <li><a href="#why-a-two-part-model" id="toc-why-a-two-part-model" class="nav-link" data-scroll-target="#why-a-two-part-model">Why a two-part model</a></li>
   <li><a href="#model-specification-aim-1" id="toc-model-specification-aim-1" class="nav-link" data-scroll-target="#model-specification-aim-1">Model specification (Aim 1)</a>
   <ul class="collapse">
@@ -3686,7 +3689,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">2026-08-10</p>
+      <p class="date">2026-08-11</p>
     </div>
   </div>
   
@@ -3729,6 +3732,17 @@ window.Quarto = {
 </section>
 <section id="primary-outcome-modeling-the-difference-not-the-level" class="level1">
 <h1>Primary outcome: modeling the difference, not the level</h1>
+<section id="estimand-of-interest" class="level2">
+<h2 class="anchored" data-anchor-id="estimand-of-interest">Estimand of interest</h2>
+<p>Our main quantity of interest in this project is the value that a given application score (<span class="math inline">\(Y_{i}\)</span>) would take if a particular reviewer characteristic (role or experience) were set to a specific value, averaged over the entire population of applications. We can write an example of, say, the difference between final scores for an application if it were assigned to a panelist or reviewer:</p>
+<p><span class="math display">\[
+\underbrace{\frac{1}{n}\sum^{n}_{i=1}}_{\substack{\text{Mean over } i \\ \text{applications}}} \underbrace{\bigg({Y_{i}(1) - Y_{i}(0)}\bigg)}_{\substack{\text{Score if assigned} \\ \text{to panelist(1)} \\ \text{or reviewer(0)}}}
+\]</span></p>
+<p><span class="math display">\[
+E[d_{ijk}] = \underbrace{P(\text{deviate})}_{\substack{\text{Part 1: any} \\ \text{deviation at all}}}
+\times
+\underbrace{E[\text{magnitude} \mid \text{deviate}]}_{\substack{\text{Part 2: size} \\ \text{given deviation}}}
+\]</span></p>
 <p>Let <span class="math inline">\(d_{ijk}\)</span> be the final score minus the consensus score, for the <span class="math inline">\(i\)</span>th panel member on the <span class="math inline">\(j\)</span>th application in the <span class="math inline">\(k\)</span>th committee:</p>
 <p><span class="math display">\[d_{ijk} = \text{final score}_{ijk} - \text{consensus score}_{jk}\]</span></p>
 <p>We model <span class="math inline">\(d_{ijk}\)</span> directly, rather than modeling the final score with consensus score as a covariate, for three reasons:</p>
@@ -3737,6 +3751,7 @@ window.Quarto = {
 <li><strong>Avoids reintroducing confounding.</strong> A freely estimated slope on consensus in a <code>final_score ~ consensus + ...</code> model has to recover something close to 1 from the data; if reviewer composition happens to correlate with consensus level across committees, that estimation can leak into the coefficients we actually care about. Differencing with an implicit slope of exactly 1 – the true administrative rule, not an assumption – removes that channel by construction.</li>
 <li><strong>Matches the actual research question.</strong> Aim 1 is about the <em>change from consensus</em> induced by discussion, not the <em>level</em> of the final score (driven mostly by application quality, which isn’t under study here). Nothing is lost: <span class="math inline">\(\text{final score} = \text{consensus} + d_{ijk}\)</span> is a trivial identity, so anything Aim 3 needs at the score level for funding-decision simulations can be reconstructed downstream.</li>
 </ol>
+</section>
 </section>
 <section id="why-a-two-part-model" class="level1">
 <h1>Why a two-part model</h1>
@@ -4002,25 +4017,25 @@ function tinytable_rank_sorter(a, b, aRow, bRow, column, dir, sorterParams) {
 
     <script>
       // Create table-specific functions using external factory
-      const tableFns_08zikueq80y3ag90k1sc = TinyTable.createTableFunctions("tinytable_08zikueq80y3ag90k1sc");
+      const tableFns_o7dl0zox94ibj6ss1gea = TinyTable.createTableFunctions("tinytable_o7dl0zox94ibj6ss1gea");
       // tinytable span after
       window.addEventListener('load', function () {
           var cellsToStyle = [
             // tinytable style arrays after
-          { positions: [ { i: '11', j: 2 }, { i: '11', j: 3 } ], css_id: 'tinytable_css_78ak9yc9m4kxgevanz61',}, 
-          { positions: [ { i: '10', j: 2 }, { i: '10', j: 3 } ], css_id: 'tinytable_css_fmgwew6ugpupfscu7t4u',}, 
-          { positions: [ { i: '1', j: 2 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '8', j: 2 }, { i: '9', j: 2 }, { i: '1', j: 3 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '8', j: 3 }, { i: '9', j: 3 } ], css_id: 'tinytable_css_ggc0zunz69ffhyuljprr',}, 
-          { positions: [ { i: '0', j: 2 }, { i: '0', j: 3 } ], css_id: 'tinytable_css_9pdxa47huk4dhk6syy4o',}, 
-          { positions: [ { i: '11', j: 1 } ], css_id: 'tinytable_css_hf3iyzq46hjvlkozt2gz',}, 
-          { positions: [ { i: '10', j: 1 } ], css_id: 'tinytable_css_adbazocmuiw2sdetmx7i',}, 
-          { positions: [ { i: '1', j: 1 }, { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 }, { i: '8', j: 1 }, { i: '9', j: 1 } ], css_id: 'tinytable_css_eu27977j9xnt7oyjwe09',}, 
-          { positions: [ { i: '0', j: 1 } ], css_id: 'tinytable_css_gzicrf27cu45m0oqn2jr',}, 
+          { positions: [ { i: '11', j: 2 }, { i: '11', j: 3 } ], css_id: 'tinytable_css_jpidnseo74d2mullvyes',}, 
+          { positions: [ { i: '10', j: 2 }, { i: '10', j: 3 } ], css_id: 'tinytable_css_a57fspi7dvnaippiwoxy',}, 
+          { positions: [ { i: '1', j: 2 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '8', j: 2 }, { i: '9', j: 2 }, { i: '1', j: 3 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '8', j: 3 }, { i: '9', j: 3 } ], css_id: 'tinytable_css_3oov9o9bt4z9cbtjdx2d',}, 
+          { positions: [ { i: '0', j: 2 }, { i: '0', j: 3 } ], css_id: 'tinytable_css_stxmzsaotq4zxirn1y4d',}, 
+          { positions: [ { i: '11', j: 1 } ], css_id: 'tinytable_css_y7qvt7hna15pcwwwm3qj',}, 
+          { positions: [ { i: '10', j: 1 } ], css_id: 'tinytable_css_grat5zdi617pacnnvb5a',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 }, { i: '8', j: 1 }, { i: '9', j: 1 } ], css_id: 'tinytable_css_cdh36t5st2ezz0006pl7',}, 
+          { positions: [ { i: '0', j: 1 } ], css_id: 'tinytable_css_fxbe34hhwl5lot8t9b14',}, 
           ];
 
           // Loop over the arrays to style the cells
           cellsToStyle.forEach(function (group) {
               group.positions.forEach(function (cell) {
-                  tableFns_08zikueq80y3ag90k1sc.styleCell(cell.i, cell.j, group.css_id);
+                  tableFns_o7dl0zox94ibj6ss1gea.styleCell(cell.i, cell.j, group.css_id);
               });
           });
       });
@@ -4223,17 +4238,17 @@ line-height: var(--tt-line-height-footnote-tight);
 </style>
     <style>
 
-#tinytable_08zikueq80y3ag90k1sc td.tinytable_css_78ak9yc9m4kxgevanz61, #tinytable_08zikueq80y3ag90k1sc th.tinytable_css_78ak9yc9m4kxgevanz61 { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
-#tinytable_08zikueq80y3ag90k1sc td.tinytable_css_fmgwew6ugpupfscu7t4u, #tinytable_08zikueq80y3ag90k1sc th.tinytable_css_fmgwew6ugpupfscu7t4u { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
-#tinytable_08zikueq80y3ag90k1sc td.tinytable_css_ggc0zunz69ffhyuljprr, #tinytable_08zikueq80y3ag90k1sc th.tinytable_css_ggc0zunz69ffhyuljprr { text-align: center }
-#tinytable_08zikueq80y3ag90k1sc td.tinytable_css_9pdxa47huk4dhk6syy4o, #tinytable_08zikueq80y3ag90k1sc th.tinytable_css_9pdxa47huk4dhk6syy4o { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
-#tinytable_08zikueq80y3ag90k1sc td.tinytable_css_hf3iyzq46hjvlkozt2gz, #tinytable_08zikueq80y3ag90k1sc th.tinytable_css_hf3iyzq46hjvlkozt2gz { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
-#tinytable_08zikueq80y3ag90k1sc td.tinytable_css_adbazocmuiw2sdetmx7i, #tinytable_08zikueq80y3ag90k1sc th.tinytable_css_adbazocmuiw2sdetmx7i { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
-#tinytable_08zikueq80y3ag90k1sc td.tinytable_css_eu27977j9xnt7oyjwe09, #tinytable_08zikueq80y3ag90k1sc th.tinytable_css_eu27977j9xnt7oyjwe09 { text-align: left }
-#tinytable_08zikueq80y3ag90k1sc td.tinytable_css_gzicrf27cu45m0oqn2jr, #tinytable_08zikueq80y3ag90k1sc th.tinytable_css_gzicrf27cu45m0oqn2jr { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+#tinytable_o7dl0zox94ibj6ss1gea td.tinytable_css_jpidnseo74d2mullvyes, #tinytable_o7dl0zox94ibj6ss1gea th.tinytable_css_jpidnseo74d2mullvyes { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+#tinytable_o7dl0zox94ibj6ss1gea td.tinytable_css_a57fspi7dvnaippiwoxy, #tinytable_o7dl0zox94ibj6ss1gea th.tinytable_css_a57fspi7dvnaippiwoxy { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+#tinytable_o7dl0zox94ibj6ss1gea td.tinytable_css_3oov9o9bt4z9cbtjdx2d, #tinytable_o7dl0zox94ibj6ss1gea th.tinytable_css_3oov9o9bt4z9cbtjdx2d { text-align: center }
+#tinytable_o7dl0zox94ibj6ss1gea td.tinytable_css_stxmzsaotq4zxirn1y4d, #tinytable_o7dl0zox94ibj6ss1gea th.tinytable_css_stxmzsaotq4zxirn1y4d { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+#tinytable_o7dl0zox94ibj6ss1gea td.tinytable_css_y7qvt7hna15pcwwwm3qj, #tinytable_o7dl0zox94ibj6ss1gea th.tinytable_css_y7qvt7hna15pcwwwm3qj { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+#tinytable_o7dl0zox94ibj6ss1gea td.tinytable_css_grat5zdi617pacnnvb5a, #tinytable_o7dl0zox94ibj6ss1gea th.tinytable_css_grat5zdi617pacnnvb5a { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+#tinytable_o7dl0zox94ibj6ss1gea td.tinytable_css_cdh36t5st2ezz0006pl7, #tinytable_o7dl0zox94ibj6ss1gea th.tinytable_css_cdh36t5st2ezz0006pl7 { text-align: left }
+#tinytable_o7dl0zox94ibj6ss1gea td.tinytable_css_fxbe34hhwl5lot8t9b14, #tinytable_o7dl0zox94ibj6ss1gea th.tinytable_css_fxbe34hhwl5lot8t9b14 { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
 </style>
     <div class="container">
-      <table class="tinytable" id="tinytable_08zikueq80y3ag90k1sc" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing="true"><caption><p>Aim 1: a linear model on raw deviation vs. a logistic model on
+      <table class="tinytable" id="tinytable_o7dl0zox94ibj6ss1gea" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing="true"><caption><p>Aim 1: a linear model on raw deviation vs. a logistic model on
 whether any deviation occurred, same covariates, same simulated data</p></caption>
         
         <thead>
@@ -4312,7 +4327,7 @@ whether any deviation occurred, same covariates, same simulated data</p></captio
 <h1>Model specification (Aim 1)</h1>
 <section id="simulating-the-data-generating-process" class="level2">
 <h2 class="anchored" data-anchor-id="simulating-the-data-generating-process">Simulating the data-generating process</h2>
-<p>For the basic structure we use 50 committees, 15 discussed applications per committee, 24 members per committee. We also simulate another 15 applications that will end up being streamlined. For the assignments we have 3 of the 24 members on each application as the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn per application (committee- and application-level random effects only, no member-level noise, since it’s agreed before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR’s one-decimal-place scoring (with rejection sampling so a “deviated” row can never round down to a contradictory zero).</p>
+<p>For the basic structure we use 50 committees, 15 discussed applications per committee, 24 members per committee. We also simulate another 15 applications that will end up being streamlined. For the assignments we have 3 of the 24 members on each application as the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn per application (committee- and application-level random effects only, no member-level variation yet, since this is before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR’s one-decimal-place scoring (with rejection sampling so a “deviated” row can never round down to a contradictory zero).</p>
 <div class="cell">
 <details class="code-fold">
 <summary>code/ror-sim-aim1.R – parameters and generative process</summary>
@@ -4720,19 +4735,19 @@ function tinytable_rank_sorter(a, b, aRow, bRow, column, dir, sorterParams) {
 
     <script>
       // Create table-specific functions using external factory
-      const tableFns_753f8095d94s2mml3syd = TinyTable.createTableFunctions("tinytable_753f8095d94s2mml3syd");
+      const tableFns_yd5bfsjk1qfxxvn10h2j = TinyTable.createTableFunctions("tinytable_yd5bfsjk1qfxxvn10h2j");
       // tinytable span after
       window.addEventListener('load', function () {
           var cellsToStyle = [
             // tinytable style arrays after
-          { positions: [ { i: '4', j: 1 }, { i: '4', j: 2 }, { i: '4', j: 3 }, { i: '4', j: 4 }, { i: '4', j: 5 } ], css_id: 'tinytable_css_kc328wbhij03e25868kz',}, 
-          { positions: [ { i: '0', j: 1 }, { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 } ], css_id: 'tinytable_css_zja3t5l816gnhbu6iyes',}, 
+          { positions: [ { i: '4', j: 1 }, { i: '4', j: 2 }, { i: '4', j: 3 }, { i: '4', j: 4 }, { i: '4', j: 5 } ], css_id: 'tinytable_css_fxn8pcegr87mhov6ami3',}, 
+          { positions: [ { i: '0', j: 1 }, { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 } ], css_id: 'tinytable_css_gv5mrzxahbqkt8zr45f0',}, 
           ];
 
           // Loop over the arrays to style the cells
           cellsToStyle.forEach(function (group) {
               group.positions.forEach(function (cell) {
-                  tableFns_753f8095d94s2mml3syd.styleCell(cell.i, cell.j, group.css_id);
+                  tableFns_yd5bfsjk1qfxxvn10h2j.styleCell(cell.i, cell.j, group.css_id);
               });
           });
       });
@@ -4935,11 +4950,11 @@ line-height: var(--tt-line-height-footnote-tight);
 </style>
     <style>
 
-#tinytable_753f8095d94s2mml3syd td.tinytable_css_kc328wbhij03e25868kz, #tinytable_753f8095d94s2mml3syd th.tinytable_css_kc328wbhij03e25868kz { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; }
-#tinytable_753f8095d94s2mml3syd td.tinytable_css_zja3t5l816gnhbu6iyes, #tinytable_753f8095d94s2mml3syd th.tinytable_css_zja3t5l816gnhbu6iyes { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; }
+#tinytable_yd5bfsjk1qfxxvn10h2j td.tinytable_css_fxn8pcegr87mhov6ami3, #tinytable_yd5bfsjk1qfxxvn10h2j th.tinytable_css_fxn8pcegr87mhov6ami3 { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; }
+#tinytable_yd5bfsjk1qfxxvn10h2j td.tinytable_css_gv5mrzxahbqkt8zr45f0, #tinytable_yd5bfsjk1qfxxvn10h2j th.tinytable_css_gv5mrzxahbqkt8zr45f0 { position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; }
 </style>
     <div class="container">
-      <table class="tinytable" id="tinytable_753f8095d94s2mml3syd" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing="true"><caption><p>Aim 2: interaction coefficients recovered from the simulated data (n
+      <table class="tinytable" id="tinytable_yd5bfsjk1qfxxvn10h2j" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing="true"><caption><p>Aim 2: interaction coefficients recovered from the simulated data (n
 = 18,000)</p></caption>
         
         <thead>
@@ -5608,434 +5623,447 @@ line-height: var(--tt-line-height-footnote-tight);
 <span id="cb7-114"><a href="#cb7-114" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-115"><a href="#cb7-115" aria-hidden="true" tabindex="-1"></a><span class="fu"># Primary outcome: modeling the difference, not the level</span></span>
 <span id="cb7-116"><a href="#cb7-116" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-117"><a href="#cb7-117" aria-hidden="true" tabindex="-1"></a>Let $d_{ijk}$ be the final score minus the consensus score, for the</span>
-<span id="cb7-118"><a href="#cb7-118" aria-hidden="true" tabindex="-1"></a>$i$th panel member on the $j$th application in the $k$th committee:</span>
-<span id="cb7-119"><a href="#cb7-119" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-120"><a href="#cb7-120" aria-hidden="true" tabindex="-1"></a>$$d_{ijk} = \text{final score}_{ijk} - \text{consensus score}_{jk}$$</span>
-<span id="cb7-121"><a href="#cb7-121" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-122"><a href="#cb7-122" aria-hidden="true" tabindex="-1"></a>We model $d_{ijk}$ directly, rather than modeling the final score with</span>
-<span id="cb7-123"><a href="#cb7-123" aria-hidden="true" tabindex="-1"></a>consensus score as a covariate, for three reasons:</span>
+<span id="cb7-117"><a href="#cb7-117" aria-hidden="true" tabindex="-1"></a><span class="fu">## Estimand of interest</span></span>
+<span id="cb7-118"><a href="#cb7-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-119"><a href="#cb7-119" aria-hidden="true" tabindex="-1"></a>Our main quantity of interest in this project is the value that a given application score ($Y_{i}$) would take if a particular reviewer characteristic (role or experience) were set to a specific value, averaged over the entire population of applications. We can write an example of, say, the difference between final scores for an application if it were assigned to a panelist or reviewer:</span>
+<span id="cb7-120"><a href="#cb7-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-121"><a href="#cb7-121" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-122"><a href="#cb7-122" aria-hidden="true" tabindex="-1"></a>\underbrace{\frac{1}{n}\sum^{n}_{i=1}}_{\substack{\text{Mean over } i \\ \text{applications}}} \underbrace{\bigg({Y_{i}(1) - Y_{i}(0)}\bigg)}_{\substack{\text{Score if assigned} <span class="sc">\\</span> \text{to panelist(1)} <span class="sc">\\</span> \text{or reviewer(0)}}}</span>
+<span id="cb7-123"><a href="#cb7-123" aria-hidden="true" tabindex="-1"></a>$$</span>
 <span id="cb7-124"><a href="#cb7-124" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-125"><a href="#cb7-125" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**Point mass at zero** Hypothesizing that most or many members will go with the consensus score, which leads to a mass either at the consensus (if you modeled the score) or a mass at zero if you model the difference. A member who doesn&#39;t</span>
-<span id="cb7-126"><a href="#cb7-126" aria-hidden="true" tabindex="-1"></a>   move from consensus has $d_{ijk}=0$ regardless of which application</span>
-<span id="cb7-127"><a href="#cb7-127" aria-hidden="true" tabindex="-1"></a>   they&#39;re scoring; a <span class="in">`final_score ~ consensus_score + ...`</span> model still has</span>
-<span id="cb7-128"><a href="#cb7-128" aria-hidden="true" tabindex="-1"></a>   that spike, just relocated to wherever a given application&#39;s consensus</span>
-<span id="cb7-129"><a href="#cb7-129" aria-hidden="true" tabindex="-1"></a>   happened to land. Differencing standardizes the spike&#39;s location across</span>
-<span id="cb7-130"><a href="#cb7-130" aria-hidden="true" tabindex="-1"></a>   every application, which is what makes a shared two-part model</span>
-<span id="cb7-131"><a href="#cb7-131" aria-hidden="true" tabindex="-1"></a>   tractable.</span>
-<span id="cb7-132"><a href="#cb7-132" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**Avoids reintroducing confounding.** A freely estimated slope on</span>
-<span id="cb7-133"><a href="#cb7-133" aria-hidden="true" tabindex="-1"></a>   consensus in a <span class="in">`final_score ~ consensus + ...`</span> model has to recover</span>
-<span id="cb7-134"><a href="#cb7-134" aria-hidden="true" tabindex="-1"></a>   something close to 1 from the data; if reviewer composition happens to</span>
-<span id="cb7-135"><a href="#cb7-135" aria-hidden="true" tabindex="-1"></a>   correlate with consensus level across committees, that estimation can</span>
-<span id="cb7-136"><a href="#cb7-136" aria-hidden="true" tabindex="-1"></a>   leak into the coefficients we actually care about. Differencing with an</span>
-<span id="cb7-137"><a href="#cb7-137" aria-hidden="true" tabindex="-1"></a>   implicit slope of exactly 1 -- the true administrative rule, not an</span>
-<span id="cb7-138"><a href="#cb7-138" aria-hidden="true" tabindex="-1"></a>   assumption -- removes that channel by construction.</span>
-<span id="cb7-139"><a href="#cb7-139" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**Matches the actual research question.** Aim 1 is about the *change from consensus* induced by discussion, not the *level* of the final score (driven mostly</span>
-<span id="cb7-140"><a href="#cb7-140" aria-hidden="true" tabindex="-1"></a>   by application quality, which isn&#39;t under study here). Nothing is lost:</span>
-<span id="cb7-141"><a href="#cb7-141" aria-hidden="true" tabindex="-1"></a>   $\text{final score} = \text{consensus} + d_{ijk}$ is a trivial identity,</span>
-<span id="cb7-142"><a href="#cb7-142" aria-hidden="true" tabindex="-1"></a>   so anything Aim 3 needs at the score level for funding-decision</span>
-<span id="cb7-143"><a href="#cb7-143" aria-hidden="true" tabindex="-1"></a>   simulations can be reconstructed downstream.</span>
-<span id="cb7-144"><a href="#cb7-144" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-145"><a href="#cb7-145" aria-hidden="true" tabindex="-1"></a><span class="fu"># Why a two-part model</span></span>
-<span id="cb7-146"><a href="#cb7-146" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-147"><a href="#cb7-147" aria-hidden="true" tabindex="-1"></a>We expect $d_{ijk}$ to have a spike at exactly zero (members who simply</span>
-<span id="cb7-148"><a href="#cb7-148" aria-hidden="true" tabindex="-1"></a>adopt the consensus score) plus variation among those who</span>
-<span id="cb7-149"><a href="#cb7-149" aria-hidden="true" tabindex="-1"></a>depart from it. So the outcome is split into two linked</span>
-<span id="cb7-150"><a href="#cb7-150" aria-hidden="true" tabindex="-1"></a>models:</span>
-<span id="cb7-151"><a href="#cb7-151" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-152"><a href="#cb7-152" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**Did this member deviate at all?** A Bernoulli model on</span>
-<span id="cb7-153"><a href="#cb7-153" aria-hidden="true" tabindex="-1"></a>   $1<span class="co">[</span><span class="ot">d_{ijk} \neq 0</span><span class="co">]</span>$.</span>
-<span id="cb7-154"><a href="#cb7-154" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**If they deviated, by how much?** A model for the (signed) magnitude,</span>
-<span id="cb7-155"><a href="#cb7-155" aria-hidden="true" tabindex="-1"></a>   conditional on deviating.</span>
-<span id="cb7-156"><a href="#cb7-156" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-157"><a href="#cb7-157" aria-hidden="true" tabindex="-1"></a>$$E<span class="co">[</span><span class="ot">d_{ijk}</span><span class="co">]</span> = P(\text{deviate}) \times E<span class="co">[</span><span class="ot">\text{magnitude} \mid \text{deviate}</span><span class="co">]</span>$$</span>
+<span id="cb7-125"><a href="#cb7-125" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-126"><a href="#cb7-126" aria-hidden="true" tabindex="-1"></a>E<span class="co">[</span><span class="ot">d_{ijk}</span><span class="co">]</span> = \underbrace{P(\text{deviate})}_{\substack{\text{Part 1: any} <span class="sc">\\</span> \text{deviation at all}}}</span>
+<span id="cb7-127"><a href="#cb7-127" aria-hidden="true" tabindex="-1"></a>\times</span>
+<span id="cb7-128"><a href="#cb7-128" aria-hidden="true" tabindex="-1"></a>\underbrace{E<span class="co">[</span><span class="ot">\text{magnitude} \mid \text{deviate}</span><span class="co">]</span>}_{\substack{\text{Part 2: size} <span class="sc">\\</span> \text{given deviation}}}</span>
+<span id="cb7-129"><a href="#cb7-129" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb7-130"><a href="#cb7-130" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-131"><a href="#cb7-131" aria-hidden="true" tabindex="-1"></a>Let $d_{ijk}$ be the final score minus the consensus score, for the</span>
+<span id="cb7-132"><a href="#cb7-132" aria-hidden="true" tabindex="-1"></a>$i$th panel member on the $j$th application in the $k$th committee:</span>
+<span id="cb7-133"><a href="#cb7-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-134"><a href="#cb7-134" aria-hidden="true" tabindex="-1"></a>$$d_{ijk} = \text{final score}_{ijk} - \text{consensus score}_{jk}$$</span>
+<span id="cb7-135"><a href="#cb7-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-136"><a href="#cb7-136" aria-hidden="true" tabindex="-1"></a>We model $d_{ijk}$ directly, rather than modeling the final score with</span>
+<span id="cb7-137"><a href="#cb7-137" aria-hidden="true" tabindex="-1"></a>consensus score as a covariate, for three reasons:</span>
+<span id="cb7-138"><a href="#cb7-138" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-139"><a href="#cb7-139" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**Point mass at zero** Hypothesizing that most or many members will go with the consensus score, which leads to a mass either at the consensus (if you modeled the score) or a mass at zero if you model the difference. A member who doesn&#39;t</span>
+<span id="cb7-140"><a href="#cb7-140" aria-hidden="true" tabindex="-1"></a>   move from consensus has $d_{ijk}=0$ regardless of which application</span>
+<span id="cb7-141"><a href="#cb7-141" aria-hidden="true" tabindex="-1"></a>   they&#39;re scoring; a <span class="in">`final_score ~ consensus_score + ...`</span> model still has</span>
+<span id="cb7-142"><a href="#cb7-142" aria-hidden="true" tabindex="-1"></a>   that spike, just relocated to wherever a given application&#39;s consensus</span>
+<span id="cb7-143"><a href="#cb7-143" aria-hidden="true" tabindex="-1"></a>   happened to land. Differencing standardizes the spike&#39;s location across</span>
+<span id="cb7-144"><a href="#cb7-144" aria-hidden="true" tabindex="-1"></a>   every application, which is what makes a shared two-part model</span>
+<span id="cb7-145"><a href="#cb7-145" aria-hidden="true" tabindex="-1"></a>   tractable.</span>
+<span id="cb7-146"><a href="#cb7-146" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**Avoids reintroducing confounding.** A freely estimated slope on</span>
+<span id="cb7-147"><a href="#cb7-147" aria-hidden="true" tabindex="-1"></a>   consensus in a <span class="in">`final_score ~ consensus + ...`</span> model has to recover</span>
+<span id="cb7-148"><a href="#cb7-148" aria-hidden="true" tabindex="-1"></a>   something close to 1 from the data; if reviewer composition happens to</span>
+<span id="cb7-149"><a href="#cb7-149" aria-hidden="true" tabindex="-1"></a>   correlate with consensus level across committees, that estimation can</span>
+<span id="cb7-150"><a href="#cb7-150" aria-hidden="true" tabindex="-1"></a>   leak into the coefficients we actually care about. Differencing with an</span>
+<span id="cb7-151"><a href="#cb7-151" aria-hidden="true" tabindex="-1"></a>   implicit slope of exactly 1 -- the true administrative rule, not an</span>
+<span id="cb7-152"><a href="#cb7-152" aria-hidden="true" tabindex="-1"></a>   assumption -- removes that channel by construction.</span>
+<span id="cb7-153"><a href="#cb7-153" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**Matches the actual research question.** Aim 1 is about the *change from consensus* induced by discussion, not the *level* of the final score (driven mostly</span>
+<span id="cb7-154"><a href="#cb7-154" aria-hidden="true" tabindex="-1"></a>   by application quality, which isn&#39;t under study here). Nothing is lost:</span>
+<span id="cb7-155"><a href="#cb7-155" aria-hidden="true" tabindex="-1"></a>   $\text{final score} = \text{consensus} + d_{ijk}$ is a trivial identity,</span>
+<span id="cb7-156"><a href="#cb7-156" aria-hidden="true" tabindex="-1"></a>   so anything Aim 3 needs at the score level for funding-decision</span>
+<span id="cb7-157"><a href="#cb7-157" aria-hidden="true" tabindex="-1"></a>   simulations can be reconstructed downstream.</span>
 <span id="cb7-158"><a href="#cb7-158" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-159"><a href="#cb7-159" aria-hidden="true" tabindex="-1"></a>This isn&#39;t just theoretically motivated -- we checked it empirically before</span>
-<span id="cb7-160"><a href="#cb7-160" aria-hidden="true" tabindex="-1"></a>committing to the extra complexity. If most of the covariate signal about</span>
-<span id="cb7-161"><a href="#cb7-161" aria-hidden="true" tabindex="-1"></a>reviewer engagement/expertise actually lived in the *average size* of the</span>
-<span id="cb7-162"><a href="#cb7-162" aria-hidden="true" tabindex="-1"></a>deviation rather than *whether* a deviation happens, a single linear model</span>
-<span id="cb7-163"><a href="#cb7-163" aria-hidden="true" tabindex="-1"></a>on $d_{ijk}$ would be simpler and would suffice.</span>
-<span id="cb7-164"><a href="#cb7-164" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-165"><a href="#cb7-165" aria-hidden="true" tabindex="-1"></a><span class="in">```{r aim1-linear-vs-two-part}</span></span>
-<span id="cb7-166"><a href="#cb7-166" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: &quot;Aim 1: a linear model on raw deviation vs. a logistic model on whether any deviation occurred, same covariates, same simulated data&quot;</span></span>
-<span id="cb7-167"><a href="#cb7-167" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-168"><a href="#cb7-168" aria-hidden="true" tabindex="-1"></a>d1 <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;sim-data-aim1.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb7-169"><a href="#cb7-169" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-170"><a href="#cb7-170" aria-hidden="true" tabindex="-1"></a>m_linear <span class="ot">&lt;-</span> <span class="fu">lm</span>(deviation <span class="sc">~</span> job <span class="sc">+</span> exp, <span class="at">data =</span> d1)</span>
-<span id="cb7-171"><a href="#cb7-171" aria-hidden="true" tabindex="-1"></a>m_logistic <span class="ot">&lt;-</span> <span class="fu">glm</span>(deviated <span class="sc">~</span> job <span class="sc">+</span> exp, <span class="at">data =</span> d1, <span class="at">family =</span> <span class="fu">binomial</span>())</span>
+<span id="cb7-159"><a href="#cb7-159" aria-hidden="true" tabindex="-1"></a><span class="fu"># Why a two-part model</span></span>
+<span id="cb7-160"><a href="#cb7-160" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-161"><a href="#cb7-161" aria-hidden="true" tabindex="-1"></a>We expect $d_{ijk}$ to have a spike at exactly zero (members who simply</span>
+<span id="cb7-162"><a href="#cb7-162" aria-hidden="true" tabindex="-1"></a>adopt the consensus score) plus variation among those who</span>
+<span id="cb7-163"><a href="#cb7-163" aria-hidden="true" tabindex="-1"></a>depart from it. So the outcome is split into two linked</span>
+<span id="cb7-164"><a href="#cb7-164" aria-hidden="true" tabindex="-1"></a>models:</span>
+<span id="cb7-165"><a href="#cb7-165" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-166"><a href="#cb7-166" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**Did this member deviate at all?** A Bernoulli model on</span>
+<span id="cb7-167"><a href="#cb7-167" aria-hidden="true" tabindex="-1"></a>   $1<span class="co">[</span><span class="ot">d_{ijk} \neq 0</span><span class="co">]</span>$.</span>
+<span id="cb7-168"><a href="#cb7-168" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**If they deviated, by how much?** A model for the (signed) magnitude,</span>
+<span id="cb7-169"><a href="#cb7-169" aria-hidden="true" tabindex="-1"></a>   conditional on deviating.</span>
+<span id="cb7-170"><a href="#cb7-170" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-171"><a href="#cb7-171" aria-hidden="true" tabindex="-1"></a>$$E<span class="co">[</span><span class="ot">d_{ijk}</span><span class="co">]</span> = P(\text{deviate}) \times E<span class="co">[</span><span class="ot">\text{magnitude} \mid \text{deviate}</span><span class="co">]</span>$$</span>
 <span id="cb7-172"><a href="#cb7-172" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-173"><a href="#cb7-173" aria-hidden="true" tabindex="-1"></a><span class="fu">modelsummary</span>(</span>
-<span id="cb7-174"><a href="#cb7-174" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="st">&quot;Linear: deviation&quot;</span> <span class="ot">=</span> m_linear, <span class="st">&quot;Logistic: deviated (0/1)&quot;</span> <span class="ot">=</span> m_logistic),</span>
-<span id="cb7-175"><a href="#cb7-175" aria-hidden="true" tabindex="-1"></a>  <span class="at">gof_omit =</span> <span class="st">&quot;DF|Deviance|R2|AIC|BIC|RMSE|Log.Lik|F&quot;</span>,</span>
-<span id="cb7-176"><a href="#cb7-176" aria-hidden="true" tabindex="-1"></a>  <span class="at">escape =</span> <span class="cn">TRUE</span></span>
-<span id="cb7-177"><a href="#cb7-177" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb7-178"><a href="#cb7-178" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-179"><a href="#cb7-179" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-180"><a href="#cb7-180" aria-hidden="true" tabindex="-1"></a>The linear model&#39;s coefficients on <span class="in">`job`</span>/<span class="in">`exp`</span> are tiny and mostly</span>
-<span id="cb7-181"><a href="#cb7-181" aria-hidden="true" tabindex="-1"></a>non-significant (largest around 0.005 points, on an outcome bounded at</span>
-<span id="cb7-182"><a href="#cb7-182" aria-hidden="true" tabindex="-1"></a>$\pm 0.5$). The logistic model on the same covariates recovers the large,</span>
-<span id="cb7-183"><a href="#cb7-183" aria-hidden="true" tabindex="-1"></a>highly significant effect pattern actually built into the simulator</span>
-<span id="cb7-184"><a href="#cb7-184" aria-hidden="true" tabindex="-1"></a>(<span class="in">`code/ror-sim-deviation.R`</span>). Because deviation magnitude is roughly</span>
-<span id="cb7-185"><a href="#cb7-185" aria-hidden="true" tabindex="-1"></a>symmetric around zero conditional on deviating, essentially all the</span>
-<span id="cb7-186"><a href="#cb7-186" aria-hidden="true" tabindex="-1"></a>covariate signal lives in *whether* someone deviates -- a model that only</span>
-<span id="cb7-187"><a href="#cb7-187" aria-hidden="true" tabindex="-1"></a>looks at the conditional mean of $d_{ijk}$ structurally cannot see it. This</span>
-<span id="cb7-188"><a href="#cb7-188" aria-hidden="true" tabindex="-1"></a>confirms the two-part structure is doing real work here, not adding</span>
-<span id="cb7-189"><a href="#cb7-189" aria-hidden="true" tabindex="-1"></a>complexity for its own sake.</span>
-<span id="cb7-190"><a href="#cb7-190" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-191"><a href="#cb7-191" aria-hidden="true" tabindex="-1"></a><span class="fu"># Model specification (Aim 1)</span></span>
-<span id="cb7-192"><a href="#cb7-192" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-193"><a href="#cb7-193" aria-hidden="true" tabindex="-1"></a><span class="fu">## Simulating the data-generating process</span></span>
-<span id="cb7-194"><a href="#cb7-194" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-195"><a href="#cb7-195" aria-hidden="true" tabindex="-1"></a>For the basic structure we use 50 committees, 15 discussed applications per committee, 24 members per committee. We also simulate another 15 applications that will end up being streamlined. For the assignments we have 3 of the 24 members on each application as the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn</span>
-<span id="cb7-196"><a href="#cb7-196" aria-hidden="true" tabindex="-1"></a>per application (committee- and application-level random effects only, no</span>
-<span id="cb7-197"><a href="#cb7-197" aria-hidden="true" tabindex="-1"></a>member-level noise, since it&#39;s agreed before any individual scoring</span>
-<span id="cb7-198"><a href="#cb7-198" aria-hidden="true" tabindex="-1"></a>happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed</span>
-<span id="cb7-199"><a href="#cb7-199" aria-hidden="true" tabindex="-1"></a>magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR&#39;s one-decimal-place scoring (with rejection sampling so a &quot;deviated&quot; row can never round down to a contradictory zero).</span>
-<span id="cb7-200"><a href="#cb7-200" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-203"><a href="#cb7-203" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb7-204"><a href="#cb7-204" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
-<span id="cb7-205"><a href="#cb7-205" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: aim1-params</span></span>
-<span id="cb7-206"><a href="#cb7-206" aria-hidden="true" tabindex="-1"></a><span class="co">#| code-summary: &quot;code/ror-sim-aim1.R -- parameters and generative process&quot;</span></span>
-<span id="cb7-207"><a href="#cb7-207" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-208"><a href="#cb7-208" aria-hidden="true" tabindex="-1"></a><span class="co"># define parameters</span></span>
-<span id="cb7-209"><a href="#cb7-209" aria-hidden="true" tabindex="-1"></a>cmte_n   <span class="ot">=</span> <span class="dv">50</span>     <span class="co"># number of committees</span></span>
-<span id="cb7-210"><a href="#cb7-210" aria-hidden="true" tabindex="-1"></a>app_n    <span class="ot">=</span> <span class="dv">15</span>     <span class="co"># number of discussed applications per committee</span></span>
-<span id="cb7-211"><a href="#cb7-211" aria-hidden="true" tabindex="-1"></a>mem_n    <span class="ot">=</span> <span class="dv">24</span>     <span class="co"># number of committee members per committee</span></span>
-<span id="cb7-212"><a href="#cb7-212" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-213"><a href="#cb7-213" aria-hidden="true" tabindex="-1"></a><span class="co"># candidate applications generated per committee before streamlining</span></span>
-<span id="cb7-214"><a href="#cb7-214" aria-hidden="true" tabindex="-1"></a>app_n_candidates <span class="ot">=</span> app_n <span class="sc">*</span> <span class="dv">2</span></span>
-<span id="cb7-215"><a href="#cb7-215" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-216"><a href="#cb7-216" aria-hidden="true" tabindex="-1"></a>b0       <span class="ot">=</span> <span class="fl">4.1</span>    <span class="co"># intercept for application&#39;s true underlying quality</span></span>
-<span id="cb7-217"><a href="#cb7-217" aria-hidden="true" tabindex="-1"></a>u0c_sd   <span class="ot">=</span> <span class="fl">0.1</span>    <span class="co"># random intercept SD for committee (quality level)</span></span>
-<span id="cb7-218"><a href="#cb7-218" aria-hidden="true" tabindex="-1"></a>u0a_sd   <span class="ot">=</span> <span class="fl">0.3</span>    <span class="co"># random intercept SD for application (quality level)</span></span>
-<span id="cb7-219"><a href="#cb7-219" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-220"><a href="#cb7-220" aria-hidden="true" tabindex="-1"></a><span class="co"># signed magnitude of deviation, given deviation occurs, truncated to</span></span>
-<span id="cb7-221"><a href="#cb7-221" aria-hidden="true" tabindex="-1"></a><span class="co"># +/- 0.5 (CIHR&#39;s stated bound on final vs. consensus score)</span></span>
-<span id="cb7-222"><a href="#cb7-222" aria-hidden="true" tabindex="-1"></a>dev_bias <span class="ot">=</span> <span class="dv">0</span>      <span class="co"># placeholder: no systematic direction yet</span></span>
-<span id="cb7-223"><a href="#cb7-223" aria-hidden="true" tabindex="-1"></a>dev_sd   <span class="ot">=</span> <span class="fl">0.15</span></span>
-<span id="cb7-224"><a href="#cb7-224" aria-hidden="true" tabindex="-1"></a>dev_min  <span class="ot">=</span> <span class="sc">-</span><span class="fl">0.5</span></span>
-<span id="cb7-225"><a href="#cb7-225" aria-hidden="true" tabindex="-1"></a>dev_max  <span class="ot">=</span>  <span class="fl">0.5</span></span>
-<span id="cb7-226"><a href="#cb7-226" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-227"><a href="#cb7-227" aria-hidden="true" tabindex="-1"></a><span class="co"># ... committee/application/member structure, reviewer assignment, and</span></span>
-<span id="cb7-228"><a href="#cb7-228" aria-hidden="true" tabindex="-1"></a><span class="co"># expertise assignment omitted here -- see code/ror-sim-aim1.R for</span></span>
-<span id="cb7-229"><a href="#cb7-229" aria-hidden="true" tabindex="-1"></a><span class="co"># the complete script</span></span>
-<span id="cb7-230"><a href="#cb7-230" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-231"><a href="#cb7-231" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> data <span class="sc">|&gt;</span></span>
-<span id="cb7-232"><a href="#cb7-232" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb7-233"><a href="#cb7-233" aria-hidden="true" tabindex="-1"></a>    <span class="at">p_dev =</span> <span class="fu">plogis</span>(a0 <span class="sc">+</span> (a1 <span class="sc">*</span> panelist) <span class="sc">+</span> (a2 <span class="sc">*</span> exp_high) <span class="sc">+</span></span>
-<span id="cb7-234"><a href="#cb7-234" aria-hidden="true" tabindex="-1"></a>      (a3 <span class="sc">*</span> exp_low) <span class="sc">+</span> (a4 <span class="sc">*</span> exp_none)),</span>
-<span id="cb7-235"><a href="#cb7-235" aria-hidden="true" tabindex="-1"></a>    <span class="at">deviated =</span> <span class="fu">rbinom</span>(<span class="fu">n</span>(), <span class="dv">1</span>, p_dev),</span>
-<span id="cb7-236"><a href="#cb7-236" aria-hidden="true" tabindex="-1"></a>    <span class="at">deviation =</span> <span class="fu">if_else</span>(</span>
-<span id="cb7-237"><a href="#cb7-237" aria-hidden="true" tabindex="-1"></a>      deviated <span class="sc">==</span> <span class="dv">1</span>,</span>
-<span id="cb7-238"><a href="#cb7-238" aria-hidden="true" tabindex="-1"></a>      <span class="fu">round_tenth</span>(<span class="fu">rtruncnorm</span>(<span class="fu">n</span>(), <span class="at">a =</span> dev_min, <span class="at">b =</span> dev_max,</span>
-<span id="cb7-239"><a href="#cb7-239" aria-hidden="true" tabindex="-1"></a>        <span class="at">mean =</span> dev_bias <span class="sc">+</span> u0m_bias, <span class="at">sd =</span> dev_sd)),</span>
-<span id="cb7-240"><a href="#cb7-240" aria-hidden="true" tabindex="-1"></a>      <span class="dv">0</span>)</span>
-<span id="cb7-241"><a href="#cb7-241" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb7-242"><a href="#cb7-242" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-173"><a href="#cb7-173" aria-hidden="true" tabindex="-1"></a>This isn&#39;t just theoretically motivated -- we checked it empirically before</span>
+<span id="cb7-174"><a href="#cb7-174" aria-hidden="true" tabindex="-1"></a>committing to the extra complexity. If most of the covariate signal about</span>
+<span id="cb7-175"><a href="#cb7-175" aria-hidden="true" tabindex="-1"></a>reviewer engagement/expertise actually lived in the *average size* of the</span>
+<span id="cb7-176"><a href="#cb7-176" aria-hidden="true" tabindex="-1"></a>deviation rather than *whether* a deviation happens, a single linear model</span>
+<span id="cb7-177"><a href="#cb7-177" aria-hidden="true" tabindex="-1"></a>on $d_{ijk}$ would be simpler and would suffice.</span>
+<span id="cb7-178"><a href="#cb7-178" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-179"><a href="#cb7-179" aria-hidden="true" tabindex="-1"></a><span class="in">```{r aim1-linear-vs-two-part}</span></span>
+<span id="cb7-180"><a href="#cb7-180" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: &quot;Aim 1: a linear model on raw deviation vs. a logistic model on whether any deviation occurred, same covariates, same simulated data&quot;</span></span>
+<span id="cb7-181"><a href="#cb7-181" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-182"><a href="#cb7-182" aria-hidden="true" tabindex="-1"></a>d1 <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;sim-data-aim1.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb7-183"><a href="#cb7-183" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-184"><a href="#cb7-184" aria-hidden="true" tabindex="-1"></a>m_linear <span class="ot">&lt;-</span> <span class="fu">lm</span>(deviation <span class="sc">~</span> job <span class="sc">+</span> exp, <span class="at">data =</span> d1)</span>
+<span id="cb7-185"><a href="#cb7-185" aria-hidden="true" tabindex="-1"></a>m_logistic <span class="ot">&lt;-</span> <span class="fu">glm</span>(deviated <span class="sc">~</span> job <span class="sc">+</span> exp, <span class="at">data =</span> d1, <span class="at">family =</span> <span class="fu">binomial</span>())</span>
+<span id="cb7-186"><a href="#cb7-186" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-187"><a href="#cb7-187" aria-hidden="true" tabindex="-1"></a><span class="fu">modelsummary</span>(</span>
+<span id="cb7-188"><a href="#cb7-188" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="st">&quot;Linear: deviation&quot;</span> <span class="ot">=</span> m_linear, <span class="st">&quot;Logistic: deviated (0/1)&quot;</span> <span class="ot">=</span> m_logistic),</span>
+<span id="cb7-189"><a href="#cb7-189" aria-hidden="true" tabindex="-1"></a>  <span class="at">gof_omit =</span> <span class="st">&quot;DF|Deviance|R2|AIC|BIC|RMSE|Log.Lik|F&quot;</span>,</span>
+<span id="cb7-190"><a href="#cb7-190" aria-hidden="true" tabindex="-1"></a>  <span class="at">escape =</span> <span class="cn">TRUE</span></span>
+<span id="cb7-191"><a href="#cb7-191" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-192"><a href="#cb7-192" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-193"><a href="#cb7-193" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-194"><a href="#cb7-194" aria-hidden="true" tabindex="-1"></a>The linear model&#39;s coefficients on <span class="in">`job`</span>/<span class="in">`exp`</span> are tiny and mostly</span>
+<span id="cb7-195"><a href="#cb7-195" aria-hidden="true" tabindex="-1"></a>non-significant (largest around 0.005 points, on an outcome bounded at</span>
+<span id="cb7-196"><a href="#cb7-196" aria-hidden="true" tabindex="-1"></a>$\pm 0.5$). The logistic model on the same covariates recovers the large,</span>
+<span id="cb7-197"><a href="#cb7-197" aria-hidden="true" tabindex="-1"></a>highly significant effect pattern actually built into the simulator</span>
+<span id="cb7-198"><a href="#cb7-198" aria-hidden="true" tabindex="-1"></a>(<span class="in">`code/ror-sim-deviation.R`</span>). Because deviation magnitude is roughly</span>
+<span id="cb7-199"><a href="#cb7-199" aria-hidden="true" tabindex="-1"></a>symmetric around zero conditional on deviating, essentially all the</span>
+<span id="cb7-200"><a href="#cb7-200" aria-hidden="true" tabindex="-1"></a>covariate signal lives in *whether* someone deviates -- a model that only</span>
+<span id="cb7-201"><a href="#cb7-201" aria-hidden="true" tabindex="-1"></a>looks at the conditional mean of $d_{ijk}$ structurally cannot see it. This</span>
+<span id="cb7-202"><a href="#cb7-202" aria-hidden="true" tabindex="-1"></a>confirms the two-part structure is doing real work here, not adding</span>
+<span id="cb7-203"><a href="#cb7-203" aria-hidden="true" tabindex="-1"></a>complexity for its own sake.</span>
+<span id="cb7-204"><a href="#cb7-204" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-205"><a href="#cb7-205" aria-hidden="true" tabindex="-1"></a><span class="fu"># Model specification (Aim 1)</span></span>
+<span id="cb7-206"><a href="#cb7-206" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-207"><a href="#cb7-207" aria-hidden="true" tabindex="-1"></a><span class="fu">## Simulating the data-generating process</span></span>
+<span id="cb7-208"><a href="#cb7-208" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-209"><a href="#cb7-209" aria-hidden="true" tabindex="-1"></a>For the basic structure we use 50 committees, 15 discussed applications per committee, 24 members per committee. We also simulate another 15 applications that will end up being streamlined. For the assignments we have 3 of the 24 members on each application as the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn</span>
+<span id="cb7-210"><a href="#cb7-210" aria-hidden="true" tabindex="-1"></a>per application (committee- and application-level random effects only, no</span>
+<span id="cb7-211"><a href="#cb7-211" aria-hidden="true" tabindex="-1"></a>member-level variation yet, since this is before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed</span>
+<span id="cb7-212"><a href="#cb7-212" aria-hidden="true" tabindex="-1"></a>magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR&#39;s one-decimal-place scoring (with rejection sampling so a &quot;deviated&quot; row can never round down to a contradictory zero).</span>
+<span id="cb7-213"><a href="#cb7-213" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-216"><a href="#cb7-216" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb7-217"><a href="#cb7-217" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb7-218"><a href="#cb7-218" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: aim1-params</span></span>
+<span id="cb7-219"><a href="#cb7-219" aria-hidden="true" tabindex="-1"></a><span class="co">#| code-summary: &quot;code/ror-sim-aim1.R -- parameters and generative process&quot;</span></span>
+<span id="cb7-220"><a href="#cb7-220" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-221"><a href="#cb7-221" aria-hidden="true" tabindex="-1"></a><span class="co"># define parameters</span></span>
+<span id="cb7-222"><a href="#cb7-222" aria-hidden="true" tabindex="-1"></a>cmte_n   <span class="ot">=</span> <span class="dv">50</span>     <span class="co"># number of committees</span></span>
+<span id="cb7-223"><a href="#cb7-223" aria-hidden="true" tabindex="-1"></a>app_n    <span class="ot">=</span> <span class="dv">15</span>     <span class="co"># number of discussed applications per committee</span></span>
+<span id="cb7-224"><a href="#cb7-224" aria-hidden="true" tabindex="-1"></a>mem_n    <span class="ot">=</span> <span class="dv">24</span>     <span class="co"># number of committee members per committee</span></span>
+<span id="cb7-225"><a href="#cb7-225" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-226"><a href="#cb7-226" aria-hidden="true" tabindex="-1"></a><span class="co"># candidate applications generated per committee before streamlining</span></span>
+<span id="cb7-227"><a href="#cb7-227" aria-hidden="true" tabindex="-1"></a>app_n_candidates <span class="ot">=</span> app_n <span class="sc">*</span> <span class="dv">2</span></span>
+<span id="cb7-228"><a href="#cb7-228" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-229"><a href="#cb7-229" aria-hidden="true" tabindex="-1"></a>b0       <span class="ot">=</span> <span class="fl">4.1</span>    <span class="co"># intercept for application&#39;s true underlying quality</span></span>
+<span id="cb7-230"><a href="#cb7-230" aria-hidden="true" tabindex="-1"></a>u0c_sd   <span class="ot">=</span> <span class="fl">0.1</span>    <span class="co"># random intercept SD for committee (quality level)</span></span>
+<span id="cb7-231"><a href="#cb7-231" aria-hidden="true" tabindex="-1"></a>u0a_sd   <span class="ot">=</span> <span class="fl">0.3</span>    <span class="co"># random intercept SD for application (quality level)</span></span>
+<span id="cb7-232"><a href="#cb7-232" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-233"><a href="#cb7-233" aria-hidden="true" tabindex="-1"></a><span class="co"># signed magnitude of deviation, given deviation occurs, truncated to</span></span>
+<span id="cb7-234"><a href="#cb7-234" aria-hidden="true" tabindex="-1"></a><span class="co"># +/- 0.5 (CIHR&#39;s stated bound on final vs. consensus score)</span></span>
+<span id="cb7-235"><a href="#cb7-235" aria-hidden="true" tabindex="-1"></a>dev_bias <span class="ot">=</span> <span class="dv">0</span>      <span class="co"># placeholder: no systematic direction yet</span></span>
+<span id="cb7-236"><a href="#cb7-236" aria-hidden="true" tabindex="-1"></a>dev_sd   <span class="ot">=</span> <span class="fl">0.15</span></span>
+<span id="cb7-237"><a href="#cb7-237" aria-hidden="true" tabindex="-1"></a>dev_min  <span class="ot">=</span> <span class="sc">-</span><span class="fl">0.5</span></span>
+<span id="cb7-238"><a href="#cb7-238" aria-hidden="true" tabindex="-1"></a>dev_max  <span class="ot">=</span>  <span class="fl">0.5</span></span>
+<span id="cb7-239"><a href="#cb7-239" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-240"><a href="#cb7-240" aria-hidden="true" tabindex="-1"></a><span class="co"># ... committee/application/member structure, reviewer assignment, and</span></span>
+<span id="cb7-241"><a href="#cb7-241" aria-hidden="true" tabindex="-1"></a><span class="co"># expertise assignment omitted here -- see code/ror-sim-aim1.R for</span></span>
+<span id="cb7-242"><a href="#cb7-242" aria-hidden="true" tabindex="-1"></a><span class="co"># the complete script</span></span>
 <span id="cb7-243"><a href="#cb7-243" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-244"><a href="#cb7-244" aria-hidden="true" tabindex="-1"></a>Every parameter above is at this point just an educated guess and a placeholder, since the point of the simulation is to see whether our modeling approach recovers a known effects, not predictive of what CIHR&#39;s actual numbers will look like.</span>
-<span id="cb7-245"><a href="#cb7-245" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-246"><a href="#cb7-246" aria-hidden="true" tabindex="-1"></a><span class="fu">## Simulated data</span></span>
-<span id="cb7-247"><a href="#cb7-247" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-248"><a href="#cb7-248" aria-hidden="true" tabindex="-1"></a>What did we generate with the parameters above? @fig-scores shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations.</span>
-<span id="cb7-249"><a href="#cb7-249" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-252"><a href="#cb7-252" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb7-253"><a href="#cb7-253" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
-<span id="cb7-254"><a href="#cb7-254" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-scores</span></span>
-<span id="cb7-255"><a href="#cb7-255" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: Distribution of simulated intial, consensus, and overall scores </span></span>
+<span id="cb7-244"><a href="#cb7-244" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> data <span class="sc">|&gt;</span></span>
+<span id="cb7-245"><a href="#cb7-245" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb7-246"><a href="#cb7-246" aria-hidden="true" tabindex="-1"></a>    <span class="at">p_dev =</span> <span class="fu">plogis</span>(a0 <span class="sc">+</span> (a1 <span class="sc">*</span> panelist) <span class="sc">+</span> (a2 <span class="sc">*</span> exp_high) <span class="sc">+</span></span>
+<span id="cb7-247"><a href="#cb7-247" aria-hidden="true" tabindex="-1"></a>      (a3 <span class="sc">*</span> exp_low) <span class="sc">+</span> (a4 <span class="sc">*</span> exp_none)),</span>
+<span id="cb7-248"><a href="#cb7-248" aria-hidden="true" tabindex="-1"></a>    <span class="at">deviated =</span> <span class="fu">rbinom</span>(<span class="fu">n</span>(), <span class="dv">1</span>, p_dev),</span>
+<span id="cb7-249"><a href="#cb7-249" aria-hidden="true" tabindex="-1"></a>    <span class="at">deviation =</span> <span class="fu">if_else</span>(</span>
+<span id="cb7-250"><a href="#cb7-250" aria-hidden="true" tabindex="-1"></a>      deviated <span class="sc">==</span> <span class="dv">1</span>,</span>
+<span id="cb7-251"><a href="#cb7-251" aria-hidden="true" tabindex="-1"></a>      <span class="fu">round_tenth</span>(<span class="fu">rtruncnorm</span>(<span class="fu">n</span>(), <span class="at">a =</span> dev_min, <span class="at">b =</span> dev_max,</span>
+<span id="cb7-252"><a href="#cb7-252" aria-hidden="true" tabindex="-1"></a>        <span class="at">mean =</span> dev_bias <span class="sc">+</span> u0m_bias, <span class="at">sd =</span> dev_sd)),</span>
+<span id="cb7-253"><a href="#cb7-253" aria-hidden="true" tabindex="-1"></a>      <span class="dv">0</span>)</span>
+<span id="cb7-254"><a href="#cb7-254" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-255"><a href="#cb7-255" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb7-256"><a href="#cb7-256" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-257"><a href="#cb7-257" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;sim-data-aim1.csv&quot;</span>))</span>
+<span id="cb7-257"><a href="#cb7-257" aria-hidden="true" tabindex="-1"></a>Every parameter above is at this point just an educated guess and a placeholder, since the point of the simulation is to see whether our modeling approach recovers a known effects, not predictive of what CIHR&#39;s actual numbers will look like.</span>
 <span id="cb7-258"><a href="#cb7-258" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-259"><a href="#cb7-259" aria-hidden="true" tabindex="-1"></a>init_hist <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(d, <span class="fu">aes</span>(<span class="at">x =</span> init_score)) <span class="sc">+</span></span>
-<span id="cb7-260"><a href="#cb7-260" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.1</span>, </span>
-<span id="cb7-261"><a href="#cb7-261" aria-hidden="true" tabindex="-1"></a>  <span class="at">boundary =</span> <span class="dv">0</span>, <span class="at">color =</span> <span class="st">&quot;white&quot;</span>, <span class="at">fill =</span> <span class="st">&quot;#377eb8&quot;</span>) <span class="sc">+</span> </span>
-<span id="cb7-262"><a href="#cb7-262" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="fl">2.5</span>, <span class="fl">5.0</span>), </span>
-<span id="cb7-263"><a href="#cb7-263" aria-hidden="true" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">seq</span>(<span class="fl">2.5</span>, <span class="fl">5.0</span>, <span class="fl">0.5</span>)) <span class="sc">+</span></span>
-<span id="cb7-264"><a href="#cb7-264" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Initial scores&quot;</span>) <span class="sc">+</span> <span class="fu">theme_classic</span>()</span>
-<span id="cb7-265"><a href="#cb7-265" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-266"><a href="#cb7-266" aria-hidden="true" tabindex="-1"></a>consensus_hist <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(d, <span class="fu">aes</span>(<span class="at">x =</span> consensus)) <span class="sc">+</span></span>
-<span id="cb7-267"><a href="#cb7-267" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.1</span>, </span>
-<span id="cb7-268"><a href="#cb7-268" aria-hidden="true" tabindex="-1"></a>  <span class="at">boundary =</span> <span class="dv">0</span>, <span class="at">color =</span> <span class="st">&quot;white&quot;</span>, <span class="at">fill =</span> <span class="st">&quot;#377eb8&quot;</span>) <span class="sc">+</span> </span>
-<span id="cb7-269"><a href="#cb7-269" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="fl">2.5</span>, <span class="fl">5.0</span>), </span>
-<span id="cb7-270"><a href="#cb7-270" aria-hidden="true" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">seq</span>(<span class="fl">2.5</span>, <span class="fl">5.0</span>, <span class="fl">0.5</span>)) <span class="sc">+</span> </span>
-<span id="cb7-271"><a href="#cb7-271" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Consensus scores&quot;</span>) <span class="sc">+</span> <span class="fu">theme_classic</span>()</span>
-<span id="cb7-272"><a href="#cb7-272" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-273"><a href="#cb7-273" aria-hidden="true" tabindex="-1"></a>score_hist <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(d, <span class="fu">aes</span>(<span class="at">x =</span> score)) <span class="sc">+</span></span>
-<span id="cb7-274"><a href="#cb7-274" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.1</span>, </span>
-<span id="cb7-275"><a href="#cb7-275" aria-hidden="true" tabindex="-1"></a>  <span class="at">boundary =</span> <span class="dv">0</span>, <span class="at">color =</span> <span class="st">&quot;white&quot;</span>, <span class="at">fill =</span> <span class="st">&quot;#377eb8&quot;</span>) <span class="sc">+</span></span>
-<span id="cb7-276"><a href="#cb7-276" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="fl">2.5</span>, <span class="fl">5.0</span>), </span>
-<span id="cb7-277"><a href="#cb7-277" aria-hidden="true" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">seq</span>(<span class="fl">2.5</span>, <span class="fl">5.0</span>, <span class="fl">0.5</span>)) <span class="sc">+</span></span>
-<span id="cb7-278"><a href="#cb7-278" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Overall scores&quot;</span>) <span class="sc">+</span> <span class="fu">theme_classic</span>()</span>
-<span id="cb7-279"><a href="#cb7-279" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-280"><a href="#cb7-280" aria-hidden="true" tabindex="-1"></a>init_hist <span class="sc">/</span> consensus_hist <span class="sc">/</span> score_hist</span>
-<span id="cb7-281"><a href="#cb7-281" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-282"><a href="#cb7-282" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-283"><a href="#cb7-283" aria-hidden="true" tabindex="-1"></a>@fig-var shows how our initial simulation incorporates a small degree of variation across committees in the overall scores, as well as the average variation within committees across applications. For the application-level variation we average over committee by within-committee application rank. </span>
-<span id="cb7-284"><a href="#cb7-284" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-287"><a href="#cb7-287" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb7-288"><a href="#cb7-288" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
-<span id="cb7-289"><a href="#cb7-289" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-var</span></span>
-<span id="cb7-290"><a href="#cb7-290" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: Distribution of score variation by committee and application</span></span>
-<span id="cb7-291"><a href="#cb7-291" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-292"><a href="#cb7-292" aria-hidden="true" tabindex="-1"></a>by_cmte <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(d, <span class="fu">aes</span>(<span class="at">x =</span> cmte, <span class="at">y =</span> score)) <span class="sc">+</span> </span>
-<span id="cb7-293"><a href="#cb7-293" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>(<span class="at">fill =</span> <span class="st">&quot;#377eb8&quot;</span>) <span class="sc">+</span> </span>
-<span id="cb7-294"><a href="#cb7-294" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Committee&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Score&quot;</span>) <span class="sc">+</span> <span class="fu">theme_classic</span>()</span>
+<span id="cb7-259"><a href="#cb7-259" aria-hidden="true" tabindex="-1"></a><span class="fu">## Simulated data</span></span>
+<span id="cb7-260"><a href="#cb7-260" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-261"><a href="#cb7-261" aria-hidden="true" tabindex="-1"></a>What did we generate with the parameters above? @fig-scores shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations.</span>
+<span id="cb7-262"><a href="#cb7-262" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-265"><a href="#cb7-265" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb7-266"><a href="#cb7-266" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
+<span id="cb7-267"><a href="#cb7-267" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-scores</span></span>
+<span id="cb7-268"><a href="#cb7-268" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: Distribution of simulated intial, consensus, and overall scores </span></span>
+<span id="cb7-269"><a href="#cb7-269" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-270"><a href="#cb7-270" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;sim-data-aim1.csv&quot;</span>))</span>
+<span id="cb7-271"><a href="#cb7-271" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-272"><a href="#cb7-272" aria-hidden="true" tabindex="-1"></a>init_hist <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(d, <span class="fu">aes</span>(<span class="at">x =</span> init_score)) <span class="sc">+</span></span>
+<span id="cb7-273"><a href="#cb7-273" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.1</span>, </span>
+<span id="cb7-274"><a href="#cb7-274" aria-hidden="true" tabindex="-1"></a>  <span class="at">boundary =</span> <span class="dv">0</span>, <span class="at">color =</span> <span class="st">&quot;white&quot;</span>, <span class="at">fill =</span> <span class="st">&quot;#377eb8&quot;</span>) <span class="sc">+</span> </span>
+<span id="cb7-275"><a href="#cb7-275" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="fl">2.5</span>, <span class="fl">5.0</span>), </span>
+<span id="cb7-276"><a href="#cb7-276" aria-hidden="true" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">seq</span>(<span class="fl">2.5</span>, <span class="fl">5.0</span>, <span class="fl">0.5</span>)) <span class="sc">+</span></span>
+<span id="cb7-277"><a href="#cb7-277" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Initial scores&quot;</span>) <span class="sc">+</span> <span class="fu">theme_classic</span>()</span>
+<span id="cb7-278"><a href="#cb7-278" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-279"><a href="#cb7-279" aria-hidden="true" tabindex="-1"></a>consensus_hist <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(d, <span class="fu">aes</span>(<span class="at">x =</span> consensus)) <span class="sc">+</span></span>
+<span id="cb7-280"><a href="#cb7-280" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.1</span>, </span>
+<span id="cb7-281"><a href="#cb7-281" aria-hidden="true" tabindex="-1"></a>  <span class="at">boundary =</span> <span class="dv">0</span>, <span class="at">color =</span> <span class="st">&quot;white&quot;</span>, <span class="at">fill =</span> <span class="st">&quot;#377eb8&quot;</span>) <span class="sc">+</span> </span>
+<span id="cb7-282"><a href="#cb7-282" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="fl">2.5</span>, <span class="fl">5.0</span>), </span>
+<span id="cb7-283"><a href="#cb7-283" aria-hidden="true" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">seq</span>(<span class="fl">2.5</span>, <span class="fl">5.0</span>, <span class="fl">0.5</span>)) <span class="sc">+</span> </span>
+<span id="cb7-284"><a href="#cb7-284" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Consensus scores&quot;</span>) <span class="sc">+</span> <span class="fu">theme_classic</span>()</span>
+<span id="cb7-285"><a href="#cb7-285" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-286"><a href="#cb7-286" aria-hidden="true" tabindex="-1"></a>score_hist <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(d, <span class="fu">aes</span>(<span class="at">x =</span> score)) <span class="sc">+</span></span>
+<span id="cb7-287"><a href="#cb7-287" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.1</span>, </span>
+<span id="cb7-288"><a href="#cb7-288" aria-hidden="true" tabindex="-1"></a>  <span class="at">boundary =</span> <span class="dv">0</span>, <span class="at">color =</span> <span class="st">&quot;white&quot;</span>, <span class="at">fill =</span> <span class="st">&quot;#377eb8&quot;</span>) <span class="sc">+</span></span>
+<span id="cb7-289"><a href="#cb7-289" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="fl">2.5</span>, <span class="fl">5.0</span>), </span>
+<span id="cb7-290"><a href="#cb7-290" aria-hidden="true" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">seq</span>(<span class="fl">2.5</span>, <span class="fl">5.0</span>, <span class="fl">0.5</span>)) <span class="sc">+</span></span>
+<span id="cb7-291"><a href="#cb7-291" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Overall scores&quot;</span>) <span class="sc">+</span> <span class="fu">theme_classic</span>()</span>
+<span id="cb7-292"><a href="#cb7-292" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-293"><a href="#cb7-293" aria-hidden="true" tabindex="-1"></a>init_hist <span class="sc">/</span> consensus_hist <span class="sc">/</span> score_hist</span>
+<span id="cb7-294"><a href="#cb7-294" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb7-295"><a href="#cb7-295" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-296"><a href="#cb7-296" aria-hidden="true" tabindex="-1"></a>app_ranks <span class="ot">&lt;-</span> d <span class="sc">|&gt;</span></span>
-<span id="cb7-297"><a href="#cb7-297" aria-hidden="true" tabindex="-1"></a>    <span class="fu">distinct</span>(cmte, app, consensus) <span class="sc">|&gt;</span></span>
-<span id="cb7-298"><a href="#cb7-298" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(cmte) <span class="sc">|&gt;</span></span>
-<span id="cb7-299"><a href="#cb7-299" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">consensus_rank =</span> <span class="fu">rank</span>(consensus, <span class="at">ties.method =</span> <span class="st">&quot;first&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb7-300"><a href="#cb7-300" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
-<span id="cb7-301"><a href="#cb7-301" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(cmte, app, consensus_rank)</span>
-<span id="cb7-302"><a href="#cb7-302" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-303"><a href="#cb7-303" aria-hidden="true" tabindex="-1"></a>app_summary <span class="ot">&lt;-</span> d <span class="sc">|&gt;</span> <span class="fu">left_join</span>(app_ranks, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;cmte&quot;</span>, <span class="st">&quot;app&quot;</span>))</span>
+<span id="cb7-296"><a href="#cb7-296" aria-hidden="true" tabindex="-1"></a>@fig-var shows how our initial simulation incorporates a small degree of variation across committees in the overall scores, as well as the average variation within committees across applications. For the application-level variation we average over committee by within-committee application rank. </span>
+<span id="cb7-297"><a href="#cb7-297" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-300"><a href="#cb7-300" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb7-301"><a href="#cb7-301" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
+<span id="cb7-302"><a href="#cb7-302" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-var</span></span>
+<span id="cb7-303"><a href="#cb7-303" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: Distribution of score variation by committee and application</span></span>
 <span id="cb7-304"><a href="#cb7-304" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-305"><a href="#cb7-305" aria-hidden="true" tabindex="-1"></a>by_app <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(app_summary, </span>
-<span id="cb7-306"><a href="#cb7-306" aria-hidden="true" tabindex="-1"></a>  <span class="fu">aes</span>(<span class="at">x =</span> score, <span class="at">y =</span> <span class="fu">factor</span>(consensus_rank), <span class="at">fill =</span> consensus_rank)) <span class="sc">+</span></span>
-<span id="cb7-307"><a href="#cb7-307" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_density_ridges</span>(<span class="at">scale =</span> <span class="fl">1.5</span>, <span class="at">rel_min_height =</span> <span class="fl">0.01</span>) <span class="sc">+</span></span>
-<span id="cb7-308"><a href="#cb7-308" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Score&quot;</span>,</span>
-<span id="cb7-309"><a href="#cb7-309" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">&quot;Application rank&quot;</span>) <span class="sc">+</span></span>
-<span id="cb7-310"><a href="#cb7-310" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_ridges</span>() <span class="sc">+</span></span>
-<span id="cb7-311"><a href="#cb7-311" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">+</span> <span class="fu">scale_y_discrete</span>(<span class="at">limits =</span> rev)</span>
-<span id="cb7-312"><a href="#cb7-312" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-313"><a href="#cb7-313" aria-hidden="true" tabindex="-1"></a>by_cmte <span class="sc">/</span> by_app</span>
-<span id="cb7-314"><a href="#cb7-314" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-305"><a href="#cb7-305" aria-hidden="true" tabindex="-1"></a>by_cmte <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(d, <span class="fu">aes</span>(<span class="at">x =</span> cmte, <span class="at">y =</span> score)) <span class="sc">+</span> </span>
+<span id="cb7-306"><a href="#cb7-306" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>(<span class="at">fill =</span> <span class="st">&quot;#377eb8&quot;</span>) <span class="sc">+</span> </span>
+<span id="cb7-307"><a href="#cb7-307" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Committee&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Score&quot;</span>) <span class="sc">+</span> <span class="fu">theme_classic</span>()</span>
+<span id="cb7-308"><a href="#cb7-308" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-309"><a href="#cb7-309" aria-hidden="true" tabindex="-1"></a>app_ranks <span class="ot">&lt;-</span> d <span class="sc">|&gt;</span></span>
+<span id="cb7-310"><a href="#cb7-310" aria-hidden="true" tabindex="-1"></a>    <span class="fu">distinct</span>(cmte, app, consensus) <span class="sc">|&gt;</span></span>
+<span id="cb7-311"><a href="#cb7-311" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(cmte) <span class="sc">|&gt;</span></span>
+<span id="cb7-312"><a href="#cb7-312" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">consensus_rank =</span> <span class="fu">rank</span>(consensus, <span class="at">ties.method =</span> <span class="st">&quot;first&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb7-313"><a href="#cb7-313" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
+<span id="cb7-314"><a href="#cb7-314" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(cmte, app, consensus_rank)</span>
 <span id="cb7-315"><a href="#cb7-315" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-316"><a href="#cb7-316" aria-hidden="true" tabindex="-1"></a><span class="fu">## Part 1: did this member deviate?</span></span>
+<span id="cb7-316"><a href="#cb7-316" aria-hidden="true" tabindex="-1"></a>app_summary <span class="ot">&lt;-</span> d <span class="sc">|&gt;</span> <span class="fu">left_join</span>(app_ranks, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;cmte&quot;</span>, <span class="st">&quot;app&quot;</span>))</span>
 <span id="cb7-317"><a href="#cb7-317" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-318"><a href="#cb7-318" aria-hidden="true" tabindex="-1"></a><span class="in">```{r aim1-m1}</span></span>
-<span id="cb7-319"><a href="#cb7-319" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
-<span id="cb7-320"><a href="#cb7-320" aria-hidden="true" tabindex="-1"></a><span class="co">#| code-summary: &quot;code/ror-analysis-score-models.R -- Part 1 (bernoulli)&quot;</span></span>
-<span id="cb7-321"><a href="#cb7-321" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-322"><a href="#cb7-322" aria-hidden="true" tabindex="-1"></a>m1_deviate <span class="ot">&lt;-</span></span>
-<span id="cb7-323"><a href="#cb7-323" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(<span class="at">data =</span> d1,</span>
-<span id="cb7-324"><a href="#cb7-324" aria-hidden="true" tabindex="-1"></a>      <span class="at">family =</span> <span class="fu">bernoulli</span>(),</span>
-<span id="cb7-325"><a href="#cb7-325" aria-hidden="true" tabindex="-1"></a>      deviated <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> job <span class="sc">+</span> exp <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> cmte) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> cid) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> app),</span>
-<span id="cb7-326"><a href="#cb7-326" aria-hidden="true" tabindex="-1"></a>      <span class="at">prior =</span> <span class="fu">c</span>(<span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">1.5</span>), <span class="at">class =</span> Intercept),</span>
-<span id="cb7-327"><a href="#cb7-327" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.5</span>), <span class="at">class =</span> b),</span>
-<span id="cb7-328"><a href="#cb7-328" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sd)),</span>
-<span id="cb7-329"><a href="#cb7-329" aria-hidden="true" tabindex="-1"></a>      <span class="at">iter =</span> <span class="dv">2000</span>, <span class="at">warmup =</span> <span class="dv">1000</span>, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>,</span>
-<span id="cb7-330"><a href="#cb7-330" aria-hidden="true" tabindex="-1"></a>      <span class="at">sample_prior =</span> <span class="st">&quot;yes&quot;</span>,</span>
-<span id="cb7-331"><a href="#cb7-331" aria-hidden="true" tabindex="-1"></a>      <span class="at">control =</span> <span class="fu">list</span>(<span class="at">adapt_delta =</span> <span class="fl">0.95</span>))</span>
-<span id="cb7-332"><a href="#cb7-332" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-333"><a href="#cb7-333" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-334"><a href="#cb7-334" aria-hidden="true" tabindex="-1"></a>Random intercepts for committee, member (<span class="in">`cid`</span>), and application; fixed</span>
-<span id="cb7-335"><a href="#cb7-335" aria-hidden="true" tabindex="-1"></a>effects for role and expertise. Weakly informative priors throughout --</span>
-<span id="cb7-336"><a href="#cb7-336" aria-hidden="true" tabindex="-1"></a><span class="in">`normal(0, 1.5)`</span> on the (logit-scale) intercept, <span class="in">`normal(0, 0.5)`</span> on</span>
-<span id="cb7-337"><a href="#cb7-337" aria-hidden="true" tabindex="-1"></a>coefficients, <span class="in">`exponential(1)`</span> on group-level SDs. <span class="in">`sample_prior = &quot;yes&quot;`</span> so we always have prior-predictive</span>
-<span id="cb7-338"><a href="#cb7-338" aria-hidden="true" tabindex="-1"></a>draws to check against before trusting the posterior.</span>
-<span id="cb7-339"><a href="#cb7-339" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-340"><a href="#cb7-340" aria-hidden="true" tabindex="-1"></a><span class="fu">## Part 2: how large, given a deviation?</span></span>
-<span id="cb7-341"><a href="#cb7-341" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-342"><a href="#cb7-342" aria-hidden="true" tabindex="-1"></a>CIHR scores are entered to one decimal place, so a deviator&#39;s score can only</span>
-<span id="cb7-343"><a href="#cb7-343" aria-hidden="true" tabindex="-1"></a>land on one of 10 discrete steps ($\pm0.1 \ldots \pm0.5$ relative to</span>
-<span id="cb7-344"><a href="#cb7-344" aria-hidden="true" tabindex="-1"></a>consensus). That&#39;s genuinely ordinal/discrete data, not a continuous</span>
-<span id="cb7-345"><a href="#cb7-345" aria-hidden="true" tabindex="-1"></a>quantity with occasional extreme values -- a continuous family</span>
-<span id="cb7-346"><a href="#cb7-346" aria-hidden="true" tabindex="-1"></a>(<span class="in">`student()`</span>/<span class="in">`gaussian()`</span>) would assign probability to impossible values</span>
-<span id="cb7-347"><a href="#cb7-347" aria-hidden="true" tabindex="-1"></a>and has no natural bound at $\pm0.5$ without truncation hacks. We use an</span>
-<span id="cb7-348"><a href="#cb7-348" aria-hidden="true" tabindex="-1"></a>ordinal <span class="in">`cumulative()`</span> model instead, with flexible (non-equidistant)</span>
-<span id="cb7-349"><a href="#cb7-349" aria-hidden="true" tabindex="-1"></a>thresholds, since there&#39;s no reason to assume the 10 steps are equally</span>
-<span id="cb7-350"><a href="#cb7-350" aria-hidden="true" tabindex="-1"></a>likely -- and in the simulated data they clearly aren&#39;t (concentrated near</span>
-<span id="cb7-351"><a href="#cb7-351" aria-hidden="true" tabindex="-1"></a>$\pm0.1$, sparse at $\pm0.5$, which happen to be the swings most relevant to</span>
-<span id="cb7-352"><a href="#cb7-352" aria-hidden="true" tabindex="-1"></a>Aim 3&#39;s funding-decision question).</span>
-<span id="cb7-353"><a href="#cb7-353" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-354"><a href="#cb7-354" aria-hidden="true" tabindex="-1"></a><span class="in">```{r aim1-m2}</span></span>
-<span id="cb7-355"><a href="#cb7-355" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
-<span id="cb7-356"><a href="#cb7-356" aria-hidden="true" tabindex="-1"></a><span class="co">#| code-summary: &quot;code/ror-analysis-score-models.R -- Part 2 (ordinal)&quot;</span></span>
-<span id="cb7-357"><a href="#cb7-357" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-358"><a href="#cb7-358" aria-hidden="true" tabindex="-1"></a>m1_magnitude <span class="ot">&lt;-</span></span>
-<span id="cb7-359"><a href="#cb7-359" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(<span class="at">data =</span> d1_dev,</span>
-<span id="cb7-360"><a href="#cb7-360" aria-hidden="true" tabindex="-1"></a>      <span class="at">family =</span> <span class="fu">cumulative</span>(<span class="at">link =</span> <span class="st">&quot;logit&quot;</span>, <span class="at">threshold =</span> <span class="st">&quot;flexible&quot;</span>),</span>
-<span id="cb7-361"><a href="#cb7-361" aria-hidden="true" tabindex="-1"></a>      deviation <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> job <span class="sc">+</span> exp <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> cmte) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> cid) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> app),</span>
-<span id="cb7-362"><a href="#cb7-362" aria-hidden="true" tabindex="-1"></a>      <span class="at">prior =</span> <span class="fu">c</span>(<span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">1.5</span>), <span class="at">class =</span> Intercept),</span>
-<span id="cb7-363"><a href="#cb7-363" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.5</span>), <span class="at">class =</span> b),</span>
-<span id="cb7-364"><a href="#cb7-364" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sd)),</span>
-<span id="cb7-365"><a href="#cb7-365" aria-hidden="true" tabindex="-1"></a>      <span class="at">iter =</span> <span class="dv">2000</span>, <span class="at">warmup =</span> <span class="dv">1000</span>, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>,</span>
-<span id="cb7-366"><a href="#cb7-366" aria-hidden="true" tabindex="-1"></a>      <span class="at">sample_prior =</span> <span class="st">&quot;yes&quot;</span>,</span>
-<span id="cb7-367"><a href="#cb7-367" aria-hidden="true" tabindex="-1"></a>      <span class="at">control =</span> <span class="fu">list</span>(<span class="at">adapt_delta =</span> <span class="fl">0.95</span>))</span>
-<span id="cb7-368"><a href="#cb7-368" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-369"><a href="#cb7-369" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-370"><a href="#cb7-370" aria-hidden="true" tabindex="-1"></a>The cost: $E<span class="co">[</span><span class="ot">\text{magnitude} \mid \text{deviate}</span><span class="co">]</span>$ from an ordinal model is</span>
-<span id="cb7-371"><a href="#cb7-371" aria-hidden="true" tabindex="-1"></a>not a linear prediction -- it&#39;s a probability-weighted sum over the 10</span>
-<span id="cb7-372"><a href="#cb7-372" aria-hidden="true" tabindex="-1"></a>category values, computed per posterior draw, not read off a default</span>
-<span id="cb7-373"><a href="#cb7-373" aria-hidden="true" tabindex="-1"></a><span class="in">`marginaleffects`</span> contrast. That combination step (and the corresponding</span>
-<span id="cb7-374"><a href="#cb7-374" aria-hidden="true" tabindex="-1"></a>$E<span class="co">[</span><span class="ot">d_{ijk}</span><span class="co">]</span> = P(\text{deviate}) \times E[\text{magnitude} \mid</span>
-<span id="cb7-375"><a href="#cb7-375" aria-hidden="true" tabindex="-1"></a>\text{deviate}]$ calculation across both models) is written but not yet</span>
-<span id="cb7-376"><a href="#cb7-376" aria-hidden="true" tabindex="-1"></a>implemented in code -- see Open Questions below.</span>
-<span id="cb7-377"><a href="#cb7-377" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-378"><a href="#cb7-378" aria-hidden="true" tabindex="-1"></a><span class="fu">## Software</span></span>
-<span id="cb7-379"><a href="#cb7-379" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-380"><a href="#cb7-380" aria-hidden="true" tabindex="-1"></a>Bayesian throughout, via <span class="in">`brms`</span> + <span class="in">`cmdstanr`</span> (Stan backend), matching the</span>
-<span id="cb7-381"><a href="#cb7-381" aria-hidden="true" tabindex="-1"></a>conventions in our other multilevel work. <span class="in">`marginaleffects`</span> for posterior</span>
-<span id="cb7-382"><a href="#cb7-382" aria-hidden="true" tabindex="-1"></a>contrasts; models cached to <span class="in">`code/fits/`</span> and deliberately re-fit (not</span>
-<span id="cb7-383"><a href="#cb7-383" aria-hidden="true" tabindex="-1"></a>silently reused) whenever formula or data change.</span>
-<span id="cb7-384"><a href="#cb7-384" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-385"><a href="#cb7-385" aria-hidden="true" tabindex="-1"></a><span class="fu"># Extending to Aim 2: applicant characteristics</span></span>
-<span id="cb7-386"><a href="#cb7-386" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-387"><a href="#cb7-387" aria-hidden="true" tabindex="-1"></a>Since applicant gender and career stage will never be extractable -- not</span>
-<span id="cb7-388"><a href="#cb7-388" aria-hidden="true" tabindex="-1"></a>even as CIHR&#39;s own dummy data -- this simulation is the only pre-deployment</span>
-<span id="cb7-389"><a href="#cb7-389" aria-hidden="true" tabindex="-1"></a>test that code touching those variables gets. We added them as</span>
-<span id="cb7-390"><a href="#cb7-390" aria-hidden="true" tabindex="-1"></a>**application-level** attributes (one value per application, like</span>
-<span id="cb7-391"><a href="#cb7-391" aria-hidden="true" tabindex="-1"></a>consensus score, not per member) to a new, separate simulation script</span>
-<span id="cb7-392"><a href="#cb7-392" aria-hidden="true" tabindex="-1"></a>(<span class="in">`code/ror-sim-aim2.R`</span>) rather than growing the Aim 1 script further --</span>
-<span id="cb7-393"><a href="#cb7-393" aria-hidden="true" tabindex="-1"></a>see &quot;A note on simulation architecture&quot; below.</span>
-<span id="cb7-394"><a href="#cb7-394" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-395"><a href="#cb7-395" aria-hidden="true" tabindex="-1"></a>Critically, we didn&#39;t just add *main* effects of gender/career stage. Aim</span>
-<span id="cb7-396"><a href="#cb7-396" aria-hidden="true" tabindex="-1"></a>2&#39;s actual question is whether the *engagement/expertise effect on</span>
-<span id="cb7-397"><a href="#cb7-397" aria-hidden="true" tabindex="-1"></a>deviation* differs by applicant characteristic -- which requires an</span>
-<span id="cb7-398"><a href="#cb7-398" aria-hidden="true" tabindex="-1"></a>**interaction** term to exist in the generating process, or there&#39;s nothing</span>
-<span id="cb7-399"><a href="#cb7-399" aria-hidden="true" tabindex="-1"></a>for the fitted model to recover.</span>
-<span id="cb7-400"><a href="#cb7-400" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-401"><a href="#cb7-401" aria-hidden="true" tabindex="-1"></a><span class="in">```{r aim2-params}</span></span>
-<span id="cb7-402"><a href="#cb7-402" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
-<span id="cb7-403"><a href="#cb7-403" aria-hidden="true" tabindex="-1"></a><span class="co">#| code-summary: &quot;code/ror-sim-aim2.R -- applicant-level additions&quot;</span></span>
-<span id="cb7-404"><a href="#cb7-404" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-405"><a href="#cb7-405" aria-hidden="true" tabindex="-1"></a><span class="co"># applicant-level main effects (modest -- not the effects of interest)</span></span>
-<span id="cb7-406"><a href="#cb7-406" aria-hidden="true" tabindex="-1"></a>g1       <span class="ot">=</span>  <span class="fl">0.1</span>   <span class="co"># applicant gender = female</span></span>
-<span id="cb7-407"><a href="#cb7-407" aria-hidden="true" tabindex="-1"></a>c1       <span class="ot">=</span> <span class="sc">-</span><span class="fl">0.1</span>   <span class="co"># applicant career stage = early</span></span>
-<span id="cb7-408"><a href="#cb7-408" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-409"><a href="#cb7-409" aria-hidden="true" tabindex="-1"></a><span class="co"># Aim 2&#39;s actual target: does the reviewer-engagement / expertise effect</span></span>
-<span id="cb7-410"><a href="#cb7-410" aria-hidden="true" tabindex="-1"></a><span class="co"># on P(deviate) differ by applicant gender / career stage? Baked in large</span></span>
-<span id="cb7-411"><a href="#cb7-411" aria-hidden="true" tabindex="-1"></a><span class="co"># on purpose so we can confirm the two-part model machinery actually</span></span>
-<span id="cb7-412"><a href="#cb7-412" aria-hidden="true" tabindex="-1"></a><span class="co"># recovers a real interaction, not just a real main effect.</span></span>
-<span id="cb7-413"><a href="#cb7-413" aria-hidden="true" tabindex="-1"></a>i_panelist_female     <span class="ot">=</span>  <span class="fl">0.5</span>  <span class="co"># job(panelist) x gender(female)</span></span>
-<span id="cb7-414"><a href="#cb7-414" aria-hidden="true" tabindex="-1"></a>i_expnone_earlycareer <span class="ot">=</span>  <span class="fl">0.6</span>  <span class="co"># exp(none) x career_stage(early)</span></span>
-<span id="cb7-415"><a href="#cb7-415" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-416"><a href="#cb7-416" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> data <span class="sc">|&gt;</span></span>
-<span id="cb7-417"><a href="#cb7-417" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb7-418"><a href="#cb7-418" aria-hidden="true" tabindex="-1"></a>    <span class="at">p_dev =</span> <span class="fu">plogis</span>(a0 <span class="sc">+</span> (a1 <span class="sc">*</span> panelist) <span class="sc">+</span> (a2 <span class="sc">*</span> exp_high) <span class="sc">+</span></span>
-<span id="cb7-419"><a href="#cb7-419" aria-hidden="true" tabindex="-1"></a>      (a3 <span class="sc">*</span> exp_low) <span class="sc">+</span> (a4 <span class="sc">*</span> exp_none) <span class="sc">+</span></span>
-<span id="cb7-420"><a href="#cb7-420" aria-hidden="true" tabindex="-1"></a>      (g1 <span class="sc">*</span> female) <span class="sc">+</span> (c1 <span class="sc">*</span> early_career) <span class="sc">+</span></span>
-<span id="cb7-421"><a href="#cb7-421" aria-hidden="true" tabindex="-1"></a>      (i_panelist_female <span class="sc">*</span> panelist <span class="sc">*</span> female) <span class="sc">+</span></span>
-<span id="cb7-422"><a href="#cb7-422" aria-hidden="true" tabindex="-1"></a>      (i_expnone_earlycareer <span class="sc">*</span> exp_none <span class="sc">*</span> early_career)),</span>
-<span id="cb7-423"><a href="#cb7-423" aria-hidden="true" tabindex="-1"></a>    <span class="at">deviated =</span> <span class="fu">rbinom</span>(<span class="fu">n</span>(), <span class="dv">1</span>, p_dev)</span>
-<span id="cb7-424"><a href="#cb7-424" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ... deviation magnitude drawn the same way as Aim 1; applicant</span></span>
-<span id="cb7-425"><a href="#cb7-425" aria-hidden="true" tabindex="-1"></a>    <span class="co"># terms are deliberately left out of the magnitude part, consistent</span></span>
-<span id="cb7-426"><a href="#cb7-426" aria-hidden="true" tabindex="-1"></a>    <span class="co"># with the Aim 1 finding above that signal lives in whether someone</span></span>
-<span id="cb7-427"><a href="#cb7-427" aria-hidden="true" tabindex="-1"></a>    <span class="co"># deviates, not in the average size of the deviation</span></span>
-<span id="cb7-428"><a href="#cb7-428" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb7-429"><a href="#cb7-429" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-430"><a href="#cb7-430" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-431"><a href="#cb7-431" aria-hidden="true" tabindex="-1"></a>**To be clear about what these numbers are and aren&#39;t:** they are chosen to</span>
-<span id="cb7-432"><a href="#cb7-432" aria-hidden="true" tabindex="-1"></a>be large enough to detect cleanly in a simulation of this size, not</span>
-<span id="cb7-433"><a href="#cb7-433" aria-hidden="true" tabindex="-1"></a>estimates -- or even guesses -- about the true magnitude or even direction</span>
-<span id="cb7-434"><a href="#cb7-434" aria-hidden="true" tabindex="-1"></a>of any real effect in CIHR review. The goal is purely to confirm our</span>
-<span id="cb7-435"><a href="#cb7-435" aria-hidden="true" tabindex="-1"></a>statistical machinery would notice an interaction if the real data</span>
-<span id="cb7-436"><a href="#cb7-436" aria-hidden="true" tabindex="-1"></a>contained one.</span>
-<span id="cb7-437"><a href="#cb7-437" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-438"><a href="#cb7-438" aria-hidden="true" tabindex="-1"></a><span class="in">```{r aim2-interaction-check}</span></span>
-<span id="cb7-439"><a href="#cb7-439" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: &quot;Aim 2: interaction coefficients recovered from the simulated data (n = 18,000)&quot;</span></span>
-<span id="cb7-440"><a href="#cb7-440" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-441"><a href="#cb7-441" aria-hidden="true" tabindex="-1"></a>d2 <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;sim-aim2-data.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb7-442"><a href="#cb7-442" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-443"><a href="#cb7-443" aria-hidden="true" tabindex="-1"></a>m_aim2 <span class="ot">&lt;-</span> <span class="fu">glm</span>(deviated <span class="sc">~</span> job <span class="sc">*</span> gender <span class="sc">+</span> exp <span class="sc">*</span> career_stage,</span>
-<span id="cb7-444"><a href="#cb7-444" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> d2, <span class="at">family =</span> <span class="fu">binomial</span>())</span>
-<span id="cb7-445"><a href="#cb7-445" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-446"><a href="#cb7-446" aria-hidden="true" tabindex="-1"></a>coefs <span class="ot">&lt;-</span> <span class="fu">summary</span>(m_aim2)<span class="sc">$</span>coefficients</span>
-<span id="cb7-447"><a href="#cb7-447" aria-hidden="true" tabindex="-1"></a>coefs[<span class="fu">grepl</span>(<span class="st">&quot;:&quot;</span>, <span class="fu">rownames</span>(coefs)), ] <span class="sc">|&gt;</span></span>
-<span id="cb7-448"><a href="#cb7-448" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>(<span class="at">rownames =</span> <span class="st">&quot;term&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb7-449"><a href="#cb7-449" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tt</span>(<span class="at">digits =</span> <span class="dv">3</span>)</span>
-<span id="cb7-450"><a href="#cb7-450" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-451"><a href="#cb7-451" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-452"><a href="#cb7-452" aria-hidden="true" tabindex="-1"></a>Both interactions are recovered cleanly and with high significance (the</span>
-<span id="cb7-453"><a href="#cb7-453" aria-hidden="true" tabindex="-1"></a>sign flips relative to the parameters above are just R&#39;s alphabetical</span>
-<span id="cb7-454"><a href="#cb7-454" aria-hidden="true" tabindex="-1"></a>choice of reference category -- <span class="in">`job`</span>&#39;s reference is &quot;panelist&quot;, <span class="in">`gender`</span>&#39;s</span>
-<span id="cb7-455"><a href="#cb7-455" aria-hidden="true" tabindex="-1"></a>is &quot;female&quot;, <span class="in">`career_stage`</span>&#39;s is &quot;early&quot;, so e.g.</span>
-<span id="cb7-456"><a href="#cb7-456" aria-hidden="true" tabindex="-1"></a><span class="in">`jobreviewer:gendermale`</span> is algebraically the same interaction as</span>
-<span id="cb7-457"><a href="#cb7-457" aria-hidden="true" tabindex="-1"></a><span class="in">`job(panelist):gender(female)`</span>, just from the opposite corner of the 2x2).</span>
+<span id="cb7-318"><a href="#cb7-318" aria-hidden="true" tabindex="-1"></a>by_app <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(app_summary, </span>
+<span id="cb7-319"><a href="#cb7-319" aria-hidden="true" tabindex="-1"></a>  <span class="fu">aes</span>(<span class="at">x =</span> score, <span class="at">y =</span> <span class="fu">factor</span>(consensus_rank), <span class="at">fill =</span> consensus_rank)) <span class="sc">+</span></span>
+<span id="cb7-320"><a href="#cb7-320" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_density_ridges</span>(<span class="at">scale =</span> <span class="fl">1.5</span>, <span class="at">rel_min_height =</span> <span class="fl">0.01</span>) <span class="sc">+</span></span>
+<span id="cb7-321"><a href="#cb7-321" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Score&quot;</span>,</span>
+<span id="cb7-322"><a href="#cb7-322" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">&quot;Application rank&quot;</span>) <span class="sc">+</span></span>
+<span id="cb7-323"><a href="#cb7-323" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_ridges</span>() <span class="sc">+</span></span>
+<span id="cb7-324"><a href="#cb7-324" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">+</span> <span class="fu">scale_y_discrete</span>(<span class="at">limits =</span> rev)</span>
+<span id="cb7-325"><a href="#cb7-325" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-326"><a href="#cb7-326" aria-hidden="true" tabindex="-1"></a>by_cmte <span class="sc">/</span> by_app</span>
+<span id="cb7-327"><a href="#cb7-327" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-328"><a href="#cb7-328" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-329"><a href="#cb7-329" aria-hidden="true" tabindex="-1"></a><span class="fu">## Part 1: did this member deviate?</span></span>
+<span id="cb7-330"><a href="#cb7-330" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-331"><a href="#cb7-331" aria-hidden="true" tabindex="-1"></a><span class="in">```{r aim1-m1}</span></span>
+<span id="cb7-332"><a href="#cb7-332" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb7-333"><a href="#cb7-333" aria-hidden="true" tabindex="-1"></a><span class="co">#| code-summary: &quot;code/ror-analysis-score-models.R -- Part 1 (bernoulli)&quot;</span></span>
+<span id="cb7-334"><a href="#cb7-334" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-335"><a href="#cb7-335" aria-hidden="true" tabindex="-1"></a>m1_deviate <span class="ot">&lt;-</span></span>
+<span id="cb7-336"><a href="#cb7-336" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(<span class="at">data =</span> d1,</span>
+<span id="cb7-337"><a href="#cb7-337" aria-hidden="true" tabindex="-1"></a>      <span class="at">family =</span> <span class="fu">bernoulli</span>(),</span>
+<span id="cb7-338"><a href="#cb7-338" aria-hidden="true" tabindex="-1"></a>      deviated <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> job <span class="sc">+</span> exp <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> cmte) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> cid) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> app),</span>
+<span id="cb7-339"><a href="#cb7-339" aria-hidden="true" tabindex="-1"></a>      <span class="at">prior =</span> <span class="fu">c</span>(<span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">1.5</span>), <span class="at">class =</span> Intercept),</span>
+<span id="cb7-340"><a href="#cb7-340" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.5</span>), <span class="at">class =</span> b),</span>
+<span id="cb7-341"><a href="#cb7-341" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sd)),</span>
+<span id="cb7-342"><a href="#cb7-342" aria-hidden="true" tabindex="-1"></a>      <span class="at">iter =</span> <span class="dv">2000</span>, <span class="at">warmup =</span> <span class="dv">1000</span>, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb7-343"><a href="#cb7-343" aria-hidden="true" tabindex="-1"></a>      <span class="at">sample_prior =</span> <span class="st">&quot;yes&quot;</span>,</span>
+<span id="cb7-344"><a href="#cb7-344" aria-hidden="true" tabindex="-1"></a>      <span class="at">control =</span> <span class="fu">list</span>(<span class="at">adapt_delta =</span> <span class="fl">0.95</span>))</span>
+<span id="cb7-345"><a href="#cb7-345" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-346"><a href="#cb7-346" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-347"><a href="#cb7-347" aria-hidden="true" tabindex="-1"></a>Random intercepts for committee, member (<span class="in">`cid`</span>), and application; fixed</span>
+<span id="cb7-348"><a href="#cb7-348" aria-hidden="true" tabindex="-1"></a>effects for role and expertise. Weakly informative priors throughout --</span>
+<span id="cb7-349"><a href="#cb7-349" aria-hidden="true" tabindex="-1"></a><span class="in">`normal(0, 1.5)`</span> on the (logit-scale) intercept, <span class="in">`normal(0, 0.5)`</span> on</span>
+<span id="cb7-350"><a href="#cb7-350" aria-hidden="true" tabindex="-1"></a>coefficients, <span class="in">`exponential(1)`</span> on group-level SDs. <span class="in">`sample_prior = &quot;yes&quot;`</span> so we always have prior-predictive</span>
+<span id="cb7-351"><a href="#cb7-351" aria-hidden="true" tabindex="-1"></a>draws to check against before trusting the posterior.</span>
+<span id="cb7-352"><a href="#cb7-352" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-353"><a href="#cb7-353" aria-hidden="true" tabindex="-1"></a><span class="fu">## Part 2: how large, given a deviation?</span></span>
+<span id="cb7-354"><a href="#cb7-354" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-355"><a href="#cb7-355" aria-hidden="true" tabindex="-1"></a>CIHR scores are entered to one decimal place, so a deviator&#39;s score can only</span>
+<span id="cb7-356"><a href="#cb7-356" aria-hidden="true" tabindex="-1"></a>land on one of 10 discrete steps ($\pm0.1 \ldots \pm0.5$ relative to</span>
+<span id="cb7-357"><a href="#cb7-357" aria-hidden="true" tabindex="-1"></a>consensus). That&#39;s genuinely ordinal/discrete data, not a continuous</span>
+<span id="cb7-358"><a href="#cb7-358" aria-hidden="true" tabindex="-1"></a>quantity with occasional extreme values -- a continuous family</span>
+<span id="cb7-359"><a href="#cb7-359" aria-hidden="true" tabindex="-1"></a>(<span class="in">`student()`</span>/<span class="in">`gaussian()`</span>) would assign probability to impossible values</span>
+<span id="cb7-360"><a href="#cb7-360" aria-hidden="true" tabindex="-1"></a>and has no natural bound at $\pm0.5$ without truncation hacks. We use an</span>
+<span id="cb7-361"><a href="#cb7-361" aria-hidden="true" tabindex="-1"></a>ordinal <span class="in">`cumulative()`</span> model instead, with flexible (non-equidistant)</span>
+<span id="cb7-362"><a href="#cb7-362" aria-hidden="true" tabindex="-1"></a>thresholds, since there&#39;s no reason to assume the 10 steps are equally</span>
+<span id="cb7-363"><a href="#cb7-363" aria-hidden="true" tabindex="-1"></a>likely -- and in the simulated data they clearly aren&#39;t (concentrated near</span>
+<span id="cb7-364"><a href="#cb7-364" aria-hidden="true" tabindex="-1"></a>$\pm0.1$, sparse at $\pm0.5$, which happen to be the swings most relevant to</span>
+<span id="cb7-365"><a href="#cb7-365" aria-hidden="true" tabindex="-1"></a>Aim 3&#39;s funding-decision question).</span>
+<span id="cb7-366"><a href="#cb7-366" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-367"><a href="#cb7-367" aria-hidden="true" tabindex="-1"></a><span class="in">```{r aim1-m2}</span></span>
+<span id="cb7-368"><a href="#cb7-368" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb7-369"><a href="#cb7-369" aria-hidden="true" tabindex="-1"></a><span class="co">#| code-summary: &quot;code/ror-analysis-score-models.R -- Part 2 (ordinal)&quot;</span></span>
+<span id="cb7-370"><a href="#cb7-370" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-371"><a href="#cb7-371" aria-hidden="true" tabindex="-1"></a>m1_magnitude <span class="ot">&lt;-</span></span>
+<span id="cb7-372"><a href="#cb7-372" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(<span class="at">data =</span> d1_dev,</span>
+<span id="cb7-373"><a href="#cb7-373" aria-hidden="true" tabindex="-1"></a>      <span class="at">family =</span> <span class="fu">cumulative</span>(<span class="at">link =</span> <span class="st">&quot;logit&quot;</span>, <span class="at">threshold =</span> <span class="st">&quot;flexible&quot;</span>),</span>
+<span id="cb7-374"><a href="#cb7-374" aria-hidden="true" tabindex="-1"></a>      deviation <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> job <span class="sc">+</span> exp <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> cmte) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> cid) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> app),</span>
+<span id="cb7-375"><a href="#cb7-375" aria-hidden="true" tabindex="-1"></a>      <span class="at">prior =</span> <span class="fu">c</span>(<span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">1.5</span>), <span class="at">class =</span> Intercept),</span>
+<span id="cb7-376"><a href="#cb7-376" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.5</span>), <span class="at">class =</span> b),</span>
+<span id="cb7-377"><a href="#cb7-377" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sd)),</span>
+<span id="cb7-378"><a href="#cb7-378" aria-hidden="true" tabindex="-1"></a>      <span class="at">iter =</span> <span class="dv">2000</span>, <span class="at">warmup =</span> <span class="dv">1000</span>, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb7-379"><a href="#cb7-379" aria-hidden="true" tabindex="-1"></a>      <span class="at">sample_prior =</span> <span class="st">&quot;yes&quot;</span>,</span>
+<span id="cb7-380"><a href="#cb7-380" aria-hidden="true" tabindex="-1"></a>      <span class="at">control =</span> <span class="fu">list</span>(<span class="at">adapt_delta =</span> <span class="fl">0.95</span>))</span>
+<span id="cb7-381"><a href="#cb7-381" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-382"><a href="#cb7-382" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-383"><a href="#cb7-383" aria-hidden="true" tabindex="-1"></a>The cost: $E<span class="co">[</span><span class="ot">\text{magnitude} \mid \text{deviate}</span><span class="co">]</span>$ from an ordinal model is</span>
+<span id="cb7-384"><a href="#cb7-384" aria-hidden="true" tabindex="-1"></a>not a linear prediction -- it&#39;s a probability-weighted sum over the 10</span>
+<span id="cb7-385"><a href="#cb7-385" aria-hidden="true" tabindex="-1"></a>category values, computed per posterior draw, not read off a default</span>
+<span id="cb7-386"><a href="#cb7-386" aria-hidden="true" tabindex="-1"></a><span class="in">`marginaleffects`</span> contrast. That combination step (and the corresponding</span>
+<span id="cb7-387"><a href="#cb7-387" aria-hidden="true" tabindex="-1"></a>$E<span class="co">[</span><span class="ot">d_{ijk}</span><span class="co">]</span> = P(\text{deviate}) \times E[\text{magnitude} \mid</span>
+<span id="cb7-388"><a href="#cb7-388" aria-hidden="true" tabindex="-1"></a>\text{deviate}]$ calculation across both models) is written but not yet</span>
+<span id="cb7-389"><a href="#cb7-389" aria-hidden="true" tabindex="-1"></a>implemented in code -- see Open Questions below.</span>
+<span id="cb7-390"><a href="#cb7-390" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-391"><a href="#cb7-391" aria-hidden="true" tabindex="-1"></a><span class="fu">## Software</span></span>
+<span id="cb7-392"><a href="#cb7-392" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-393"><a href="#cb7-393" aria-hidden="true" tabindex="-1"></a>Bayesian throughout, via <span class="in">`brms`</span> + <span class="in">`cmdstanr`</span> (Stan backend), matching the</span>
+<span id="cb7-394"><a href="#cb7-394" aria-hidden="true" tabindex="-1"></a>conventions in our other multilevel work. <span class="in">`marginaleffects`</span> for posterior</span>
+<span id="cb7-395"><a href="#cb7-395" aria-hidden="true" tabindex="-1"></a>contrasts; models cached to <span class="in">`code/fits/`</span> and deliberately re-fit (not</span>
+<span id="cb7-396"><a href="#cb7-396" aria-hidden="true" tabindex="-1"></a>silently reused) whenever formula or data change.</span>
+<span id="cb7-397"><a href="#cb7-397" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-398"><a href="#cb7-398" aria-hidden="true" tabindex="-1"></a><span class="fu"># Extending to Aim 2: applicant characteristics</span></span>
+<span id="cb7-399"><a href="#cb7-399" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-400"><a href="#cb7-400" aria-hidden="true" tabindex="-1"></a>Since applicant gender and career stage will never be extractable -- not</span>
+<span id="cb7-401"><a href="#cb7-401" aria-hidden="true" tabindex="-1"></a>even as CIHR&#39;s own dummy data -- this simulation is the only pre-deployment</span>
+<span id="cb7-402"><a href="#cb7-402" aria-hidden="true" tabindex="-1"></a>test that code touching those variables gets. We added them as</span>
+<span id="cb7-403"><a href="#cb7-403" aria-hidden="true" tabindex="-1"></a>**application-level** attributes (one value per application, like</span>
+<span id="cb7-404"><a href="#cb7-404" aria-hidden="true" tabindex="-1"></a>consensus score, not per member) to a new, separate simulation script</span>
+<span id="cb7-405"><a href="#cb7-405" aria-hidden="true" tabindex="-1"></a>(<span class="in">`code/ror-sim-aim2.R`</span>) rather than growing the Aim 1 script further --</span>
+<span id="cb7-406"><a href="#cb7-406" aria-hidden="true" tabindex="-1"></a>see &quot;A note on simulation architecture&quot; below.</span>
+<span id="cb7-407"><a href="#cb7-407" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-408"><a href="#cb7-408" aria-hidden="true" tabindex="-1"></a>Critically, we didn&#39;t just add *main* effects of gender/career stage. Aim</span>
+<span id="cb7-409"><a href="#cb7-409" aria-hidden="true" tabindex="-1"></a>2&#39;s actual question is whether the *engagement/expertise effect on</span>
+<span id="cb7-410"><a href="#cb7-410" aria-hidden="true" tabindex="-1"></a>deviation* differs by applicant characteristic -- which requires an</span>
+<span id="cb7-411"><a href="#cb7-411" aria-hidden="true" tabindex="-1"></a>**interaction** term to exist in the generating process, or there&#39;s nothing</span>
+<span id="cb7-412"><a href="#cb7-412" aria-hidden="true" tabindex="-1"></a>for the fitted model to recover.</span>
+<span id="cb7-413"><a href="#cb7-413" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-414"><a href="#cb7-414" aria-hidden="true" tabindex="-1"></a><span class="in">```{r aim2-params}</span></span>
+<span id="cb7-415"><a href="#cb7-415" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb7-416"><a href="#cb7-416" aria-hidden="true" tabindex="-1"></a><span class="co">#| code-summary: &quot;code/ror-sim-aim2.R -- applicant-level additions&quot;</span></span>
+<span id="cb7-417"><a href="#cb7-417" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-418"><a href="#cb7-418" aria-hidden="true" tabindex="-1"></a><span class="co"># applicant-level main effects (modest -- not the effects of interest)</span></span>
+<span id="cb7-419"><a href="#cb7-419" aria-hidden="true" tabindex="-1"></a>g1       <span class="ot">=</span>  <span class="fl">0.1</span>   <span class="co"># applicant gender = female</span></span>
+<span id="cb7-420"><a href="#cb7-420" aria-hidden="true" tabindex="-1"></a>c1       <span class="ot">=</span> <span class="sc">-</span><span class="fl">0.1</span>   <span class="co"># applicant career stage = early</span></span>
+<span id="cb7-421"><a href="#cb7-421" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-422"><a href="#cb7-422" aria-hidden="true" tabindex="-1"></a><span class="co"># Aim 2&#39;s actual target: does the reviewer-engagement / expertise effect</span></span>
+<span id="cb7-423"><a href="#cb7-423" aria-hidden="true" tabindex="-1"></a><span class="co"># on P(deviate) differ by applicant gender / career stage? Baked in large</span></span>
+<span id="cb7-424"><a href="#cb7-424" aria-hidden="true" tabindex="-1"></a><span class="co"># on purpose so we can confirm the two-part model machinery actually</span></span>
+<span id="cb7-425"><a href="#cb7-425" aria-hidden="true" tabindex="-1"></a><span class="co"># recovers a real interaction, not just a real main effect.</span></span>
+<span id="cb7-426"><a href="#cb7-426" aria-hidden="true" tabindex="-1"></a>i_panelist_female     <span class="ot">=</span>  <span class="fl">0.5</span>  <span class="co"># job(panelist) x gender(female)</span></span>
+<span id="cb7-427"><a href="#cb7-427" aria-hidden="true" tabindex="-1"></a>i_expnone_earlycareer <span class="ot">=</span>  <span class="fl">0.6</span>  <span class="co"># exp(none) x career_stage(early)</span></span>
+<span id="cb7-428"><a href="#cb7-428" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-429"><a href="#cb7-429" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> data <span class="sc">|&gt;</span></span>
+<span id="cb7-430"><a href="#cb7-430" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb7-431"><a href="#cb7-431" aria-hidden="true" tabindex="-1"></a>    <span class="at">p_dev =</span> <span class="fu">plogis</span>(a0 <span class="sc">+</span> (a1 <span class="sc">*</span> panelist) <span class="sc">+</span> (a2 <span class="sc">*</span> exp_high) <span class="sc">+</span></span>
+<span id="cb7-432"><a href="#cb7-432" aria-hidden="true" tabindex="-1"></a>      (a3 <span class="sc">*</span> exp_low) <span class="sc">+</span> (a4 <span class="sc">*</span> exp_none) <span class="sc">+</span></span>
+<span id="cb7-433"><a href="#cb7-433" aria-hidden="true" tabindex="-1"></a>      (g1 <span class="sc">*</span> female) <span class="sc">+</span> (c1 <span class="sc">*</span> early_career) <span class="sc">+</span></span>
+<span id="cb7-434"><a href="#cb7-434" aria-hidden="true" tabindex="-1"></a>      (i_panelist_female <span class="sc">*</span> panelist <span class="sc">*</span> female) <span class="sc">+</span></span>
+<span id="cb7-435"><a href="#cb7-435" aria-hidden="true" tabindex="-1"></a>      (i_expnone_earlycareer <span class="sc">*</span> exp_none <span class="sc">*</span> early_career)),</span>
+<span id="cb7-436"><a href="#cb7-436" aria-hidden="true" tabindex="-1"></a>    <span class="at">deviated =</span> <span class="fu">rbinom</span>(<span class="fu">n</span>(), <span class="dv">1</span>, p_dev)</span>
+<span id="cb7-437"><a href="#cb7-437" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ... deviation magnitude drawn the same way as Aim 1; applicant</span></span>
+<span id="cb7-438"><a href="#cb7-438" aria-hidden="true" tabindex="-1"></a>    <span class="co"># terms are deliberately left out of the magnitude part, consistent</span></span>
+<span id="cb7-439"><a href="#cb7-439" aria-hidden="true" tabindex="-1"></a>    <span class="co"># with the Aim 1 finding above that signal lives in whether someone</span></span>
+<span id="cb7-440"><a href="#cb7-440" aria-hidden="true" tabindex="-1"></a>    <span class="co"># deviates, not in the average size of the deviation</span></span>
+<span id="cb7-441"><a href="#cb7-441" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-442"><a href="#cb7-442" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-443"><a href="#cb7-443" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-444"><a href="#cb7-444" aria-hidden="true" tabindex="-1"></a>**To be clear about what these numbers are and aren&#39;t:** they are chosen to</span>
+<span id="cb7-445"><a href="#cb7-445" aria-hidden="true" tabindex="-1"></a>be large enough to detect cleanly in a simulation of this size, not</span>
+<span id="cb7-446"><a href="#cb7-446" aria-hidden="true" tabindex="-1"></a>estimates -- or even guesses -- about the true magnitude or even direction</span>
+<span id="cb7-447"><a href="#cb7-447" aria-hidden="true" tabindex="-1"></a>of any real effect in CIHR review. The goal is purely to confirm our</span>
+<span id="cb7-448"><a href="#cb7-448" aria-hidden="true" tabindex="-1"></a>statistical machinery would notice an interaction if the real data</span>
+<span id="cb7-449"><a href="#cb7-449" aria-hidden="true" tabindex="-1"></a>contained one.</span>
+<span id="cb7-450"><a href="#cb7-450" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-451"><a href="#cb7-451" aria-hidden="true" tabindex="-1"></a><span class="in">```{r aim2-interaction-check}</span></span>
+<span id="cb7-452"><a href="#cb7-452" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: &quot;Aim 2: interaction coefficients recovered from the simulated data (n = 18,000)&quot;</span></span>
+<span id="cb7-453"><a href="#cb7-453" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-454"><a href="#cb7-454" aria-hidden="true" tabindex="-1"></a>d2 <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;sim-aim2-data.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb7-455"><a href="#cb7-455" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-456"><a href="#cb7-456" aria-hidden="true" tabindex="-1"></a>m_aim2 <span class="ot">&lt;-</span> <span class="fu">glm</span>(deviated <span class="sc">~</span> job <span class="sc">*</span> gender <span class="sc">+</span> exp <span class="sc">*</span> career_stage,</span>
+<span id="cb7-457"><a href="#cb7-457" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> d2, <span class="at">family =</span> <span class="fu">binomial</span>())</span>
 <span id="cb7-458"><a href="#cb7-458" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-459"><a href="#cb7-459" aria-hidden="true" tabindex="-1"></a>**Not yet built:** an Aim-2-specific version of</span>
-<span id="cb7-460"><a href="#cb7-460" aria-hidden="true" tabindex="-1"></a><span class="in">`code/ror-analysis-score-models.R`</span> that actually includes these interaction</span>
-<span id="cb7-461"><a href="#cb7-461" aria-hidden="true" tabindex="-1"></a>terms in the <span class="in">`brm()`</span> formulas. The simulation is ready; the model script</span>
-<span id="cb7-462"><a href="#cb7-462" aria-hidden="true" tabindex="-1"></a>that would be tested against it isn&#39;t written yet.</span>
-<span id="cb7-463"><a href="#cb7-463" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-464"><a href="#cb7-464" aria-hidden="true" tabindex="-1"></a><span class="fu"># Aim 3: not yet designed</span></span>
-<span id="cb7-465"><a href="#cb7-465" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-466"><a href="#cb7-466" aria-hidden="true" tabindex="-1"></a>Aim 3 asks how alternative funding-decision schemes -- reweighting scores</span>
-<span id="cb7-467"><a href="#cb7-467" aria-hidden="true" tabindex="-1"></a>by engagement, or partially randomizing funding decisions for applications</span>
-<span id="cb7-468"><a href="#cb7-468" aria-hidden="true" tabindex="-1"></a>near the threshold -- would compare to the status quo. That&#39;s a</span>
-<span id="cb7-469"><a href="#cb7-469" aria-hidden="true" tabindex="-1"></a>structurally different kind of simulation: an intervention/counterfactual</span>
-<span id="cb7-470"><a href="#cb7-470" aria-hidden="true" tabindex="-1"></a>layered on top of the funding decision itself, not just an extension of</span>
-<span id="cb7-471"><a href="#cb7-471" aria-hidden="true" tabindex="-1"></a>Aims 1-2&#39;s data-generating process for reviewer behavior. We haven&#39;t</span>
-<span id="cb7-472"><a href="#cb7-472" aria-hidden="true" tabindex="-1"></a>started designing it, and would welcome input on what the alternative</span>
-<span id="cb7-473"><a href="#cb7-473" aria-hidden="true" tabindex="-1"></a>schemes worth simulating actually are before building anything.</span>
-<span id="cb7-474"><a href="#cb7-474" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-475"><a href="#cb7-475" aria-hidden="true" tabindex="-1"></a><span class="fu"># A note on simulation architecture</span></span>
+<span id="cb7-459"><a href="#cb7-459" aria-hidden="true" tabindex="-1"></a>coefs <span class="ot">&lt;-</span> <span class="fu">summary</span>(m_aim2)<span class="sc">$</span>coefficients</span>
+<span id="cb7-460"><a href="#cb7-460" aria-hidden="true" tabindex="-1"></a>coefs[<span class="fu">grepl</span>(<span class="st">&quot;:&quot;</span>, <span class="fu">rownames</span>(coefs)), ] <span class="sc">|&gt;</span></span>
+<span id="cb7-461"><a href="#cb7-461" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>(<span class="at">rownames =</span> <span class="st">&quot;term&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-462"><a href="#cb7-462" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tt</span>(<span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb7-463"><a href="#cb7-463" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-464"><a href="#cb7-464" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-465"><a href="#cb7-465" aria-hidden="true" tabindex="-1"></a>Both interactions are recovered cleanly and with high significance (the</span>
+<span id="cb7-466"><a href="#cb7-466" aria-hidden="true" tabindex="-1"></a>sign flips relative to the parameters above are just R&#39;s alphabetical</span>
+<span id="cb7-467"><a href="#cb7-467" aria-hidden="true" tabindex="-1"></a>choice of reference category -- <span class="in">`job`</span>&#39;s reference is &quot;panelist&quot;, <span class="in">`gender`</span>&#39;s</span>
+<span id="cb7-468"><a href="#cb7-468" aria-hidden="true" tabindex="-1"></a>is &quot;female&quot;, <span class="in">`career_stage`</span>&#39;s is &quot;early&quot;, so e.g.</span>
+<span id="cb7-469"><a href="#cb7-469" aria-hidden="true" tabindex="-1"></a><span class="in">`jobreviewer:gendermale`</span> is algebraically the same interaction as</span>
+<span id="cb7-470"><a href="#cb7-470" aria-hidden="true" tabindex="-1"></a><span class="in">`job(panelist):gender(female)`</span>, just from the opposite corner of the 2x2).</span>
+<span id="cb7-471"><a href="#cb7-471" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-472"><a href="#cb7-472" aria-hidden="true" tabindex="-1"></a>**Not yet built:** an Aim-2-specific version of</span>
+<span id="cb7-473"><a href="#cb7-473" aria-hidden="true" tabindex="-1"></a><span class="in">`code/ror-analysis-score-models.R`</span> that actually includes these interaction</span>
+<span id="cb7-474"><a href="#cb7-474" aria-hidden="true" tabindex="-1"></a>terms in the <span class="in">`brm()`</span> formulas. The simulation is ready; the model script</span>
+<span id="cb7-475"><a href="#cb7-475" aria-hidden="true" tabindex="-1"></a>that would be tested against it isn&#39;t written yet.</span>
 <span id="cb7-476"><a href="#cb7-476" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-477"><a href="#cb7-477" aria-hidden="true" tabindex="-1"></a>We&#39;re deliberately keeping a separate, self-contained simulation script per</span>
-<span id="cb7-478"><a href="#cb7-478" aria-hidden="true" tabindex="-1"></a>aim (<span class="in">`ror-sim-deviation.R`</span> for Aim 1, <span class="in">`ror-sim-aim2.R`</span> for Aim 2, and</span>
-<span id="cb7-479"><a href="#cb7-479" aria-hidden="true" tabindex="-1"></a>eventually an Aim 3 script) rather than one script that keeps growing.</span>
-<span id="cb7-480"><a href="#cb7-480" aria-hidden="true" tabindex="-1"></a>Some duplication of the committee/application/member setup across scripts</span>
-<span id="cb7-481"><a href="#cb7-481" aria-hidden="true" tabindex="-1"></a>is an accepted cost of each one being independently runnable and easy to</span>
-<span id="cb7-482"><a href="#cb7-482" aria-hidden="true" tabindex="-1"></a>reason about in isolation.</span>
-<span id="cb7-483"><a href="#cb7-483" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-484"><a href="#cb7-484" aria-hidden="true" tabindex="-1"></a><span class="fu"># What this simulation validates, and what it doesn&#39;t</span></span>
-<span id="cb7-485"><a href="#cb7-485" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-486"><a href="#cb7-486" aria-hidden="true" tabindex="-1"></a>It validates that: (1) the two-part model structure is necessary, not</span>
-<span id="cb7-487"><a href="#cb7-487" aria-hidden="true" tabindex="-1"></a>over-engineering, for this outcome; (2) the ordinal magnitude submodel is</span>
-<span id="cb7-488"><a href="#cb7-488" aria-hidden="true" tabindex="-1"></a>the right match for CIHR&#39;s one-decimal-place scoring; (3) the model can</span>
-<span id="cb7-489"><a href="#cb7-489" aria-hidden="true" tabindex="-1"></a>recover both main effects (Aim 1) and interaction effects (Aim 2) of a</span>
-<span id="cb7-490"><a href="#cb7-490" aria-hidden="true" tabindex="-1"></a>detectable size, using only the fields CIHR has confirmed are extractable</span>
-<span id="cb7-491"><a href="#cb7-491" aria-hidden="true" tabindex="-1"></a>plus the fields that would only ever be touched via an in-house CIHR-run</span>
-<span id="cb7-492"><a href="#cb7-492" aria-hidden="true" tabindex="-1"></a>analysis.</span>
-<span id="cb7-493"><a href="#cb7-493" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-494"><a href="#cb7-494" aria-hidden="true" tabindex="-1"></a>It does **not** tell us anything about the true size, direction, or even</span>
-<span id="cb7-495"><a href="#cb7-495" aria-hidden="true" tabindex="-1"></a>existence of any of these effects in actual CIHR peer review -- every</span>
-<span id="cb7-496"><a href="#cb7-496" aria-hidden="true" tabindex="-1"></a>parameter in both simulations is an illustrative placeholder chosen for</span>
-<span id="cb7-497"><a href="#cb7-497" aria-hidden="true" tabindex="-1"></a>statistical detectability, not drawn from evidence.</span>
+<span id="cb7-477"><a href="#cb7-477" aria-hidden="true" tabindex="-1"></a><span class="fu"># Aim 3: not yet designed</span></span>
+<span id="cb7-478"><a href="#cb7-478" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-479"><a href="#cb7-479" aria-hidden="true" tabindex="-1"></a>Aim 3 asks how alternative funding-decision schemes -- reweighting scores</span>
+<span id="cb7-480"><a href="#cb7-480" aria-hidden="true" tabindex="-1"></a>by engagement, or partially randomizing funding decisions for applications</span>
+<span id="cb7-481"><a href="#cb7-481" aria-hidden="true" tabindex="-1"></a>near the threshold -- would compare to the status quo. That&#39;s a</span>
+<span id="cb7-482"><a href="#cb7-482" aria-hidden="true" tabindex="-1"></a>structurally different kind of simulation: an intervention/counterfactual</span>
+<span id="cb7-483"><a href="#cb7-483" aria-hidden="true" tabindex="-1"></a>layered on top of the funding decision itself, not just an extension of</span>
+<span id="cb7-484"><a href="#cb7-484" aria-hidden="true" tabindex="-1"></a>Aims 1-2&#39;s data-generating process for reviewer behavior. We haven&#39;t</span>
+<span id="cb7-485"><a href="#cb7-485" aria-hidden="true" tabindex="-1"></a>started designing it, and would welcome input on what the alternative</span>
+<span id="cb7-486"><a href="#cb7-486" aria-hidden="true" tabindex="-1"></a>schemes worth simulating actually are before building anything.</span>
+<span id="cb7-487"><a href="#cb7-487" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-488"><a href="#cb7-488" aria-hidden="true" tabindex="-1"></a><span class="fu"># A note on simulation architecture</span></span>
+<span id="cb7-489"><a href="#cb7-489" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-490"><a href="#cb7-490" aria-hidden="true" tabindex="-1"></a>We&#39;re deliberately keeping a separate, self-contained simulation script per</span>
+<span id="cb7-491"><a href="#cb7-491" aria-hidden="true" tabindex="-1"></a>aim (<span class="in">`ror-sim-deviation.R`</span> for Aim 1, <span class="in">`ror-sim-aim2.R`</span> for Aim 2, and</span>
+<span id="cb7-492"><a href="#cb7-492" aria-hidden="true" tabindex="-1"></a>eventually an Aim 3 script) rather than one script that keeps growing.</span>
+<span id="cb7-493"><a href="#cb7-493" aria-hidden="true" tabindex="-1"></a>Some duplication of the committee/application/member setup across scripts</span>
+<span id="cb7-494"><a href="#cb7-494" aria-hidden="true" tabindex="-1"></a>is an accepted cost of each one being independently runnable and easy to</span>
+<span id="cb7-495"><a href="#cb7-495" aria-hidden="true" tabindex="-1"></a>reason about in isolation.</span>
+<span id="cb7-496"><a href="#cb7-496" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-497"><a href="#cb7-497" aria-hidden="true" tabindex="-1"></a><span class="fu"># What this simulation validates, and what it doesn&#39;t</span></span>
 <span id="cb7-498"><a href="#cb7-498" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-499"><a href="#cb7-499" aria-hidden="true" tabindex="-1"></a><span class="fu"># Open questions</span></span>
-<span id="cb7-500"><a href="#cb7-500" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-501"><a href="#cb7-501" aria-hidden="true" tabindex="-1"></a><span class="fu">## For Arijit</span></span>
-<span id="cb7-502"><a href="#cb7-502" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-503"><a href="#cb7-503" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Is $d_{ijk}$ (final $-$ consensus) the right primary outcome, or is there</span>
-<span id="cb7-504"><a href="#cb7-504" aria-hidden="true" tabindex="-1"></a>  a better way to frame the estimand for Aim 1/2?</span>
-<span id="cb7-505"><a href="#cb7-505" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Does the interaction specification for Aim 2 (<span class="in">`job x gender`</span>,</span>
-<span id="cb7-506"><a href="#cb7-506" aria-hidden="true" tabindex="-1"></a>  <span class="in">`exp x career_stage`</span>, both entering only the deviation-probability part)</span>
-<span id="cb7-507"><a href="#cb7-507" aria-hidden="true" tabindex="-1"></a>  match how you&#39;d operationalize the research question, or would you</span>
-<span id="cb7-508"><a href="#cb7-508" aria-hidden="true" tabindex="-1"></a>  frame it differently?</span>
-<span id="cb7-509"><a href="#cb7-509" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Any concerns about the priors, the random-effects structure, or the</span>
-<span id="cb7-510"><a href="#cb7-510" aria-hidden="true" tabindex="-1"></a>  choice of an ordinal rather than continuous family for the magnitude</span>
-<span id="cb7-511"><a href="#cb7-511" aria-hidden="true" tabindex="-1"></a>  part?</span>
-<span id="cb7-512"><a href="#cb7-512" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Anything about the overall statistical strategy that looks wrong before</span>
-<span id="cb7-513"><a href="#cb7-513" aria-hidden="true" tabindex="-1"></a>  this goes to CIHR?</span>
-<span id="cb7-514"><a href="#cb7-514" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-515"><a href="#cb7-515" aria-hidden="true" tabindex="-1"></a><span class="fu">## For CIHR&#39;s Funding Analytics Team</span></span>
-<span id="cb7-516"><a href="#cb7-516" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-517"><a href="#cb7-517" aria-hidden="true" tabindex="-1"></a>(Carried over from <span class="in">`code/ror-research-log.qmd`</span>; repeated here since this</span>
-<span id="cb7-518"><a href="#cb7-518" aria-hidden="true" tabindex="-1"></a>document is the more likely vehicle for actually sending them.)</span>
-<span id="cb7-519"><a href="#cb7-519" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-520"><a href="#cb7-520" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>For fields that can&#39;t be extracted (applicant gender/career stage,</span>
-<span id="cb7-521"><a href="#cb7-521" aria-hidden="true" tabindex="-1"></a>   reviewer gender/experience, etc.) -- can the dummy-data step still</span>
-<span id="cb7-522"><a href="#cb7-522" aria-hidden="true" tabindex="-1"></a>   include *synthetic* versions of those columns for us to pipeline-test</span>
-<span id="cb7-523"><a href="#cb7-523" aria-hidden="true" tabindex="-1"></a>   against, or is the in-house-run path a black box until the real run?</span>
-<span id="cb7-524"><a href="#cb7-524" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Resubmission status is only available from 2023 onward -- does that</span>
-<span id="cb7-525"><a href="#cb7-525" aria-hidden="true" tabindex="-1"></a>   mean our cohort has to start at the 2023 competition if we want that</span>
-<span id="cb7-526"><a href="#cb7-526" aria-hidden="true" tabindex="-1"></a>   field, or can it be requested as a partially-missing covariate over a</span>
-<span id="cb7-527"><a href="#cb7-527" aria-hidden="true" tabindex="-1"></a>   longer window?</span>
-<span id="cb7-528"><a href="#cb7-528" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>How should we define/measure &quot;reviewer experience&quot; for the fields where</span>
-<span id="cb7-529"><a href="#cb7-529" aria-hidden="true" tabindex="-1"></a>   that&#39;s the blocker to a yes/no on extractability?</span>
-<span id="cb7-530"><a href="#cb7-530" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>Can you confirm our understanding of the review process itself (the</span>
-<span id="cb7-531"><a href="#cb7-531" aria-hidden="true" tabindex="-1"></a>   $\pm0.5$ rule, one-decimal-place scoring, equal-weight averaging into</span>
-<span id="cb7-532"><a href="#cb7-532" aria-hidden="true" tabindex="-1"></a>   the funding decision) is accurate?</span>
-<span id="cb7-533"><a href="#cb7-533" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>How much variation exists in the number of members across committees,     applications per committee, and scores per application (given conflicts)?</span>
-<span id="cb7-534"><a href="#cb7-534" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span>Discussion time? Do we know how long the discussion period goes at the application level?</span>
-<span id="cb7-535"><a href="#cb7-535" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-536"><a href="#cb7-536" aria-hidden="true" tabindex="-1"></a><span class="fu"># What comes next</span></span>
-<span id="cb7-537"><a href="#cb7-537" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-538"><a href="#cb7-538" aria-hidden="true" tabindex="-1"></a>Once the Aim 2 model script exists and <span class="in">`FIT_MODELS`</span> is switched on -- after</span>
-<span id="cb7-539"><a href="#cb7-539" aria-hidden="true" tabindex="-1"></a>confirming CIHR&#39;s execution environment can actually compile/run Stan via</span>
-<span id="cb7-540"><a href="#cb7-540" aria-hidden="true" tabindex="-1"></a><span class="in">`cmdstanr`</span>, and after prior-predictive checks on both submodels -- this</span>
-<span id="cb7-541"><a href="#cb7-541" aria-hidden="true" tabindex="-1"></a>document (or its next revision) will add a results section presenting</span>
-<span id="cb7-542"><a href="#cb7-542" aria-hidden="true" tabindex="-1"></a>posterior marginal effects via <span class="in">`marginaleffects`</span> for both the</span>
-<span id="cb7-543"><a href="#cb7-543" aria-hidden="true" tabindex="-1"></a>deviation-probability and magnitude submodels, and showing recovery of the</span>
-<span id="cb7-544"><a href="#cb7-544" aria-hidden="true" tabindex="-1"></a>known simulated effects at the full posterior level, the same way the</span>
-<span id="cb7-545"><a href="#cb7-545" aria-hidden="true" tabindex="-1"></a>frequentist checks above do at a point-estimate level.</span>
-<span id="cb7-546"><a href="#cb7-546" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-547"><a href="#cb7-547" aria-hidden="true" tabindex="-1"></a><span class="fu"># References</span></span>
+<span id="cb7-499"><a href="#cb7-499" aria-hidden="true" tabindex="-1"></a>It validates that: (1) the two-part model structure is necessary, not</span>
+<span id="cb7-500"><a href="#cb7-500" aria-hidden="true" tabindex="-1"></a>over-engineering, for this outcome; (2) the ordinal magnitude submodel is</span>
+<span id="cb7-501"><a href="#cb7-501" aria-hidden="true" tabindex="-1"></a>the right match for CIHR&#39;s one-decimal-place scoring; (3) the model can</span>
+<span id="cb7-502"><a href="#cb7-502" aria-hidden="true" tabindex="-1"></a>recover both main effects (Aim 1) and interaction effects (Aim 2) of a</span>
+<span id="cb7-503"><a href="#cb7-503" aria-hidden="true" tabindex="-1"></a>detectable size, using only the fields CIHR has confirmed are extractable</span>
+<span id="cb7-504"><a href="#cb7-504" aria-hidden="true" tabindex="-1"></a>plus the fields that would only ever be touched via an in-house CIHR-run</span>
+<span id="cb7-505"><a href="#cb7-505" aria-hidden="true" tabindex="-1"></a>analysis.</span>
+<span id="cb7-506"><a href="#cb7-506" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-507"><a href="#cb7-507" aria-hidden="true" tabindex="-1"></a>It does **not** tell us anything about the true size, direction, or even</span>
+<span id="cb7-508"><a href="#cb7-508" aria-hidden="true" tabindex="-1"></a>existence of any of these effects in actual CIHR peer review -- every</span>
+<span id="cb7-509"><a href="#cb7-509" aria-hidden="true" tabindex="-1"></a>parameter in both simulations is an illustrative placeholder chosen for</span>
+<span id="cb7-510"><a href="#cb7-510" aria-hidden="true" tabindex="-1"></a>statistical detectability, not drawn from evidence.</span>
+<span id="cb7-511"><a href="#cb7-511" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-512"><a href="#cb7-512" aria-hidden="true" tabindex="-1"></a><span class="fu"># Open questions</span></span>
+<span id="cb7-513"><a href="#cb7-513" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-514"><a href="#cb7-514" aria-hidden="true" tabindex="-1"></a><span class="fu">## For Arijit</span></span>
+<span id="cb7-515"><a href="#cb7-515" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-516"><a href="#cb7-516" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Is $d_{ijk}$ (final $-$ consensus) the right primary outcome, or is there</span>
+<span id="cb7-517"><a href="#cb7-517" aria-hidden="true" tabindex="-1"></a>  a better way to frame the estimand for Aim 1/2?</span>
+<span id="cb7-518"><a href="#cb7-518" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Does the interaction specification for Aim 2 (<span class="in">`job x gender`</span>,</span>
+<span id="cb7-519"><a href="#cb7-519" aria-hidden="true" tabindex="-1"></a>  <span class="in">`exp x career_stage`</span>, both entering only the deviation-probability part)</span>
+<span id="cb7-520"><a href="#cb7-520" aria-hidden="true" tabindex="-1"></a>  match how you&#39;d operationalize the research question, or would you</span>
+<span id="cb7-521"><a href="#cb7-521" aria-hidden="true" tabindex="-1"></a>  frame it differently?</span>
+<span id="cb7-522"><a href="#cb7-522" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Any concerns about the priors, the random-effects structure, or the</span>
+<span id="cb7-523"><a href="#cb7-523" aria-hidden="true" tabindex="-1"></a>  choice of an ordinal rather than continuous family for the magnitude</span>
+<span id="cb7-524"><a href="#cb7-524" aria-hidden="true" tabindex="-1"></a>  part?</span>
+<span id="cb7-525"><a href="#cb7-525" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Anything about the overall statistical strategy that looks wrong before</span>
+<span id="cb7-526"><a href="#cb7-526" aria-hidden="true" tabindex="-1"></a>  this goes to CIHR?</span>
+<span id="cb7-527"><a href="#cb7-527" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-528"><a href="#cb7-528" aria-hidden="true" tabindex="-1"></a><span class="fu">## For CIHR&#39;s Funding Analytics Team</span></span>
+<span id="cb7-529"><a href="#cb7-529" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-530"><a href="#cb7-530" aria-hidden="true" tabindex="-1"></a>(Carried over from <span class="in">`code/ror-research-log.qmd`</span>; repeated here since this</span>
+<span id="cb7-531"><a href="#cb7-531" aria-hidden="true" tabindex="-1"></a>document is the more likely vehicle for actually sending them.)</span>
+<span id="cb7-532"><a href="#cb7-532" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-533"><a href="#cb7-533" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>For fields that can&#39;t be extracted (applicant gender/career stage,</span>
+<span id="cb7-534"><a href="#cb7-534" aria-hidden="true" tabindex="-1"></a>   reviewer gender/experience, etc.) -- can the dummy-data step still</span>
+<span id="cb7-535"><a href="#cb7-535" aria-hidden="true" tabindex="-1"></a>   include *synthetic* versions of those columns for us to pipeline-test</span>
+<span id="cb7-536"><a href="#cb7-536" aria-hidden="true" tabindex="-1"></a>   against, or is the in-house-run path a black box until the real run?</span>
+<span id="cb7-537"><a href="#cb7-537" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Resubmission status is only available from 2023 onward -- does that</span>
+<span id="cb7-538"><a href="#cb7-538" aria-hidden="true" tabindex="-1"></a>   mean our cohort has to start at the 2023 competition if we want that</span>
+<span id="cb7-539"><a href="#cb7-539" aria-hidden="true" tabindex="-1"></a>   field, or can it be requested as a partially-missing covariate over a</span>
+<span id="cb7-540"><a href="#cb7-540" aria-hidden="true" tabindex="-1"></a>   longer window?</span>
+<span id="cb7-541"><a href="#cb7-541" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>How should we define/measure &quot;reviewer experience&quot; for the fields where</span>
+<span id="cb7-542"><a href="#cb7-542" aria-hidden="true" tabindex="-1"></a>   that&#39;s the blocker to a yes/no on extractability?</span>
+<span id="cb7-543"><a href="#cb7-543" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>Can you confirm our understanding of the review process itself (the</span>
+<span id="cb7-544"><a href="#cb7-544" aria-hidden="true" tabindex="-1"></a>   $\pm0.5$ rule, one-decimal-place scoring, equal-weight averaging into</span>
+<span id="cb7-545"><a href="#cb7-545" aria-hidden="true" tabindex="-1"></a>   the funding decision) is accurate?</span>
+<span id="cb7-546"><a href="#cb7-546" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>How much variation exists in the number of members across committees,     applications per committee, and scores per application (given conflicts)?</span>
+<span id="cb7-547"><a href="#cb7-547" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span>Discussion time? Do we know how long the discussion period goes at the application level?</span>
 <span id="cb7-548"><a href="#cb7-548" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-549"><a href="#cb7-549" aria-hidden="true" tabindex="-1"></a>::: {#refs}</span>
-<span id="cb7-550"><a href="#cb7-550" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb7-549"><a href="#cb7-549" aria-hidden="true" tabindex="-1"></a><span class="fu"># What comes next</span></span>
+<span id="cb7-550"><a href="#cb7-550" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-551"><a href="#cb7-551" aria-hidden="true" tabindex="-1"></a>Once the Aim 2 model script exists and <span class="in">`FIT_MODELS`</span> is switched on -- after</span>
+<span id="cb7-552"><a href="#cb7-552" aria-hidden="true" tabindex="-1"></a>confirming CIHR&#39;s execution environment can actually compile/run Stan via</span>
+<span id="cb7-553"><a href="#cb7-553" aria-hidden="true" tabindex="-1"></a><span class="in">`cmdstanr`</span>, and after prior-predictive checks on both submodels -- this</span>
+<span id="cb7-554"><a href="#cb7-554" aria-hidden="true" tabindex="-1"></a>document (or its next revision) will add a results section presenting</span>
+<span id="cb7-555"><a href="#cb7-555" aria-hidden="true" tabindex="-1"></a>posterior marginal effects via <span class="in">`marginaleffects`</span> for both the</span>
+<span id="cb7-556"><a href="#cb7-556" aria-hidden="true" tabindex="-1"></a>deviation-probability and magnitude submodels, and showing recovery of the</span>
+<span id="cb7-557"><a href="#cb7-557" aria-hidden="true" tabindex="-1"></a>known simulated effects at the full posterior level, the same way the</span>
+<span id="cb7-558"><a href="#cb7-558" aria-hidden="true" tabindex="-1"></a>frequentist checks above do at a point-estimate level.</span>
+<span id="cb7-559"><a href="#cb7-559" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-560"><a href="#cb7-560" aria-hidden="true" tabindex="-1"></a><span class="fu"># References</span></span>
+<span id="cb7-561"><a href="#cb7-561" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-562"><a href="#cb7-562" aria-hidden="true" tabindex="-1"></a>::: {#refs}</span>
+<span id="cb7-563"><a href="#cb7-563" aria-hidden="true" tabindex="-1"></a>:::</span>
 </code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

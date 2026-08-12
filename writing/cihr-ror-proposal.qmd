@@ -3,6 +3,16 @@ title: "The Influence of Reviewer Expertise and Engagement on Peer Review of Gra
 format: 
   html:
     toc: true
+    mainfont: "Roboto Slab"
+    embed-resources: true
+    include-in-header:
+      text: |
+        <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@300;400;600&display=swap" rel="stylesheet">
+        <style>
+          body, p, li, td, th { font-family: 'Roboto Slab', serif !important; font-weight: 400; color: rgb(54, 55, 55); }
+          h1, h2, h3, h4 { font-family: 'Roboto Slab', serif !important; font-weight: 600; color: rgb(54, 55, 55); }
+          body { line-height: 1.8; }
+        </style>
   typst:
     mainfont: "C059"
     fontsize: "11pt"
