@@ -761,3 +761,105 @@ count for a number actually being reported. The `re_formula = NA` +
 small-`datagrid()` shortcut discussed alongside `ndraws` is fine for a
 fast approximate look during iteration, but the headline number should
 come from `re_formula = NULL` on the real data, per above.
+
+# 2026-08-11
+
+## New experimental streamlining DGP: `code/ror-sim-streamlining-experiment.R`
+
+Sam described the real CIHR streamlining procedure in more detail than
+was in the simulation: each of the 3 reviewers gives a separate
+categorical "top"/"bottom" call alongside their score (correlated with
+it, not determined by it), and an application is streamlined out iff
+>=1 "bottom" call AND its mean-of-3 score ranks in the bottom 60% of
+its own committee's candidate pool (relative rank, not a fixed absolute
+score). This directly explains a pattern found earlier the same day in
+a hypothetical Sam constructed: two applications with *identical* 3
+reviewer scores had different discussed/not-discussed outcomes -- a
+pure score-threshold rule can't produce that, but this mechanism can
+(different top/bottom calls and/or different committee rank context at
+the same raw score).
+
+Built as a new, explicitly EXPERIMENTAL script rather than folded into
+`ror-sim-aim1.R` -- Sam was upfront about wavering between DGP fidelity
+and overcomplication, and the goal was to test whether the added
+realism changes anything material for recoverability, not to replace
+the validated pipeline. Structure: Stage 1 (new) simulates a genuine
+submission-volume candidate pool per committee (`pool_per_cmte = 40`,
+vs. `ror-sim-aim1.R`'s target-count-driven oversampling) and runs the
+top/bottom + rank streamlining decision; Stage 2 reuses
+`ror-sim-aim1.R`'s deviation-generating machinery unchanged, applied
+only to whatever survives Stage 1.
+
+Also tried, then deliberately dropped: a "bring back" advocacy stage
+(a streamlined application reinstated by a persuasive reviewer, more
+likely when borderline on rank or when reviewers disagreed a lot).
+Sam's call -- felt too haphazard to model convincingly relative to what
+it bought. Checked before removing it: it only accounted for ~6% of
+discussed applications, and the same-score/different-outcome pattern it
+was meant to help explain already happens without it (confirmed by
+rerunning the "identical consensus, different outcome" check after
+removal -- same result, 6 distinct consensus values with both outcomes
+present, both before and after). It was also the least-grounded piece
+of the three-part mechanism -- three invented coefficients vs. the
+top/bottom-vs-score relationship and the 60% threshold, both closer to
+stated fact than guesses.
+
+**Key finding:** despite the much richer two-stage selection process
+determining which applications even reach discussion, Aim 1's core
+recovery checks are unaffected -- `job`/`exp` effects on `P(deviate))`
+and the member-level (`cid`) variance both still recover cleanly, at
+magnitudes essentially identical to `ror-sim-aim1.R`. Discussion rate
+~40%, ~16 discussed applications per committee (SD ~2.2) -- both in a
+plausible range given the two hypotheticals discussed earlier.
+
+Read as: the added procedural realism doesn't change the bottom line
+for Aim 1, so `ror-sim-aim1.R`'s simpler mechanism looks like a safe
+simplification for that purpose. Where the richer version would likely
+matter more is Aim 3 -- who gets streamlined and who's borderline is
+exactly the "grey zone" territory that aim is about.
+
+## `ror-sim-aim1.R` vs. the streamlining experiment: the discussed-application score distributions look meaningfully different
+
+Sam plotted initial/consensus/overall score histograms side by side
+(`ror-sim-aim1.R` vs. `ror-sim-streamlining-experiment.R`) and the
+experiment's distributions are visibly shifted right and missing the
+low tail across all three panels. Checked numerically rather than just
+by eye:
+
+- `ror-sim-aim1.R` discussed applications: consensus range 3.5-4.8,
+  mean 3.97.
+- Experiment discussed applications: consensus range 3.7-4.8, mean
+  4.26. **87.5% of discussed applications are in the top 40% by rank**
+  -- the rank rule alone is doing almost all the selecting; only 12.5%
+  got in from the bottom 60% by escaping a "bottom" call.
+
+Mechanism, confirmed rather than assumed: `ror-sim-aim1.R` selects
+anyone clearing the fixed 3.5 floor, then takes a *random* subsample of
+15 -- a 3.5 and a 4.8 have equal odds of being chosen as long as both
+clear the bar, which preserves a broad, representative spread of the
+eligible pool. The experiment's mechanism is structurally
+rank-selective (roughly top-40%), which concentrates the discussed
+sample toward the high end regardless of the absolute floor. Not a
+bug -- a genuine, expected consequence of the mechanism being
+fundamentally different (competitive/relative selection vs.
+threshold-then-random-draw).
+
+**The more useful finding: checked which shape better matches the two
+hypothetical datasets from earlier the same session** (the
+score/discussed-status examples Sam constructed to test the
+streamlining rule). In *both* hypotheticals, no "discussed" (Yes)
+application ever scored below ~4.0 (hypothetical 1's lowest Yes was
+4.03; hypothetical 2's was 4.00). `ror-sim-aim1.R` routinely discusses
+applications scoring 3.5-3.9 -- a third of its own range -- which never
+shows up as a "Yes" case in either hypothetical. The experiment's
+right-shifted, truncated shape lines up with that real-world anchor
+noticeably better than `ror-sim-aim1.R`'s broader spread does.
+
+**Not yet resolved:** whether this means `ror-sim-aim1.R`'s simpler
+streamlining mechanism should itself be revisited (e.g. moving it
+toward something rank-based, or at least raising its effective floor)
+now that there's evidence its discussed-application score range is
+too broad relative to the two hypothetical anchors -- or whether to
+just leave `ror-sim-aim1.R` as the intentionally-simple validated
+baseline and treat the experiment as the more-trustworthy-but-still-
+experimental alternative. Picking this up next session.

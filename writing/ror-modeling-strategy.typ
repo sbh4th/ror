@@ -179,6 +179,8 @@
   abstract: none,
   abstract-title: none,
   cols: 1,
+  margin: (x: 1.25in, y: 1.25in),
+  paper: "us-letter",
   lang: "en",
   region: "US",
   font: "libertinus serif",
@@ -191,12 +193,18 @@
   heading-color: black,
   heading-line-height: 0.65em,
   sectionnumbering: none,
+  pagenumbering: "1",
   toc: false,
   toc_title: none,
   toc_depth: none,
   toc_indent: 1.5em,
   doc,
 ) = {
+  set page(
+    paper: paper,
+    margin: margin,
+    numbering: pagenumbering,
+  )
   set par(justify: true)
   set text(lang: lang,
            region: region,
@@ -207,7 +215,8 @@
     align(center)[#block(inset: 2em)[
       #set par(leading: heading-line-height)
       #if (heading-family != none or heading-weight != "bold" or heading-style != "normal"
-           or heading-color != black) {
+           or heading-color != black or heading-decoration == "underline"
+           or heading-background-color != none) {
         set text(font: heading-family, weight: heading-weight, style: heading-style, fill: heading-color)
         text(size: title-size)[#title]
         if subtitle != none {
@@ -279,12 +288,6 @@
   stroke: none
 )
 
-#set page(
-  paper: "us-letter",
-  margin: (x: 1.87cm,y: 1.87cm,),
-  numbering: "1",
-)
-
 #show: doc => article(
   title: [Simulation Design and Modeling Strategy],
   subtitle: [The Influence of Reviewer Expertise and Engagement on Peer Review of Grants],
@@ -293,9 +296,11 @@
       affiliation: [],
       email: [] ),
     ),
-  date: [2026-08-12],
+  date: [2026-08-13],
+  margin: (x: 1.87cm,y: 1.87cm,),
   font: ("C059",),
   fontsize: 11pt,
+  pagenumbering: "1",
   toc_title: [Table of contents],
   toc_depth: 3,
   cols: 1,
@@ -331,26 +336,30 @@ CIHR's Funding Analytics Team confirmed by email (2025-12-04) which fields are a
 
 = Primary outcome: modeling the difference, not the level
 <primary-outcome-modeling-the-difference-not-the-level>
-== Estimand of interest
-<estimand-of-interest>
-Our main quantity of interest in this project is the value that a given application score ($Y_i$) would take if a particular reviewer characteristic (role or experience) were set to a specific value, averaged over the entire population of applications. We can write an example of, say, the difference between final scores for an application if it were assigned to a panelist or reviewer:
-
-#let phantom_tall = box(width: 0pt, hide[$1 / n sum_(i = 1)^n$])
-$ underbrace(1 / n sum_(i = 1)^n, upright("Mean over ") i \
-upright("applications")) underbrace(#stack(dir: ltr, phantom_tall, $(Y_i (1) - Y_i (0))$), upright("Score if assigned") \
-upright("to panelist(1)") \
-upright("or reviewer(0)")) $
-Leaving aside for the moment the assumptions needed to credibly estimate this quantity, the specific data generating process for application scores, where there is a consensus score that members can deviate from, leads to considering an alternative outcome, which is the difference between the consensus score and each member's score. However, this leads to challenges since we might expect many members to just go with and agree on the consensus score.
+The primary Aim 1 outlined above is to assess how #emph[changes] from the initial consensus score to the final review scores (after discussion) may vary with panel expertise and engagement. Thus, rather than our primary outcome being the overall application score, we specifically want to model the difference between the consensus score and the final scores.
 
 Let $d_(i j k)$ be the final score minus the consensus score, for the $i$th panel member on the $j$th application in the $k$th committee:
 
 $ d_(i j k) = upright("final score")_(i j k) - upright("consensus score")_(j k) $
 
-We model $d_(i j k)$ directly, rather than modeling the final score with consensus score as a covariate, for three reasons:
+Our interest is in modeling $d_(i j k)$ directly, rather than modeling the final score with consensus score as a covariate, for three reasons:
 
-+ #strong[Point mass at zero] We hypothesize that most or many members will go with the consensus score, which leads to a mass either at the consensus (if you modeled the score) or a mass at zero if you model the difference. A member who doesn't move from consensus has $d_(i j k) = 0$ regardless of which application they're scoring. So even if you model the final score conditional on the consensus you will still have a spike, just relocated to wherever a given application's consensus happened to land. Differencing standardizes the spike's location across every application and makes a shared two-part model feasible.
-+ #strong[Avoids reintroducing confounding.] A freely estimated slope on consensus in a `final_score ~ consensus + ...` model has to recover something close to 1 from the data; if reviewer composition happens to correlate with consensus level across committees, that estimation can leak into the coefficients we actually care about. Differencing with an implicit slope of exactly 1 -- the true administrative rule, not an assumption -- removes that channel by construction.
-+ #strong[Matches the actual research question.] Aim 1 is about the #emph[change from consensus] induced by discussion, not the #emph[level] of the final score (driven mostly by application quality, which isn't under study here). Nothing is lost: $upright("final score") = upright("consensus") + d_(i j k)$ is a trivial identity, so anything Aim 3 needs at the score level for funding-decision simulations can be reconstructed downstream.
++ #strong[Point mass at zero.] We hypothesize that most or many members will go with the consensus score, which leads to a mass either at the consensus (if you modeled the score) or a mass at zero if you model the difference. A member who doesn't move from consensus has $d_(i j k) = 0$ regardless of which application they're scoring. So even if you model the final score conditional on the consensus you will still have a spike, just relocated to wherever a given application's consensus happened to land. Differencing standardizes the spike's location (at zero) across every application and makes a shared two-part model feasible.
++ #strong[Avoids some sources of confounding.] The consensus score is constant across everyone in the committee and reflects both the committee's and the application's "true quality" signal. Subtracting it off removes anything that's shared by every member evaluating the same application (committee identity, application quality, etc.), leaving only the within-application variation across panel members as what's left to explain. If some committees have both higher consensus scores and a different mix of reviewer expertise then consensus and 'expertise' are correlated across applications. Differencing eliminates this potential bias since the coefficient on consensus isn't estimated at all.
++ #strong[Matches the actual research question.] Aim 1 is about the #emph[change from consensus] induced by discussion, not the #emph[level] of the final score (driven mostly by application quality). Since it is simple to recover the final score like $upright("final score") = upright("consensus") + d_(i j k)$, anything Aim 3 needs at the score level for funding-decision simulations can be reconstructed downstream.
+
+== Estimand of interest
+<estimand-of-interest>
+Our main quantity of interest in this project is the value that a given panel member's score ($Y_(i j k)$) would take if a particular reviewer characteristic (role or experience) were set to a specific value, averaged over the entire population of panel members, applications, and committees. We can write an example of, say, the difference between final scores for a given member-application pairing if that member were assigned to be a panelist or a reviewer:
+
+#let phantom_tall = box(width: 0pt, hide[$1 / (I J K) sum_(k=1)^K sum_(j=1)^J sum_(i=1)^I$])
+$ underbrace(1 / (I J K) sum_(k=1)^K sum_(j=1)^J sum_(i=1)^I,
+upright("Mean over members ") i upright(",") \
+upright("applications ") j upright(",") \
+upright("and committees ") k) underbrace(#stack(dir: ltr, phantom_tall, $(Y_(i j k) (1) - Y_(i j k) (0))$), upright("Score if assigned") \
+upright("to panelist(1)") \
+upright("or reviewer(0)")) $
+Leaving aside for the moment the assumptions needed to credibly estimate this quantity, the specific data generating process for application scores, where there is a consensus score that members can deviate from, leads to considering an alternative outcome, which is the difference between the consensus score and each member's score. However, this leads to challenges since we might expect many members to just go with and agree on the consensus score.
 
 = Why a two-part model
 <why-a-two-part-model>
@@ -436,8 +445,8 @@ modelsummary(
     },
  table.hline(y: 1, start: 0, end: 3, stroke: 0.05em + black),
  table.hline(y: 11, start: 0, end: 3, stroke: 0.05em + black),
- table.hline(y: 12, start: 0, end: 3, stroke: 0.1em + black),
- table.hline(y: 0, start: 0, end: 3, stroke: 0.1em + black),
+ table.hline(y: 12, start: 0, end: 3, stroke: 0.08em + black),
+ table.hline(y: 0, start: 0, end: 3, stroke: 0.08em + black),
     // tinytable lines before
 
     // tinytable header start
@@ -448,15 +457,15 @@ modelsummary(
     // tinytable header end
 
     // tinytable cell content after
-[(Intercept)], [\-0.001], [\-0.964],
+[(Intercept)], [\-0.001], [\-0.954],
 [], [(0.002)], [(0.034)],
-[jobreviewer], [\-0.004], [\-0.274],
+[jobreviewer], [\-0.003], [\-0.303],
 [], [(0.003)], [(0.049)],
-[explow], [0.004], [0.654],
+[explow], [0.003], [0.643],
 [], [(0.003)], [(0.050)],
-[expmed], [0.000], [0.447],
+[expmed], [0.002], [0.467],
 [], [(0.002)], [(0.041)],
-[expnone], [0.001], [0.938],
+[expnone], [0.001], [0.857],
 [], [(0.003)], [(0.050)],
 [Num.Obs.], [18000], [18000],
 
@@ -571,7 +580,7 @@ m1_deviate <-
   brm(data = d1,
       family = bernoulli(),
       deviated ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | app),
-      prior = c(prior(normal(0, 1.5), class = Intercept),
+      prior = c(prior(normal(0, 1.0), class = Intercept),
                 prior(normal(0, 0.5), class = b),
                 prior(exponential(1), class = sd)),
       iter = 2000, warmup = 1000, chains = 4, cores = 4,
@@ -581,6 +590,110 @@ m1_deviate <-
 
 ]
 Random intercepts for committee, member (`cid`), and application; fixed effects for role and expertise. Weakly informative priors throughout -- `normal(0, 1.5)` on the (logit-scale) intercept, `normal(0, 0.5)` on coefficients, `exponential(1)` on group-level SDs. `sample_prior = "yes"` so we always have prior-predictive draws to check against before trusting the posterior.
+
+This model run on the simulated data gives the following estimates, shown in #ref(<tbl-m1-deviate>, supplement: [Table]):
+
+#figure([
+#show figure: set block(breakable: true)
+
+#block[ // start block
+
+  #let style-dict = (
+    // tinytable style-dict after
+    "1_0": 0, "7_0": 0, "1_1": 0, "7_1": 0, "1_2": 0, "7_2": 0, "1_3": 0, "7_3": 0, "1_4": 0, "7_4": 0
+  )
+
+  #let style-array = ( 
+    // tinytable cell style after
+    (italic: true,),
+  )
+
+  // Helper function to get cell style
+  #let get-style(x, y) = {
+    let key = str(y) + "_" + str(x)
+    if key in style-dict { style-array.at(style-dict.at(key)) } else { none }
+  }
+
+  // tinytable align-default-array before
+  #let align-default-array = ( left, left, left, left, left, ) // tinytable align-default-array here
+  #show table.cell: it => {
+    if style-array.len() == 0 { return it }
+    
+    let style = get-style(it.x, it.y)
+    if style == none { return it }
+    
+    let tmp = it
+    if ("fontsize" in style) { tmp = text(size: style.fontsize, tmp) }
+    if ("color" in style) { tmp = text(fill: style.color, tmp) }
+    if ("indent" in style) { tmp = pad(left: style.indent, tmp) }
+    if ("underline" in style) { tmp = underline(tmp) }
+    if ("italic" in style) { tmp = emph(tmp) }
+    if ("bold" in style) { tmp = strong(tmp) }
+    if ("mono" in style) { tmp = math.mono(tmp) }
+    if ("strikeout" in style) { tmp = strike(tmp) }
+    if ("smallcaps" in style) { tmp = smallcaps(tmp) }
+    tmp
+  }
+
+  #align(center, [
+
+  #table( // tinytable table start
+    columns: (auto, auto, auto, auto, auto),
+    stroke: none,
+    rows: auto,
+    align: (x, y) => {
+      let style = get-style(x, y)
+      if style != none and "align" in style { style.align } else { left }
+    },
+    fill: (x, y) => {
+      let style = get-style(x, y)
+      if style != none and "background" in style { style.background }
+    },
+ table.hline(y: 1, start: 0, end: 5, stroke: 0.05em + black),
+ table.hline(y: 11, start: 0, end: 5, stroke: 0.08em + black),
+ table.hline(y: 0, start: 0, end: 5, stroke: 0.08em + black),
+    // tinytable lines before
+
+    // tinytable header start
+    table.header(
+      repeat: true,
+[Parameter], [Estimate], [Error], [95% CrI Lower], [95% CrI Upper],
+    ),
+    // tinytable header end
+
+    // tinytable cell content after
+table.cell(colspan: 5)[Fixed effects (log odds)],
+[Intercept], [-0.789], [0.051], [-0.887], [-0.694],
+[Panelist vs. Reviewer], [0.300], [0.049], [0.208], [0.397],
+[High vs. Medium Expertise], [-0.467], [0.042], [-0.547], [-0.385],
+[Low vs. Medium Expertise], [0.175], [0.044], [0.089], [0.262],
+[No Expertise vs. Medium], [0.388], [0.043], [0.304], [0.476],
+table.cell(colspan: 5)[Random effects (SD)],
+[Application], [0.015], [0.014], [0.001], [0.053],
+[Committee Member], [0.046], [0.039], [0.002], [0.134],
+[Committee], [0.034], [0.026], [0.002], [0.088],
+
+    // tinytable footer after
+
+  ) // end table
+
+  ]) // end align
+
+] // end block
+Estimates from deviation model
+
+], caption: figure.caption(
+separator: "", 
+position: top, 
+[
+]), 
+kind: "quarto-float-tbl", 
+supplement: "Table", 
+)
+<tbl-m1-deviate>
+
+
+From the fixed effects we see that we generally recover the simulated parameters. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package
 
 == Part 2: how large, given a deviation?
 <part-2-how-large-given-a-deviation>
@@ -710,8 +823,8 @@ coefs[grepl(":", rownames(coefs)), ] |>
       if style != none and "background" in style { style.background }
     },
  table.hline(y: 1, start: 0, end: 5, stroke: 0.05em + black),
- table.hline(y: 5, start: 0, end: 5, stroke: 0.1em + black),
- table.hline(y: 0, start: 0, end: 5, stroke: 0.1em + black),
+ table.hline(y: 5, start: 0, end: 5, stroke: 0.08em + black),
+ table.hline(y: 0, start: 0, end: 5, stroke: 0.08em + black),
     // tinytable lines before
 
     // tinytable header start

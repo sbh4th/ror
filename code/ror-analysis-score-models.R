@@ -48,6 +48,7 @@ library(cmdstanr)
 library(marginaleffects)
 library(bayesplot)
 library(tinytable)
+library(patchwork)
 
 # Use the cmdstanr backend for Stan
 # You need to install the cmdstanr package first
@@ -163,7 +164,7 @@ term_labels <- c(
   "jobpanelist" = "Panelist vs. Reviewer",
   "exphigh"     = "High vs. Medium Expertise",
   "explow"      = "Low vs. Medium Expertise",
-  "expnone"     = "No Expertise vs. Medium",
+  "expnone"     = "None vs. Medium Expertise",
   "app"         = "Application",
   "cid"         = "Committee Member",
   "cmte"        = "Committee"
@@ -206,7 +207,13 @@ tab |>
                     "Random effects (SD)" = random_start)) |>
   style_tt(i = c(1,7), italic = TRUE)
 
-## 3 Model 2: signed magnitude of deviation, among deviators ----
+## 3 Marginal effects
+
+# How many deviate?
+avg_predictions(m1_deviate, ndraws=200)
+
+
+## 4 Model 2: signed magnitude of deviation, among deviators ----
 ## ordinal cumulative() model over the 10 discrete +/-0.1 ... +/-0.5
 ## steps. Thresholds default to "flexible" (not "equidistant"), 
 ## so the model does not assume the 10 steps are equally likely
