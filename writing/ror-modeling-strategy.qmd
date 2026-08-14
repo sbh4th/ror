@@ -374,16 +374,18 @@ fixed_start  <- which(tab$group == "Fixed effects")[1]
 random_start <- which(tab$group == "Random effects (SD)")[1]
 
 tab |>
-  select(term, estimate, mad, conf.low, conf.high) |>
-  setNames(c("Parameter", "Estimate", "Error", 
+  select(term, truth, estimate, mad, conf.low, conf.high) |>
+  setNames(c("Parameter", "Truth", "Estimate", "Error",
              "95% CrI Lower", "95% CrI Upper")) |>
   tt(caption = "Posterior estimates: m1_deviate") |>
-  group_tt(i = list("Fixed effects (log odds)" = fixed_start, 
+  group_tt(i = list("Fixed effects (log odds)" = fixed_start,
                     "Random effects (SD)" = random_start)) |>
-  style_tt(i = c(1,7), italic = TRUE)
+  style_tt(i = c(1,7), italic = TRUE) |>
+  style_tt(i = 0, align = "l") |>
+  style_tt(j = 1, align = "l")
 ```
 
-From the fixed effects we see that we generally recover the simulated parameters. Specifically the 'true' treatment effects in the first column are well approximated by our model. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package
+From the fixed effects we see that we generally recover the simulated parameters. Specifically the 'true' treatment effects in the first column are well approximated by our model. The three random-effect SDs are also correctly recovered near their true value of 0 -- the simulated data-generating process for whether a member deviates (`deviated`) depends only on `job`/`exp`, with no committee-, application-, or member-level heterogeneity built in at that stage (member-level heterogeneity only enters the *magnitude* of deviation, modeled separately in Part 2 below), so small, imprecisely-bounded estimates here are the expected result, not a recovery failure. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package
 
 ## Part 2: how large, given a deviation?
 

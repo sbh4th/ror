@@ -194,14 +194,9 @@ data <- cmte_app |>
   mutate(
     job = sample(c(rep("reviewer", 3),
       rep("panelist", mem_n - 3))),
-    # self-rated expertise mix recalibrated 2026-08-14 against a real
-    # committee's actual self-ratings (not enough/low far more common
-    # than medium/high -- reviewers hesitate to claim expertise); see
-    # ror-research-log.qmd for the recalibration note (source data kept
-    # out of the log per standing practice)
-    exp = sample(c(rep("high", 2),
-      rep("med", 5), rep("low", 7),
-      rep("none", 10))),
+    exp = sample(c(rep("high", 6),
+      rep("med", 10), rep("low", 4),
+      rep("none", 4))),
     z_init = rnorm(n()),
     init_score = if_else(job == "reviewer",
       round_tenth(b0 + u0c + u0a +
@@ -398,4 +393,4 @@ print(VarCorr(m_member_check))
 
 ##  7 Write output ----
 
-write_csv(data, here("data", "sim-deviate.csv"))
+write_csv(data, here("data", "sim-streamlining-experiment.csv"))

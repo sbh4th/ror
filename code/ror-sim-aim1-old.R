@@ -108,14 +108,21 @@ data <- add_random(committee = cmte_n,
   add_between("application", app = 1:app_n_candidates) |>
   add_between("member", memno = sprintf("%02d", 1:mem_n)) |>
 
-  mutate(cid = paste0(cmte, "_", memno)) |>
+  mutate(cid = paste0(cmte, "_", memno),
+    # unique application identity -- faux's own "application" column
+    # (used below) is fully crossed with committee (app_n_candidates
+    # levels total, recycled identically across every committee), the
+    # same conflation bug diagnosed and fixed for member/cid on
+    # 2026-08-05, just never caught here until 2026-08-14. cmte+app is
+    # the real unique identity.
+    aid = paste0(cmte, "_", app)) |>
 
   # random effects for the application's *true quality* (committee +
   # application only) -- this is what the 3 assigned reviewers each
   # independently perceive, with their own noise, below. Not consensus
   # itself; consensus is derived from the reviewers' scores next.
   add_ranef("cmte", u0c = u0c_sd) |>
-  add_ranef("application", u0a = u0a_sd) |>
+  add_ranef("aid", u0a = u0a_sd) |>
 
   # assign reviewers uniquely within each application, and draw each of
   # the 3 reviewers' initial score as true quality + asymmetric
@@ -133,9 +140,14 @@ data <- add_random(committee = cmte_n,
   mutate(
     job = sample(c(rep("reviewer", 3),
       rep("panelist", 21))),
-    exp = sample(c(rep("high", 6),
-      rep("med", 10), rep("low", 4),
-      rep("none", 4))),
+    # self-rated expertise mix recalibrated 2026-08-14 against a real
+    # committee's actual self-ratings (not enough/low far more common
+    # than medium/high -- reviewers hesitate to claim expertise); see
+    # ror-research-log.qmd for the recalibration note (source data kept
+    # out of the log per standing practice)
+    exp = sample(c(rep("high", 2),
+      rep("med", 5), rep("low", 7),
+      rep("none", 10))),
     z_init = rnorm(n()),
     init_score = if_else(job == "reviewer",
       round_tenth(b0 + u0c + u0a +
@@ -239,7 +251,7 @@ data <- data |>
   mutate(
     score = round_tenth(pmax(scale_min, pmin(score_max, consensus + deviation)))
   ) |>
-  select(-committee, -application, -member, -u0c, -u0a, -u0m_bias, -p_dev)
+  select(-committee, -application, -member, -aid, -u0c, -u0a, -u0m_bias, -p_dev)
 
 ##  4 Sanity checks ----
 

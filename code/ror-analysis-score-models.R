@@ -80,7 +80,17 @@ d1 <- d |>
   mutate(
     job      = factor(job, levels = c("reviewer", "panelist")),
     exp      = factor(exp, levels = c("med", "high", "low", "none")),
-    deviated = factor(deviated, levels = c(0, 1))
+    deviated = factor(deviated, levels = c(0, 1)),
+    # data/sim-data-aim1.csv only saves the raw `app` label (recycled
+    # across committees), not a unique per-committee-application
+    # identifier -- same crossing issue diagnosed and fixed in the
+    # simulation scripts on 2026-08-14 (see ror-research-log.qmd),
+    # just discovered here too once the modeling-strategy table grew a
+    # "Truth" column and it was obvious the Application random effect
+    # wasn't recovering. `(1 | app)` below would pool together
+    # unrelated applications from different committees that happen to
+    # share a label; group on this composite instead.
+    aid      = paste0(cmte, "_", app)
   )
 
 # the 10 discrete steps a deviator's score can take relative to consensus
@@ -145,7 +155,7 @@ if (file.exists(here("code/fits/ror-deviate-m1.rds"))) {
   m1_deviate <-
     brm(data = d1,
         family = bernoulli(),
-        deviated ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | app),
+        deviated ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | aid),
         prior = c(prior(normal(0, 1.0), class = Intercept),   # bar alpha
                   prior(normal(0, 0.5), class = b),           # betas
                   prior(exponential(1), class = sd)),         # sigma
@@ -165,31 +175,58 @@ term_labels <- c(
   "exphigh"     = "High vs. Medium Expertise",
   "explow"      = "Low vs. Medium Expertise",
   "expnone"     = "None vs. Medium Expertise",
-  "app"         = "Application",
+  "aid"         = "Application",
   "cid"         = "Committee Member",
   "cmte"        = "Committee"
+)
+
+# true generating values for each term, so the table can show recovery
+# directly rather than asking the reader to hold the DGP parameters in
+# their head. Fixed effects must be kept in sync by hand with the aim 1
+# simulation script's a0-a4 (logit scale) -- there's no live link
+# between the two scripts, since the simulation script only writes a
+# CSV. The three random-effect SDs are all truly 0 here, NOT
+# u0c_sd/u0a_sd/u0m_bias_sd (2026-08-14 correction) -- p_dev, which
+# generates `deviated`, is plogis(a0 + a1*panelist + a2*exp_high +
+# a3*exp_low + a4*exp_none) only. u0c/u0a never enter the deviation
+# process at all (they only drive init_score/consensus); u0m_bias only
+# enters the *magnitude* of deviation given deviation occurs (Part 2,
+# m1_magnitude), not whether a member deviates (Part 1, m1_deviate,
+# this table). See ror-research-log.qmd.
+truth <- c(
+  "Intercept"   = -0.8,   # a0
+  "jobpanelist" =  0.3,   # a1
+  "exphigh"     = -0.4,   # a2
+  "explow"      =  0.2,   # a3
+  "expnone"     =  0.5,   # a4
+  "aid"         =  0,     # no application-level variation in p_dev
+  "cid"         =  0,     # no member-level variation in p_dev (u0m_bias is magnitude-only)
+  "cmte"        =  0      # no committee-level variation in p_dev
 )
 
 tab <- get_estimates(m1_deviate) |>
   select(term, estimate, mad, conf.low, conf.high) |>
   mutate(
-    group = if_else(str_starts(term, "b_"), 
+    group = if_else(str_starts(term, "b_"),
       "Fixed effects", "Random effects (SD)"),
-    term  = term |> 
-  str_remove("^b_") |> 
-  str_remove("^sd_") |> 
+    term  = term |>
+  str_remove("^b_") |>
+  str_remove("^sd_") |>
   str_remove("__Intercept$")
   )
 
-# fails loudly if a term shows up that term_labels hasn't been told about,
-# rather than silently printing NA in the final table
+# fails loudly if a term shows up that term_labels/truth haven't been
+# told about, rather than silently printing NA in the final table
 stopifnot("term_labels is missing an entry for at least one term" =
   all(tab$term %in% names(term_labels)))
+stopifnot("truth is missing an entry for at least one term" =
+  all(tab$term %in% names(truth)))
 
 tab <- tab |>
   mutate(
-    term = term_labels[term],
-    across(c(estimate, mad, conf.low, conf.high), 
+    truth = sprintf("%.3f", truth[term]),
+    term  = term_labels[term],
+    across(c(estimate, mad, conf.low, conf.high),
       ~sprintf("%.3f", .x))
   )
 
@@ -199,13 +236,15 @@ fixed_start  <- which(tab$group == "Fixed effects")[1]
 random_start <- which(tab$group == "Random effects (SD)")[1]
 
 tab |>
-  select(term, estimate, mad, conf.low, conf.high) |>
-  setNames(c("Parameter", "Estimate", "Error", 
+  select(term, truth, estimate, mad, conf.low, conf.high) |>
+  setNames(c("Parameter", "Truth", "Estimate", "Error",
              "95% CrI Lower", "95% CrI Upper")) |>
   tt(caption = "Posterior estimates: m1_deviate") |>
-  group_tt(i = list("Fixed effects (log odds)" = fixed_start, 
+  group_tt(i = list("Fixed effects (log odds)" = fixed_start,
                     "Random effects (SD)" = random_start)) |>
-  style_tt(i = c(1,7), italic = TRUE)
+  style_tt(i = c(1,7), italic = TRUE) |>
+  style_tt(i = 0, align = "l") |>
+  style_tt(j = 1, align = "l")
 
 ## 3 Marginal effects
 
@@ -232,7 +271,7 @@ if (FIT_MODELS) {
   m1_magnitude <-
     brm(data = d1_dev,
         family = cumulative(link = "logit", threshold = "flexible"),
-        deviation ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | app),
+        deviation ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | aid),
         prior = c(prior(normal(0, 1.5), class = Intercept),  # thresholds
                   prior(normal(0, 0.5), class = b),           # betas
                   prior(exponential(1), class = sd)),         # group SDs

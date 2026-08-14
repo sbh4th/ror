@@ -53,3 +53,9 @@ rsconnect/
 # instead of git (see u2-sibs's code/u2s-push-to-OSF.R / -pull-from-OSF.R
 # for the pattern to adopt here once there's something worth syncing)
 code/fits/
+
+# CIHR open-data downloads (open.canada.ca) -- large (~10-12MB) public
+# Excel files plus the small metadata/data-dictionary file, all easy to
+# re-download, not worth versioning
+data/cihr_investments*.xlsx
+data/metadata-metadonnees.xlsx
