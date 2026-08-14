@@ -1081,6 +1081,34 @@ philosophy throughout this project. The bulk of the distribution
 (median, IQR) is essentially unchanged from before this whole
 left-tail investigation started.
 
+## Recalibrated the `exp` (self-rated expertise) category mix
+
+The `exp` sampling shares in `ror-sim-aim1.R`/`ror-sim-aim2.R`/
+`ror-sim-streamlining-experiment.R` had been an arbitrary illustrative
+split since the project's earliest simulations (6 high / 10 medium / 4
+low / 4 none out of 24 members -- 25/42/17/17%), with medium treated as
+the dominant category and high fairly common.
+
+Checked this against a real reference distribution of self-rated
+expertise Sam has access to (source kept out of this log per standing
+practice, as with other real-data calibration checks this session).
+The real shape is close to inverted relative to what the simulation
+assumed: "not enough" and "low" together make up the large majority of
+self-ratings, "high" is the rarest category by a wide margin -- Sam's
+read is that this reflects a real, fairly consistent pattern (reviewers
+are reluctant to claim medium/high expertise), not an artifact of one
+unusual meeting.
+
+**Changed to:** 2 high / 5 medium / 7 low / 10 none out of 24 members
+(8.3/20.8/29.2/41.7%), approximating a target split of roughly
+10/20/30/40. Applied identically to all three simulation scripts for
+consistency, since this is a property of the reviewer population, not
+something that should vary by which experimental variant is running.
+Re-ran all three after the change -- all sanity/recovery checks still
+pass, and the regenerated `data/sim-data-aim1.csv` matches the intended
+shares closely (8.2/29.8/20.5/41.5% observed vs. 8.3/29.2/20.8/41.7%
+target).
+
 ## `m1_deviate`'s Truth column was wrong for all three random effects -- they should be 0, not u0c_sd/u0a_sd/u0m_bias_sd
 
 After fixing the `application`/`aid` grouping bug in the simulation
