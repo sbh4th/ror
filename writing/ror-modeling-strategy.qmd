@@ -374,6 +374,12 @@ fixed_start  <- which(tab$group == "Fixed effects")[1]
 random_start <- which(tab$group == "Random effects (SD)")[1]
 
 tab |>
+  # Truth is only meaningful for the fixed effects -- this table's job is
+  # to show fixed-effect recovery, not the random-effect SDs (which are
+  # genuinely 0 by construction for this model and just invite the
+  # "why doesn't the estimate show exactly 0" question without adding to
+  # the table's actual point)
+  mutate(truth = if_else(group == "Random effects (SD)", "", truth)) |>
   select(term, truth, estimate, mad, conf.low, conf.high) |>
   setNames(c("Parameter", "Truth", "Estimate", "Error",
              "95% CrI Lower", "95% CrI Upper")) |>
@@ -385,7 +391,7 @@ tab |>
   style_tt(j = 1, align = "l")
 ```
 
-From the fixed effects we see that we generally recover the simulated parameters. Specifically the 'true' treatment effects in the first column are well approximated by our model. The three random-effect SDs are also correctly recovered near their true value of 0 -- the simulated data-generating process for whether a member deviates (`deviated`) depends only on `job`/`exp`, with no committee-, application-, or member-level heterogeneity built in at that stage (member-level heterogeneity only enters the *magnitude* of deviation, modeled separately in Part 2 below), so small, imprecisely-bounded estimates here are the expected result, not a recovery failure. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package
+From the fixed effects we see that we generally recover the simulated parameters -- the 'true' treatment effects in the first column are well approximated by our model. The three random-effect SDs are small and estimated with considerable uncertainty; the simulated data-generating process for whether a member deviates (`deviated`) depends only on `job`/`exp`, with no committee-, application-, or member-level heterogeneity built in at that stage (member-level heterogeneity only enters the *magnitude* of deviation, modeled separately in Part 2 below), so this is the expected pattern rather than a recovery failure. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package
 
 ## Part 2: how large, given a deviation?
 

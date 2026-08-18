@@ -296,7 +296,7 @@
       affiliation: [],
       email: [] ),
     ),
-  date: [2026-08-13],
+  date: [2026-08-15],
   margin: (x: 1.87cm,y: 1.87cm,),
   font: ("C059",),
   fontsize: 11pt,
@@ -350,23 +350,25 @@ Our interest is in modeling $d_(i j k)$ directly, rather than modeling the final
 
 == Estimand of interest
 <estimand-of-interest>
-Our main quantity of interest in this project is the value that a given panel member's score ($Y_(i j k)$) would take if a particular reviewer characteristic (role or experience) were set to a specific value, averaged over the entire population of panel members, applications, and committees. We can write an example of, say, the difference between final scores for a given member-application pairing if that member were assigned to be a panelist or a reviewer:
+Our main quantity of interest in this project is the value that a given committee member's score differential from the consensus ($d_(i j k)$) would take if a particular reviewer characteristic (role or experience) were set to a specific value, averaged over the entire population of panel members, applications, and committees. We can write an example of, say, the difference between final scores for a given member-application pairing if that member were assigned to be a panelist or a reviewer:
 
 #let phantom_tall = box(width: 0pt, hide[$1 / (I J K) sum_(k=1)^K sum_(j=1)^J sum_(i=1)^I$])
 $ underbrace(1 / (I J K) sum_(k=1)^K sum_(j=1)^J sum_(i=1)^I,
-upright("Mean over members ") i upright(",") \
-upright("applications ") j upright(",") \
-upright("and committees ") k) underbrace(#stack(dir: ltr, phantom_tall, $(Y_(i j k) (1) - Y_(i j k) (0))$), upright("Score if assigned") \
+upright("Mean over members") i upright(",") \
+upright("applications") j upright(",") \
+upright("and committees") k) underbrace(#stack(dir: ltr, phantom_tall, $(d_(i j k) (1) - d_(i j k) (0))$), upright("Score if assigned") \
 upright("to panelist(1)") \
 upright("or reviewer(0)")) $
-Leaving aside for the moment the assumptions needed to credibly estimate this quantity, the specific data generating process for application scores, where there is a consensus score that members can deviate from, leads to considering an alternative outcome, which is the difference between the consensus score and each member's score. However, this leads to challenges since we might expect many members to just go with and agree on the consensus score.
+Leaving aside for the moment the assumptions needed to credibly estimate this quantity, the specific data generating process for score deviations leads to challenges, since the distribution of this outcome depends on two processes: 1) whether a given member deviates from the consensus score; and 2) how large that deviation might be. Estimating these effects across the whole population of applications leads to the intuition for a two-part model.
 
 = Why a two-part model
 <why-a-two-part-model>
 We expect $d_(i j k)$ to have a spike at exactly zero (members who simply adopt the consensus score) plus variation among those who depart from it. So the outcome is split into two linked models:
 
-+ #strong[Did this member deviate at all?] A Bernoulli model on $1 [d_(i j k) eq.not 0]$.
++ #strong[Did this member deviate at all?] A Bernoulli/logistic model on $1 [d_(i j k) eq.not 0]$.
 + #strong[If they deviated, by how much?] A model for the (signed) magnitude, conditional on deviating.
+
+Estimating the expected value of the both parts across the entire population of reviewers (not just those that deviate from consensus) recovers the effect in the entire sample.
 
 $ E [d_(i j k)] = underbrace(P (upright("deviate")), upright("Part 1: any")\
 upright("deviation at all")) times underbrace(E [upright("magnitude") divides upright("deviate")], upright("Part 2: size")\
@@ -457,16 +459,16 @@ modelsummary(
     // tinytable header end
 
     // tinytable cell content after
-[(Intercept)], [\-0.001], [\-0.954],
-[], [(0.002)], [(0.034)],
-[jobreviewer], [\-0.003], [\-0.303],
-[], [(0.003)], [(0.049)],
-[explow], [0.003], [0.643],
-[], [(0.003)], [(0.050)],
-[expmed], [0.002], [0.467],
-[], [(0.002)], [(0.041)],
-[expnone], [0.001], [0.857],
-[], [(0.003)], [(0.050)],
+[(Intercept)], [\-0.003], [\-0.962],
+[], [(0.003)], [(0.059)],
+[jobreviewer], [\-0.001], [\-0.345],
+[], [(0.003)], [(0.047)],
+[explow], [0.001], [0.647],
+[], [(0.004)], [(0.065)],
+[expmed], [0.003], [0.520],
+[], [(0.004)], [(0.067)],
+[expnone], [0.004], [0.939],
+[], [(0.004)], [(0.063)],
 [Num.Obs.], [18000], [18000],
 
     // tinytable footer after
@@ -482,7 +484,7 @@ The linear model's coefficients on `job`/`exp` are tiny and mostly non-significa
 <model-specification-aim-1>
 == Simulating the data-generating process
 <simulating-the-data-generating-process>
-For the basic structure we use 50 committees, 15 discussed applications per committee, 24 members per committee. We also simulate another 15 applications that will end up being streamlined. For the assignments we have 3 of the 24 members on each application as the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn per application (committee- and application-level random effects only, no member-level variation yet, since this is before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR's one-decimal-place scoring (with rejection sampling so a "deviated" row can never round down to a contradictory zero).
+For the basic structure of the data generating process we use 50 committees, 15 discussed applications per committee, 24 members per committee. We also simulate another 15 applications that will end up being streamlined. For the assignments we have 3 of the 24 members on each application as the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn per application (committee- and application-level random effects only, no member-level variation yet, since this is before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR's one-decimal-place scoring (with rejection sampling so a "deviated" row can never round down to a contradictory zero).
 
 #block[
 ```r
@@ -600,12 +602,14 @@ This model run on the simulated data gives the following estimates, shown in #re
 
   #let style-dict = (
     // tinytable style-dict after
-    "1_0": 0, "7_0": 0, "1_1": 0, "7_1": 0, "1_2": 0, "7_2": 0, "1_3": 0, "7_3": 0, "1_4": 0, "7_4": 0
+    "0_0": 0, "2_0": 0, "3_0": 0, "4_0": 0, "5_0": 0, "6_0": 0, "8_0": 0, "9_0": 0, "10_0": 0, "0_1": 0, "0_2": 0, "0_3": 0, "0_4": 0, "0_5": 0, "1_1": 1, "7_1": 1, "1_2": 1, "7_2": 1, "1_3": 1, "7_3": 1, "1_4": 1, "7_4": 1, "1_5": 1, "7_5": 1, "1_0": 2, "7_0": 2
   )
 
   #let style-array = ( 
     // tinytable cell style after
+    (align: left,),
     (italic: true,),
+    (italic: true, align: left,),
   )
 
   // Helper function to get cell style
@@ -615,7 +619,7 @@ This model run on the simulated data gives the following estimates, shown in #re
   }
 
   // tinytable align-default-array before
-  #let align-default-array = ( left, left, left, left, left, ) // tinytable align-default-array here
+  #let align-default-array = ( left, left, left, left, left, left, ) // tinytable align-default-array here
   #show table.cell: it => {
     if style-array.len() == 0 { return it }
     
@@ -638,7 +642,7 @@ This model run on the simulated data gives the following estimates, shown in #re
   #align(center, [
 
   #table( // tinytable table start
-    columns: (auto, auto, auto, auto, auto),
+    columns: (auto, auto, auto, auto, auto, auto),
     stroke: none,
     rows: auto,
     align: (x, y) => {
@@ -649,29 +653,29 @@ This model run on the simulated data gives the following estimates, shown in #re
       let style = get-style(x, y)
       if style != none and "background" in style { style.background }
     },
- table.hline(y: 1, start: 0, end: 5, stroke: 0.05em + black),
- table.hline(y: 11, start: 0, end: 5, stroke: 0.08em + black),
- table.hline(y: 0, start: 0, end: 5, stroke: 0.08em + black),
+ table.hline(y: 1, start: 0, end: 6, stroke: 0.05em + black),
+ table.hline(y: 11, start: 0, end: 6, stroke: 0.08em + black),
+ table.hline(y: 0, start: 0, end: 6, stroke: 0.08em + black),
     // tinytable lines before
 
     // tinytable header start
     table.header(
       repeat: true,
-[Parameter], [Estimate], [Error], [95% CrI Lower], [95% CrI Upper],
+[Parameter], [Truth], [Estimate], [Error], [95% CrI Lower], [95% CrI Upper],
     ),
     // tinytable header end
 
     // tinytable cell content after
-table.cell(colspan: 5)[Fixed effects (log odds)],
-[Intercept], [-0.789], [0.051], [-0.887], [-0.694],
-[Panelist vs. Reviewer], [0.300], [0.049], [0.208], [0.397],
-[High vs. Medium Expertise], [-0.467], [0.042], [-0.547], [-0.385],
-[Low vs. Medium Expertise], [0.175], [0.044], [0.089], [0.262],
-[No Expertise vs. Medium], [0.388], [0.043], [0.304], [0.476],
-table.cell(colspan: 5)[Random effects (SD)],
-[Application], [0.015], [0.014], [0.001], [0.053],
-[Committee Member], [0.046], [0.039], [0.002], [0.134],
-[Committee], [0.034], [0.026], [0.002], [0.088],
+table.cell(colspan: 6)[Fixed effects (log odds)],
+[Intercept], [-0.800], [-0.771], [0.048], [-0.865], [-0.675],
+[Panelist vs. Reviewer], [0.300], [0.253], [0.046], [0.158], [0.345],
+[High vs. Medium Expertise], [-0.400], [-0.401], [0.040], [-0.482], [-0.324],
+[Low vs. Medium Expertise], [0.200], [0.265], [0.044], [0.180], [0.347],
+[None vs. Medium Expertise], [0.500], [0.515], [0.042], [0.432], [0.601],
+table.cell(colspan: 6)[Random effects (SD)],
+[Application], [], [0.038], [0.034], [0.002], [0.116],
+[Committee Member], [], [0.053], [0.044], [0.002], [0.146],
+[Committee], [], [0.019], [0.017], [0.001], [0.062],
 
     // tinytable footer after
 
@@ -693,7 +697,7 @@ supplement: "Table",
 <tbl-m1-deviate>
 
 
-From the fixed effects we see that we generally recover the simulated parameters. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package
+From the fixed effects we see that we generally recover the simulated parameters -- the 'true' treatment effects in the first column are well approximated by our model. The three random-effect SDs are small and estimated with considerable uncertainty; the simulated data-generating process for whether a member deviates (`deviated`) depends only on `job`/`exp`, with no committee-, application-, or member-level heterogeneity built in at that stage (member-level heterogeneity only enters the #emph[magnitude] of deviation, modeled separately in Part 2 below), so this is the expected pattern rather than a recovery failure. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package
 
 == Part 2: how large, given a deviation?
 <part-2-how-large-given-a-deviation>
@@ -835,10 +839,10 @@ coefs[grepl(":", rownames(coefs)), ] |>
     // tinytable header end
 
     // tinytable cell content after
-[jobreviewer:gendermale], [0.51164], [0.0966], [5.2955], [0.00000011866],
-[explow:career_stageestablished], [-0.00456], [0.0977], [-0.0466], [0.96280257387],
-[expmed:career_stageestablished], [0.00247], [0.0793], [0.0311], [0.97516026324],
-[expnone:career_stageestablished], [-0.6084], [0.0999], [-6.0914], [0.00000000112],
+[jobreviewer:gendermale], [0.571], [0.0933], [6.12], [0.000000000933],
+[explow:career_stageestablished], [0.26], [0.1228], [2.12], [0.034154693615],
+[expmed:career_stageestablished], [0.253], [0.1281], [1.97], [0.048458324937],
+[expnone:career_stageestablished], [-0.43], [0.1195], [-3.6], [0.00032331474],
 
     // tinytable footer after
 

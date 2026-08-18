@@ -251,6 +251,12 @@ tab |>
 # How many deviate?
 avg_predictions(m1_deviate, ndraws=200)
 
+# Deviations by engagement
+avg_predictions(m1_deviate, variables = "exp", ndraws = 200)
+  
+# Deviations by experience
+avg_predictions(m1_deviate, variables = "job", ndraws = 200)
+
 
 ## 4 Model 2: signed magnitude of deviation, among deviators ----
 ## ordinal cumulative() model over the 10 discrete +/-0.1 ... +/-0.5

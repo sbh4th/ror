@@ -1,16 +1,12 @@
-#  program:  ror-sim-streamlining-experiment.R
+#  program:  ror-sim-deviate.R
 #  task:     EXPERIMENTAL. A more procedurally faithful streamlining DGP
 #            for Aim 1, layered on top of the already-validated
 #            ror-sim-aim1.R deviation-generating machinery (reused
-#            unchanged for Stage 2 below). NOT part of the main Aim 1/2
-#            pipeline -- this is a side-by-side check of whether the
-#            added realism changes anything material for recoverability,
-#            or whether the simpler rank/threshold-only approach in
-#            ror-sim-aim1.R is a safe simplification.
+#            unchanged for Stage 2 below).
 #  input:    none (simulated from scratch)
-#  output:   data/sim-streamlining-experiment.csv
+#  output:   data/sim-deviate.csv
 #  project:  RoR
-#  author:   sam harper \ 2026-08-11
+#  author:   sam harper \ 2026-08-15
 #
 #  note:     per Sam's account of the real CIHR procedure (2026-08-11,
 #            drawing on his own committee/Scientific Officer experience):
@@ -393,4 +389,4 @@ print(VarCorr(m_member_check))
 
 ##  7 Write output ----
 
-write_csv(data, here("data", "sim-streamlining-experiment.csv"))
+write_csv(data, here("data", "sim-deviate.csv"))
