@@ -6,6 +6,16 @@ next), not a decision record. For the actual research log — dated entries
 with rationale, code, and results for substantive decisions — see
 [`code/ror-research-log.qmd`](code/ror-research-log.qmd).
 
+## Where we left off (2026-08-19)
+
+**`code/ror-sim-deviate.R` is now the canonical Aim 1 simulation** — the experimental streamlining mechanism (top/bottom calls + rank-based selection) is no longer a side comparison, it's the main DGP. `code/ror-analysis-score-models.R` now reads `data/sim-deviate.csv` accordingly. `code/ror-sim-aim1-old.R` is the old fixed-threshold version, superseded.
+
+**Next thing to do: draft an Appendix in `writing/ror-modeling-strategy.qmd`** walking through the full simulation script, since it's gotten complex enough to warrant real documentation. Decided against a separate standalone `.qmd` (one more file that can drift out of sync — exactly what happened this session with `sim-data-aim1.csv` vs `sim-deviate.csv`). Plan: pull the actual script in via Quarto's `file =` chunk option (e.g. `{r, file = here("code", "ror-sim-deviate.R")}`) rather than retyping/copy-pasting code, with explanatory prose around it, so the appendix can't silently go stale. **Not started — pick this up first.**
+
+**Open, not urgent:** the `m1_deviate` Truth column's `aid`/`cid`/`cmte` rows are correctly `0` (see 2026-08-14 below for why), but Sam doesn't love how a bare "0.000" reads in the rendered table and was mid-edit on a better presentation when this session ended — revisit before treating that table as finished. Also minor/harmless: `ror-analysis-score-models.R`'s `d1` still reconstructs `aid = paste0(cmte, "_", app)` even though the CSV now carries `aid` directly (the simulation script no longer drops it) — could simplify to just use the CSV's column.
+
+**Discussed and decided against (for now):** giving individual reviewers a persistent initial-scoring trait (some persistently harsh/lenient graders, distinct from the existing `u0m_bias` which only affects discussion-deviation, not initial scores). Real phenomenon per Sam's experience, but doesn't bear on Aim 1/2's actual estimand ($d_{ijk}$) — flagged as worth building in for **Aim 3** instead (funding-decision simulations depend on absolute score levels, where this could actually change a substantive conclusion), once Aim 3's simulation gets started.
+
 ## Where we left off (2026-08-14)
 
 **Bug fix across all three simulation scripts:** `ror-sim-aim1.R`, `ror-sim-aim2.R`, and `ror-sim-streamlining-experiment.R` all had `add_ranef()` called directly on `faux::add_random()`'s raw "application" factor, which is fully crossed with committee — meaning `u0a` draws were identical for same-labeled applications across different committees (same conflation bug class as the `member`/`cid` fix on 2026-08-05, just never caught for `application` until now). Fixed in all three by building an explicit unique `aid = paste0(cmte, "_", app)` key and pointing `add_ranef()` at that. Verified directly (consensus now differs by committee for the same `app` label); all existing `stopifnot()`/recovery checks still pass. Full details in the research log.

@@ -1173,14 +1173,21 @@ redundant `aid = paste0(cmte, "_", app)` reconstruction in `d1`'s
 that the CSV carries `aid` directly -- harmless as-is since it
 recomputes the identical value, just duplicated logic.)
 
-**Caught and fixed a live bug while wrapping up:** the `truth` vector's
-last three entries (`aid`/`cid`/`cmte`, all meant to be `0` per the
-2026-08-14 entry above) had lost their `= 0` during editing --
-`c("Intercept" = -0.8, ..., "aid", "cid", "cmte")` silently coerces the
-whole vector to character (can't mix named numeric and unnamed string
-elements) and turns those three into unnamed values instead of names
-mapped to 0, so `truth["aid"]` etc. would silently return `NA`
-downstream. Restored the `= 0` on all three.
+**Caught mid-edit while wrapping up:** the `truth` vector's last three
+entries (`aid`/`cid`/`cmte`) had lost their `= 0` -- Sam was mid-way
+through reworking this himself, prompted by not liking how plain
+`0.000` reads in the rendered Truth column, and hadn't finished when
+the session ended. In the interim state, `c("Intercept" = -0.8, ...,
+"aid", "cid", "cmte")` silently coerces the whole vector to character
+(can't mix named numeric and unnamed string elements), turning those
+three into unnamed values instead of names mapped to 0 -- `truth["aid"]`
+etc. would silently return `NA` if the script ran like that. Restored
+plain `= 0` so the script runs correctly in the meantime, but **Sam
+still wants to revisit the display** (e.g. showing something other
+than a bare "0.000" for a structurally-zero random effect, maybe with
+a note explaining why) -- not a value/correctness question, a
+presentation one. Pick this up before treating the Truth column as
+finished.
 
 ## Discussed: should individual reviewers have a persistent
 ## initial-scoring trait (some persistently harsh/lenient graders)?
