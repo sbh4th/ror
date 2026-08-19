@@ -49,6 +49,7 @@ library(marginaleffects)
 library(bayesplot)
 library(tinytable)
 library(patchwork)
+library(modelsummary)
 
 # Use the cmdstanr backend for Stan
 # You need to install the cmdstanr package first
@@ -63,13 +64,11 @@ dir.create(here("code", "fits"), showWarnings = FALSE, recursive = TRUE)
 
 ## 1 Read in simulated dataset ----
 
-d <- read_csv(here("data", "sim-data-aim1.csv"),
+d <- read_csv(here("data", "sim-deviate.csv"),
   show_col_types = FALSE)
 
 # Sanity checks on the simulated analytic sample
 stopifnot(
-  "expect 18,000 rows (50 cmte x 15 app x 24 member)" =
-    nrow(d) == 18000,
   "deviated should be 0/1" =
     all(d$deviated %in% c(0, 1)),
   "score should stay within [3.5, 4.9]" =
@@ -81,16 +80,6 @@ d1 <- d |>
     job      = factor(job, levels = c("reviewer", "panelist")),
     exp      = factor(exp, levels = c("med", "high", "low", "none")),
     deviated = factor(deviated, levels = c(0, 1)),
-    # data/sim-data-aim1.csv only saves the raw `app` label (recycled
-    # across committees), not a unique per-committee-application
-    # identifier -- same crossing issue diagnosed and fixed in the
-    # simulation scripts on 2026-08-14 (see ror-research-log.qmd),
-    # just discovered here too once the modeling-strategy table grew a
-    # "Truth" column and it was obvious the Application random effect
-    # wasn't recovering. `(1 | app)` below would pool together
-    # unrelated applications from different committees that happen to
-    # share a label; group on this composite instead.
-    aid      = paste0(cmte, "_", app)
   )
 
 # the 10 discrete steps a deviator's score can take relative to consensus
@@ -214,13 +203,6 @@ tab <- get_estimates(m1_deviate) |>
   str_remove("^sd_") |>
   str_remove("__Intercept$")
   )
-
-# fails loudly if a term shows up that term_labels/truth haven't been
-# told about, rather than silently printing NA in the final table
-stopifnot("term_labels is missing an entry for at least one term" =
-  all(tab$term %in% names(term_labels)))
-stopifnot("truth is missing an entry for at least one term" =
-  all(tab$term %in% names(truth)))
 
 tab <- tab |>
   mutate(

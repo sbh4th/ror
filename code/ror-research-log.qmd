@@ -883,26 +883,20 @@ within one assumed rate (e.g. at 15%: IQR 33-53, range 7-80).
 
 ## CIHR's own funding-decision-process page confirms this and adds a real modeling gap
 
-Sam supplied CIHR's own description of the funding decision process
+CIHR's own description of the funding decision process
 ([cihr-irsc.gc.ca/e/51315.html](https://cihr-irsc.gc.ca/e/51315.html)),
 which both independently validates the back-calculation above and
 surfaces something not currently in any of our simulations.
 
-**Validates the back-calculation, and supersedes it as the primary
-reference going forward:**
-
-- CIHR states directly: **20-80 applications per committee**. Our
+- CIHR states directly: **20-80 applications per committee**. Current
   back-calculated IQR (33-53 at 15%) sits inside that; the median (40)
   is almost exactly `pool_per_cmte`'s current fixed value in
   `ror-sim-streamlining-experiment.R`.
 - "More than 2000 applications... across approximately 58 committees"
-  implies ~34-40 average -- same story, from an independent (aggregate,
-  not funded-count-derived) source.
+  implies ~34-40 average per committee.
 - Confirms **3.5 as the fundable threshold** exactly, matching
-  `score_min` -- not a guess anymore.
-- One open discrepancy, not resolved: our real data has **68** distinct
-  Project Grant committees; CIHR's text says "approximately 58." Could
-  be a rounding/older figure, or some of our 68 could be subcommittee
+  `score_min`
+- One open discrepancy, not resolved: CIHR's funding analytics database has **68** distinct Project Grant committees; CIHR's text says "approximately 58." Could be a rounding/older figure, or some of our 68 could be subcommittee
   splits (we saw e.g. "Behavioural Sciences - A/B/B-2/C" as four
   separate rows) that CIHR's summary counts more coarsely. Not urgent,
   flagged for later.
@@ -1153,3 +1147,101 @@ underestimation. Added a note to this effect in
 fit) is the one place `cid` should show a genuine non-zero truth
 (`u0m_bias_sd = 0.1`) -- `cmte`/`aid` stay at 0 there too, since
 neither enters the deviation-magnitude formula either.
+
+# 2026-08-19
+
+## `ror-sim-deviate.R` promoted to the canonical Aim 1 simulation
+
+The experimental streamlining mechanism (top/bottom calls + rank-based
+selection, previously `ror-sim-streamlining-experiment.R`) is now the
+main Aim 1 DGP going forward, under `code/ror-sim-deviate.R` -- not a
+side-by-side comparison against `ror-sim-aim1-old.R`'s simpler
+fixed-threshold mechanism anymore. `code/ror-analysis-score-models.R`
+now reads `data/sim-deviate.csv` accordingly (was pointed at the older
+`data/sim-data-aim1.csv`, which had gone stale relative to the actual
+script in use -- caught mid-session when the two didn't match).
+
+Also cleaned up: `ror-sim-deviate.R` no longer drops `aid` in its final
+`select()`. Unlike `u0c`/`u0a`/`u0m_bias`/`p_dev` (true latent DGP
+quantities that should never appear in an "observed" analytic
+dataset), `aid` is just `paste0(cmte, "_", app)` -- a legitimate
+observable identifier a real dataset would have. It had been swept
+into the same drop line by pattern-matching on "used to build
+`add_ranef()`," not because it belonged there. (Not yet done: the now-
+redundant `aid = paste0(cmte, "_", app)` reconstruction in `d1`'s
+`mutate()` in `ror-analysis-score-models.R` could be removed too, now
+that the CSV carries `aid` directly -- harmless as-is since it
+recomputes the identical value, just duplicated logic.)
+
+**Caught and fixed a live bug while wrapping up:** the `truth` vector's
+last three entries (`aid`/`cid`/`cmte`, all meant to be `0` per the
+2026-08-14 entry above) had lost their `= 0` during editing --
+`c("Intercept" = -0.8, ..., "aid", "cid", "cmte")` silently coerces the
+whole vector to character (can't mix named numeric and unnamed string
+elements) and turns those three into unnamed values instead of names
+mapped to 0, so `truth["aid"]` etc. would silently return `NA`
+downstream. Restored the `= 0` on all three.
+
+## Discussed: should individual reviewers have a persistent
+## initial-scoring trait (some persistently harsh/lenient graders)?
+
+Sam's reviewing experience: yes, this is a real, recognizable pattern,
+distinct from the already-modeled `u0m_bias` (which only affects the
+*discussion-deviation* step, not initial scores at all -- currently no
+persistent per-member trait feeds into `init_score` anywhere; the
+per-reviewer noise there is redrawn fresh for every review instance).
+
+**Decision: not worth building in for Aim 1/2.** The project's primary
+estimand is $d_{ijk}$ (the discussion-deviation), and a persistent
+initial-scoring trait would mostly reshape *consensus* (since consensus
+is the mean of 3 reviewers' scores) rather than the deviation mechanism
+itself -- nothing about a reviewer's own initial-scoring tendency
+currently needs to, or would naturally, feed into whether/how much they
+personally deviate during discussion, unless we specifically wanted to
+model a *different* hypothesis (e.g. "reviewers who scored unusually
+harshly relative to co-reviewers are more likely to hold their ground
+in discussion") -- a real, separate, and more specific claim, not
+something to bundle in under general realism.
+
+**Flagged for later: likely worth it for Aim 3.** Funding-decision
+simulations depend on absolute score/consensus levels, where a
+persistently harsh reviewer could genuinely tip a real application
+across the streamlining or funding threshold -- a case where the added
+realism could change a substantive conclusion, not just add cosmetic
+texture. Aim 3's simulation hasn't been started yet; revisit this when
+it is.
+
+**Independent sanity check, in passing:** Sam's stated real-world
+figures (~5-6 total application reviews per member per cycle, ~40%
+reaching discussion) line up well with two numbers calibrated
+separately this project: a beta-distributed candidate pool averaging
+~42 applications/committee gives an expected 42x3/24 ~= 5.25
+reviews/member, and the streamlining mechanism's discussion rate has
+been landing around 36-40% in recent runs. Two independently-derived
+figures converging on Sam's real-world number is a good sign, not
+acted on further.
+
+## Next step, not yet started: Appendix in `ror-modeling-strategy.qmd` walking through the full simulation script
+
+The simulation has grown complex enough that Sam wants it documented
+in more depth than the current "Data structure" section. Discussed two
+options: a separate standalone `.qmd`, or an Appendix section at the
+end of `ror-modeling-strategy.qmd`.
+
+**Decided: Appendix in the existing document, not a separate file.**
+Two reasons: (1) the document's own stated purpose ("lays out the
+data-generating process we believe matches CIHR's Project Grant peer
+review") already covers a full script walkthrough -- it's in scope, not
+a tangent; (2) a second standalone document is one more artifact that
+can silently drift out of sync with the actual script, which is
+exactly the failure mode hit twice already today (`sim-data-aim1.csv`
+vs. `sim-deviate.csv`; `ror-sim-aim1.R` vs. `-old.R` vs. `-deviate.R`).
+
+**Planned mechanism:** pull the actual script content into the
+appendix via Quarto's `file =` chunk option (e.g. `{r, file =
+here("code", "ror-sim-deviate.R")}`), rather than manually retyping or
+copy-pasting code into the qmd -- so the appendix always reflects
+whatever the script currently says, with explanatory prose written
+around/between sections rather than as a frozen snapshot.
+
+**Not started yet** -- this is the next thing to pick up.

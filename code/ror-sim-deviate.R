@@ -1,16 +1,12 @@
 #  program:  ror-sim-deviate.R
-#  task:     EXPERIMENTAL. A more procedurally faithful streamlining DGP
-#            for Aim 1, layered on top of the already-validated
-#            ror-sim-aim1.R deviation-generating machinery (reused
-#            unchanged for Stage 2 below).
+#  task:     generating a more faithful streamlining DGP
+#            for Aim 1
 #  input:    none (simulated from scratch)
 #  output:   data/sim-deviate.csv
 #  project:  RoR
-#  author:   sam harper \ 2026-08-15
+#  author:   sam harper \ 2026-08-19
 #
-#  note:     per Sam's account of the real CIHR procedure (2026-08-11,
-#            drawing on his own committee/Scientific Officer experience):
-#              1. each of the 3 assigned reviewers gives a score AND a
+#  note:       1. each of the 3 assigned reviewers gives a score AND a
 #                 separate categorical "top" (competitive) / "bottom"
 #                 (not competitive) call -- correlated with their score,
 #                 but not a deterministic function of it.
@@ -57,26 +53,21 @@ library(tidyverse)
 library(faux)
 library(truncnorm)
 
-set.seed(20260811)
+set.seed(20260819)
 
 ##  1 Define parameters ----
 
 cmte_n = 50     # number of committees
 mem_n  = 24     # number of committee members per committee
 
-# EXPERIMENTAL vs. ror-sim-aim1.R: the candidate pool now stands in for
-# an actual submission volume per committee, not "however many we need
-# after a target-count filter" -- see writing/sim-data.qmd's own aside
-# about up to ~50 applications for busier PH committees.
-#
-# Per-committee pool_size is now drawn (below, section 2) from a beta
-# distribution scaled to CIHR's own stated 20-80 range -- see the
-# header note above.
-pool_min = 20        # CIHR's stated lower bound on applications reviewed per committee
-pool_max = 80         # CIHR's stated upper bound
-pool_shape1 = 2.5      # rbeta() shape -- illustrative, not fit; chosen to
-pool_shape2 = 4        # roughly match the mean/SD/right-skew of the
-                        # funded-count back-calculation (mean ~42, SD ~12)
+# Per-committee pool_size is drawn (below, section 2) from a beta
+# distribution scaled to CIHR's own stated 20-80 range.
+
+pool_min = 20        # lower bound on applications reviewed per committee
+pool_max = 80        # upper bound
+pool_shape1 = 2.5    # rbeta() shape -- illustrative, not fit; chosen to
+pool_shape2 = 4      # roughly match the mean/SD/right-skew of the
+                     # funded-count back-calculation (mean ~42, SD ~12)
 
 b0         = 4.0    # intercept for (discussed) application's true quality
 u0c_sd     = 0.1    # random intercept SD for committee (quality level)
@@ -309,7 +300,7 @@ data <- data |>
     score = round_tenth(pmax(scale_min, 
       pmin(score_max, consensus + deviation)))
   ) |>
-  select(-aid, -u0c, -u0a, -u0m_bias, -p_dev)
+  select(-u0c, -u0a, -u0m_bias, -p_dev)
 
 ##  5 Checks ----
 

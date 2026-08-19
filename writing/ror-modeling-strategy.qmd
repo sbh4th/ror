@@ -75,9 +75,8 @@ Full detail is in the funded proposal (`cihr-ror-proposal.qmd`); briefly:
 
 # The review process we're modeling
 
-- The 3 assigned reviewers read the application, score it, discuss, and
-  agree a **consensus score**.
-- All panel members -- including the 3 reviewers themselves -- then submit a
+- The 3 assigned reviewers read the application and score it. At the meeting (and *before* any discussion), they are required to agree on a **consensus score**.
+- After discussion all panel members (including the 3 reviewers) submit a
   **final score**. Reviewers are not bound to their own consensus number;
   they can move too.
 - The final score must fall within **&plusmn;0.5** of the consensus score,
@@ -261,7 +260,7 @@ What did we generate with the parameters above? @fig-scores shows the distributi
 #| label: fig-scores
 #| fig-cap: Distribution of simulated intial, consensus, and overall scores 
 
-d <- read_csv(here("data", "sim-data-aim1.csv"))
+d <- read_csv(here("data", "sim-deviate.csv"))
 
 init_hist <- ggplot(d, aes(x = init_score)) +
   geom_histogram(binwidth = 0.1, 
@@ -332,7 +331,7 @@ by_app <- ggplot(app_summary,
        y = "Application rank") +
     theme_ridges() +
     theme(legend.position = "none") + 
-  scale_y_discrete(limits = rev, breaks = c(5, 10, 15))
+  scale_y_discrete(limits = rev, breaks = c(5, 10, 15, 20, 25))
 
 by_cmte / by_app
 ```
