@@ -373,11 +373,6 @@ fixed_start  <- which(tab$group == "Fixed effects")[1]
 random_start <- which(tab$group == "Random effects (SD)")[1]
 
 tab |>
-  # Truth is only meaningful for the fixed effects -- this table's job is
-  # to show fixed-effect recovery, not the random-effect SDs (which are
-  # genuinely 0 by construction for this model and just invite the
-  # "why doesn't the estimate show exactly 0" question without adding to
-  # the table's actual point)
   mutate(truth = if_else(group == "Random effects (SD)", "", truth)) |>
   select(term, truth, estimate, mad, conf.low, conf.high) |>
   setNames(c("Parameter", "Truth", "Estimate", "Error",
@@ -390,7 +385,33 @@ tab |>
   style_tt(j = 1, align = "l")
 ```
 
-From the fixed effects we see that we generally recover the simulated parameters -- the 'true' treatment effects in the first column are well approximated by our model. The three random-effect SDs are small and estimated with considerable uncertainty; the simulated data-generating process for whether a member deviates (`deviated`) depends only on `job`/`exp`, with no committee-, application-, or member-level heterogeneity built in at that stage (member-level heterogeneity only enters the *magnitude* of deviation, modeled separately in Part 2 below), so this is the expected pattern rather than a recovery failure. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package
+From the fixed effects we see that we generally recover the simulated parameters -- the 'true' treatment effects in the first column are well approximated by our model. The three random-effect SDs are small and estimated with considerable uncertainty; the simulated data-generating process for whether a member deviates (`deviated`) depends only on `job`/`exp`, with no committee-, application-, or member-level heterogeneity built in at that stage (member-level heterogeneity only enters the *magnitude* of deviation, modeled separately in Part 2 below), so this is the expected pattern. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package. 
+
+
+```{r}
+#| echo: false
+#| label: tbl-m1-me
+#| fig-cap: Marginal effects from deviation model
+
+tab <- readRDS(here("output", "m1-deviate-me.rds"))
+
+fixed_start  <- which(tab$group == "Fixed effects")[1]
+random_start <- which(tab$group == "Random effects (SD)")[1]
+
+tab |>
+  mutate(truth = if_else(group == "Random effects (SD)", "", truth)) |>
+  select(term, truth, estimate, mad, conf.low, conf.high) |>
+  setNames(c("Parameter", "Truth", "Estimate", "Error",
+             "95% CrI Lower", "95% CrI Upper")) |>
+  tt(caption = "Posterior estimates: m1_deviate") |>
+  group_tt(i = list("Fixed effects (log odds)" = fixed_start,
+                    "Random effects (SD)" = random_start)) |>
+  style_tt(i = c(1,7), italic = TRUE) |>
+  style_tt(i = 0, align = "l") |>
+  style_tt(j = 1, align = "l")
+```
+
+@tbl-dev-me show that the overall fraction of members that deviate is around 38%. Reviewers are slightly less likely to deviate than non-reviewing panelists. With respect to expertise, those with high expertise are the least likely to deviate from the consensus (30%), whereas those with no . In practice we 
 
 ## Part 2: how large, given a deviation?
 
@@ -598,6 +619,28 @@ posterior marginal effects via `marginaleffects` for both the
 deviation-probability and magnitude submodels, and showing recovery of the
 known simulated effects at the full posterior level, the same way the
 frequentist checks above do at a point-estimate level.
+
+# Appendix: Aim 1 simulation script (`ror-sim-deviate.R`)
+
+The "Model specification" section above walks through a simplified, didactic version of the Aim 1 data-generating process. `code/ror-sim-deviate.R` is the actual, current simulation script -- the one that produced the results reported in that section and the workhorse we're using going forward -- and it's more procedurally involved than the summary above lets on. Rather than re-typing or excerpting pieces of it here (a second, hand-maintained copy that can silently drift out of sync with the real script, a failure mode we've already hit once with the simulation's own file names), this appendix pulls in the script's full, current contents directly, so it can never go stale. What follows is a guide to what to look for as you read it.
+
+The script is organized into seven numbered sections, matching the `##  N ...` comments in the source:
+
+- **0-1: packages and parameters.** All parameters are illustrative placeholders, not estimates -- with two exceptions called out explicitly in the script's own comments: `streamline_rank_threshold = 0.60` (CIHR's stated real streamlining rule) and the beta-distributed committee pool size range, `[20, 80]` (CIHR's own stated range). `init_sd_lo` and the `exp` category mix were calibrated against real reviewer-score data Sam has access to, though that source data itself isn't reproduced or logged anywhere in this repository.
+- **2: candidate pool.** Generates each committee's full pool of candidate applications (before streamlining), assigns 3 of each application's 24 committee members as reviewers, draws each reviewer's initial score, and has each reviewer separately record a "top"/"bottom" call -- correlated with, but not determined by, their score. Out-of-bounds initial scores are redrawn rather than clamped, to avoid an artificial probability spike at the scale's boundaries. The application grid is built manually (not via `faux::add_random()`) specifically to avoid a conflation bug found earlier in this project: `add_random()`'s crossed factors give identical random-effect draws to same-labeled applications across different committees unless a unique composite key (`aid`) is used instead.
+- **3: streamlining decision.** Implements CIHR's actual rule as Sam described it from his own committee/Scientific Officer experience: an application is streamlined out (not discussed) if at least one reviewer called it "bottom" *and* its mean-of-3 score ranks in the bottom 60% of that committee's own candidate pool -- a relative, within-committee rule, not a fixed absolute score cutoff. This mechanism was specifically validated against two hypothetical datasets Sam constructed, including a case where two applications with identical reviewer scores had different discussed/not-discussed outcomes -- something a pure score-threshold rule can't produce, but this rank-and-call combination can. An earlier "bring back" stage, where a reviewer could argue to reinstate a borderline streamlined-out application, was tried and deliberately dropped as too haphazard and too thinly grounded (only ~6% of discussed applications) to be worth the added complexity -- see `code/ror-research-log.qmd` for that discussion.
+- **4: the two-part deviation model.** Once discussed, each member's score is generated as consensus plus a two-part process: whether they deviate from consensus at all (a function of role and self-described expertise), and, if so, the signed magnitude (a truncated, rounded draw, with member-level leniency/harshness heterogeneity, `u0m_bias`). This is the same two-part structure the modeling strategy above is built to recover.
+- **5: internal consistency checks.** A set of `stopifnot()` assertions -- e.g., every committee retains at least one discussed application, consensus never falls outside the range of its own 3 reviewer scores, deviation is exactly zero whenever `deviated == 0` and never zero when `deviated == 1`. These aren't diagnostics for a reader; they're guardrails that halt the script if a future edit breaks an invariant the rest of the design depends on.
+- **6: empirical checks.** Printed summaries -- pool size and discussion-rate distributions, confirmation that the identical-scores-different-outcomes pattern the mechanism was designed to explain actually occurs, and a quick `glm()`/`lmer()` check that `job`/`exp` effects on deviation and member-level heterogeneity both still recover cleanly despite the richer selection stage.
+- **7: output.** Writes `data/sim-deviate.csv`, which `code/ror-analysis-score-models.R` reads.
+
+```{r}
+#| label: appendix-sim-deviate
+#| file: !expr here::here("code", "ror-sim-deviate.R")
+#| eval: false
+#| echo: true
+#| code-summary: "code/ror-sim-deviate.R -- full script"
+```
 
 # References
 
