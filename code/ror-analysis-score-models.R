@@ -188,9 +188,9 @@ truth <- c(
   "exphigh"     = -0.4,   # a2
   "explow"      =  0.2,   # a3
   "expnone"     =  0.5,   # a4
-  "aid"         =  0,     # no application-level variation in p_dev
-  "cid"         =  0,     # no member-level variation in p_dev (u0m_bias is magnitude-only)
-  "cmte"        =  0      # no committee-level variation in p_dev
+  "aid"         =  NA,     # no application-level variation in p_dev
+  "cid"         =  NA,     # no member-level variation in p_dev (u0m_bias is magnitude-only)
+  "cmte"        =  NA      # no committee-level variation in p_dev
 )
 
 tab <- get_estimates(m1_deviate) |>
@@ -206,7 +206,7 @@ tab <- get_estimates(m1_deviate) |>
 
 tab <- tab |>
   mutate(
-    truth = sprintf("%.3f", truth[term]),
+    truth = if_else(is.na(truth[term]), "", sprintf("%.3f", truth[term])),
     term  = term_labels[term],
     across(c(estimate, mad, conf.low, conf.high),
       ~sprintf("%.3f", .x))
@@ -218,6 +218,7 @@ fixed_start  <- which(tab$group == "Fixed effects")[1]
 random_start <- which(tab$group == "Random effects (SD)")[1]
 
 tab |>
+  mutate(truth = if_else(group == "Random effects (SD)", "", truth)) |>
   select(term, truth, estimate, mad, conf.low, conf.high) |>
   setNames(c("Parameter", "Truth", "Estimate", "Error",
              "95% CrI Lower", "95% CrI Upper")) |>
@@ -230,14 +231,52 @@ tab |>
 
 ## 3 Marginal effects
 
-# How many deviate?
-avg_predictions(m1_deviate, ndraws=200)
+# Predicted P(deviate) -- overall, and by expertise/role -- as
+# population-average predictions (marginaleffects' default re_formula
+# behavior across the full observed dataset), not raw logit
+# coefficients, since a coefficient alone doesn't say what P(deviate)
+# actually looks like. ndraws = 200 for speed; raise before reporting
+# real posterior summaries.
 
-# Deviations by engagement
-avg_predictions(m1_deviate, variables = "exp", ndraws = 200)
-  
-# Deviations by experience
-avg_predictions(m1_deviate, variables = "job", ndraws = 200)
+exp_labels <- c(med = "Medium", 
+  high = "High", low = "Low", none = "Not enough")
+job_labels <- c(reviewer = "Reviewer", 
+  panelist = "Panelist")
+
+p_overall <- avg_predictions(m1_deviate, ndraws = 200) |>
+  as.data.frame() |>
+  mutate(group = "Overall", term = "All members")
+
+p_exp <- avg_predictions(m1_deviate, 
+  variables = "exp", ndraws = 200) |>
+  as.data.frame() |>
+  mutate(group = "By self-rated expertise", term = exp_labels[exp])
+
+p_job <- avg_predictions(m1_deviate, 
+  variables = "job", ndraws = 200) |>
+  as.data.frame() |>
+  mutate(group = "By role", term = job_labels[job])
+
+pred_tab <- bind_rows(p_overall, p_exp, p_job) |>
+  select(group, term, estimate, conf.low, conf.high) |>
+  mutate(across(c(estimate, conf.low, conf.high), ~sprintf("%.3f", .x)))
+
+# group_tt() inserts a header row above each named start index -- so
+# once inserted, every group's own start (and everything after it)
+# shifts down by however many headers now precede it. group_starts
+# must stay in ascending order for this offset to be correct.
+group_starts <- which(!duplicated(pred_tab$group))
+header_rows  <- group_starts + seq_along(group_starts) - 1
+
+pred_tab |>
+  select(term, estimate, conf.low, conf.high) |>
+  setNames(c("Parameter", "P(deviate)", 
+    "95% CI Lower", "95% CI Upper")) |>
+  tt(caption = "Predicted probability of deviation from consensus") |>
+  group_tt(i = setNames(as.list(group_starts), unique(pred_tab$group))) |>
+  style_tt(i = header_rows, italic = TRUE) |>
+  style_tt(i = 0, align = "l") |>
+  style_tt(j = 1, align = "l")
 
 
 ## 4 Model 2: signed magnitude of deviation, among deviators ----

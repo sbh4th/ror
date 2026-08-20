@@ -1252,3 +1252,92 @@ whatever the script currently says, with explanatory prose written
 around/between sections rather than as a frozen snapshot.
 
 **Not started yet** -- this is the next thing to pick up.
+
+## `writing/ror.bib` citekey regression, again
+
+Pulling the latest office commits (`8be0df2`) reintroduced the same
+Better BibTeX citekey-corruption pattern fixed earlier this week: a
+fresh Zotero export renumbers citekeys based on collisions across
+Sam's *entire* library, not just this file, so ~42 entries picked up
+spurious trailing letters (e.g. `nandi2022a` where the in-file key was
+`nandi2022`) even though nothing about those entries changed. Diagnosed
+and fixed the same way as before: confirmed only one genuine in-file
+collision (`governmentofcanada2016`, two distinct entries), then
+stripped the spurious trailing letter from the other 42 via a
+protect-then-strip script, leaving the collision pair
+(`governmentofcanada2016`/`governmentofcanada2016a`) untouched. As
+before, this fix is local to the file and will likely be undone by the
+next Zotero export -- the durable fix is on the Zotero side (pin
+citekeys so BBT stops renumbering them).
+
+Separately, found and fixed an unrelated pre-existing bug while
+cross-checking cited keys against the bib file: `@Jahagirdar:2017aa`
+in `writing/cihr-ror-proposal.qmd` used a stray BibDesk/JabRef-style
+key (with a `:2017aa` suffix baked into the citation itself) instead
+of the file's Zotero-derived `authoryearN` convention, so it never
+actually resolved even before this session's regression. Renamed the
+bib entry to `jahagirdar2017` and fixed the citation to match.
+
+Verified with a full audit: extracted every `@key` cited across the
+three documents that declare `bibliography: ror.bib`
+(`cihr-ror-proposal.qmd`, `proposal.qmd`, `ror-modeling-strategy.qmd`)
+and confirmed each resolves exactly against a bib entry (the only
+non-matches were `@fig-`/`@tbl-` cross-reference labels, not
+citations). Rendered all three to their relevant formats
+(`cihr-ror-proposal.qmd` and `proposal.qmd` to html;
+`ror-modeling-strategy.qmd` to html and typst/PDF) -- zero citation
+warnings, zero `(?)` broken-citation markers in any output.
+
+## Appendix added to `writing/ror-modeling-strategy.qmd`: full `ror-sim-deviate.R` script
+
+Picked up the "next thing to do" flagged above. Added a new `# Appendix:
+Aim 1 simulation script (ror-sim-deviate.R)` section right before
+`# References`, implementing the plan already agreed: pull the actual
+script content in via a knitr `file` chunk option rather than
+retyping/excerpting it, so the appendix always reflects whatever the
+script currently says.
+
+**Mechanism:** a single chunk,
+
+```
+#| label: appendix-sim-deviate
+#| file: !expr here::here("code", "ror-sim-deviate.R")
+#| eval: false
+#| echo: true
+#| code-summary: "code/ror-sim-deviate.R -- full script"
+```
+
+`file` (a knitr chunk option, not a Quarto-specific one) reads the
+named file's contents in as the chunk's code at render time; `!expr`
+is needed because the value has to be an evaluated R expression
+(`here::here(...)`), not a literal string -- a bare string path would
+have looked in the wrong working directory once rendered. `eval:
+false` keeps the script from actually executing during render (it has
+side effects -- writes `data/sim-deviate.csv` -- and depends on
+packages/state we don't want tied to this document's render). `echo:
+true` is there because the `docx` format block in this document's YAML
+sets `execute: echo: false` as a document-wide default -- without the
+per-chunk override the appendix would render as an empty code block in
+Word specifically, even though html/typst were unaffected.
+
+**Prose:** rather than interleaving explanatory text between fragments
+of the script (which would require either hand-splitting the single
+`file=` inclusion -- defeating the point -- or adding `read_chunk()`
+markers to the script itself just for this), added one framing block
+before the code that walks through the script's own seven numbered
+`##  N ...` sections at a summary level (parameters and their real vs.
+placeholder status, candidate-pool/reviewer-scoring generation, the
+streamlining rule and the dropped "bring back" stage, the two-part
+deviation model, the internal `stopifnot()` guardrails, the empirical
+diagnostic printouts, and the output). Full section-by-section
+rationale for *why* the script does what it does was already covered
+earlier in this log and in the script's own inline comments -- the
+appendix intro doesn't repeat that, just orients a reader before they
+hit ~380 lines of code.
+
+**Verified:** rendered to html, typst/PDF, and docx. Confirmed via the
+knitted output (not just visual inspection) that the full script --
+including its final `write_csv()` call -- appears exactly once in each
+format's real document body (not just in the html version's separate
+"View Source" modal from `code-tools`, which dumps the raw `.qmd` and
+is unrelated), correctly R-syntax-highlighted and foldable in html.
