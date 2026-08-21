@@ -6,6 +6,18 @@ next), not a decision record. For the actual research log — dated entries
 with rationale, code, and results for substantive decisions — see
 [`code/ror-research-log.qmd`](code/ror-research-log.qmd).
 
+## Where we left off (2026-08-21)
+
+**`mem_n` (committee member count) now varies too, derived from `pool_size`** — real CIHR Fall 2025 roster data (66 committees, member counts 8-37) confirmed `mem_n=24` was a good central guess but wrong to hold fixed. Rather than an independent draw, `mem_n` is derived from `pool_size` via a workload target (`target_reviews_per_member = 5.5`) plus lognormal noise (`mem_noise_sd = 0.15`) — reflects the real causal story (CIHR sizes committees to manage workload given known application volume), not just a statistical correlation. `cmte_pool` (pool_size/mem_n) now saved to `output/cmte-pool.rds` by `ror-sim-deviate.R`, consumed directly by the modeling-strategy doc's new `fig-cmte` diagnostic figure — no more hand-duplicated generating code in the qmd.
+
+**Reviewer assignment (`job`) is now correlated with `exp`** — real committee data showed reviewers assigned almost exclusively from high/medium self-rated expertise; illustrative weights `c(high=40, med=30, low=5, none=1)` used for a weighted draw. `exp`'s reference category also switched from medium to high (for simplicity) — `a0`/`a2`-`a4` re-derived (not just relabeled) so true per-category probabilities are unchanged; `term_labels`/`truth` in the analysis script updated to match.
+
+**Model-specification equation added to `writing/ror-modeling-strategy.qmd`**, rendered natively in all three formats (html/typst work directly; docx uses an embedded image, `writing/media/eq-m1-deviate.png`, since pandoc's docx converter cannot render *any* multi-row aligned math — confirmed precisely, not just the earlier `vphantom` case). **Not yet fixed:** the older two-part-model `\underbrace{}` equation has the same docx problem, no fallback yet.
+
+**Magnitude model (`m1_magnitude`) priors: tested, not adopting.** Compared generic vs. threshold-specific informed priors (Kurz-blog-inspired, adapted to our logit link and real category shape) head to head — ESS improved ~61% but wall-clock time got ~25% *slower*, and LOO showed statistically indistinguishable predictive fit (`elpd_diff = -1.2, se_diff = 1.1`). Not adopting the informed priors; they don't hurt but don't solve the actual (speed) problem. **Next lever to try, not yet tested:** `adapt_delta` is currently a conservative 0.95 with zero divergences observed in either model — real headroom to lower it, more likely to actually help wall-clock time.
+
+**Also fixed in passing:** an orphaned `}` in `ror-analysis-score-models.R` that made the script fail to parse via a clean `Rscript`/`source()` (leftover from removing an `if (FIT_MODELS) {...}` wrapper), and a `data`/`d` variable-name bug in `fig-cmte` that broke the modeling-strategy doc's render.
+
 ## Where we left off (2026-08-19)
 
 **`code/ror-sim-deviate.R` is now the canonical Aim 1 simulation** — the experimental streamlining mechanism (top/bottom calls + rank-based selection) is no longer a side comparison, it's the main DGP. `code/ror-analysis-score-models.R` now reads `data/sim-deviate.csv` accordingly. `code/ror-sim-aim1-old.R` is the old fixed-threshold version, superseded.

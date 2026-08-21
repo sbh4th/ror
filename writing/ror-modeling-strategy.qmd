@@ -7,6 +7,7 @@ date-format: iso
 format:
   html:
     toc: true
+    toc-location: left
     code-fold: true
     code-tools: true
     embed-resources: true
@@ -34,6 +35,7 @@ format:
     citeproc: true
     bibliographystyle: vancouver.csl
     toc: false
+    number-sections: true
   docx:
     toc: false
     execute:
@@ -52,17 +54,15 @@ library(ggridges)
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
 ```
 
-# Purpose of this document
+# Purpose
 
-This is a design and validation exercise for a project that aims to assess how reviewer engagement and expertise may affect grant scores during CIHR peer review. Given the restrictive nature of CIHR funding data, this document does not use real CIHR data; rather it lays out the data-generating process we believe matches CIHR's Project Grant peer review, the model we intend to fit against it, and evidence that the models we will use can actually recover simulated effects. 
+This is a design and validation exercise for a project that aims to assess how reviewer engagement and expertise may affect grant scores during CIHR peer review. Given the restrictive nature of CIHR funding data, this document lays out the data-generating process we believe is similar to CIHR's Project Grant peer review, the model we intend to fit against it, and evidence that the models we will use can actually recover simulated effects. 
 
 It is not a full pre-analysis plan (no pre-specified hypotheses, stopping
 rules, or multiplicity strategy yet), but it's close in spirit, and a
 subsequent revision could become one.
 
-# Research questions
-
-Full detail is in the funded proposal (`cihr-ror-proposal.qmd`); briefly:
+# Research aims
 
 1. **Aim 1** -- How do reviewer expertise (self-described: high/medium/low/not
    enough) and engagement (assigned reviewer vs. non-reviewing panelist)
@@ -73,7 +73,7 @@ Full detail is in the funded proposal (`cihr-ror-proposal.qmd`); briefly:
    (e.g. reweighting by engagement, partial randomization near the funding
    threshold) compare to the status quo?
 
-# The review process we're modeling
+# Project Scheme review process
 
 - The 3 assigned reviewers read the application and score it. At the meeting (and *before* any discussion), they are required to agree on a **consensus score**.
 - After discussion all panel members (including the 3 reviewers) submit a
@@ -89,7 +89,8 @@ Full detail is in the funded proposal (`cihr-ror-proposal.qmd`); briefly:
 We're assuming a three-level structure: committees, discussed applications
 nested in committees, and panel members nested in committees (crossed with
 applications, since a member reviews many applications within a cycle).
-Based on recent Project Grant committee sizes, our working numbers are
+Based on recent Project Grant committee sizes, our working numbers are roughly 50 committees and 24 members per committee, but we allow the number of applications across committees to vary. 
+
 **50 committees &times; 15 discussed applications per committee &times; 24
 members per committee**.
 
@@ -170,39 +171,60 @@ E[d_{ijk}] = \underbrace{P(\text{deviate})}_{\substack{\text{Part 1: any} \\ \te
 \underbrace{E[\text{magnitude} \mid \text{deviate}]}_{\substack{\text{Part 2: size} \\ \text{given deviation}}}
 $$
 
-This isn't just theoretically motivated -- we checked it empirically before
-committing to the extra complexity. If most of the covariate signal about
-reviewer engagement/expertise actually lived in the *average size* of the
-deviation rather than *whether* a deviation happens, a single linear model
-on $d_{ijk}$ would be simpler and would suffice.
-
-```{r aim1-linear-vs-two-part}
-#| tbl-cap: "Aim 1: a linear model on raw deviation vs. a logistic model on whether any deviation occurred, same covariates, same simulated data"
-
-d1 <- read_csv(here("data", "sim-data-aim1.csv"), show_col_types = FALSE)
-
-m_linear <- lm(deviation ~ job + exp, data = d1)
-m_logistic <- glm(deviated ~ job + exp, data = d1, family = binomial())
-
-modelsummary(
-  list("Linear: deviation" = m_linear, "Logistic: deviated (0/1)" = m_logistic),
-  gof_omit = "DF|Deviance|R2|AIC|BIC|RMSE|Log.Lik|F",
-  escape = TRUE
-)
-```
-
-The linear model's coefficients on `job`/`exp` are tiny and mostly
-non-significant (largest around 0.005 points, on an outcome bounded at
-$\pm 0.5$). The logistic model on the same covariates recovers the large,
-highly significant effect pattern actually built into the simulator
-(`code/ror-sim-deviation.R`). Because deviation magnitude is roughly
-symmetric around zero conditional on deviating, essentially all the
-covariate signal lives in *whether* someone deviates -- a model that only
-looks at the conditional mean of $d_{ijk}$ structurally cannot see it. This
-confirms the two-part structure is doing real work here, not adding
-complexity for its own sake.
-
 # Model specification (Aim 1)
+
+We adopt a Bayesian modeling approach and model the binomial outcome of whether or not a member deviated as a function of their engagement with the application (reviewer vs. panelist) and their self-declared expertise to review (high, medium, low, none). In our specification below $D_{ijk}$ is 1 for those who deviated, and we include random effects for committees ($\gamma_{cmte[k]}$), members ($\alpha_{mem[i]}$), and applications ($\beta_{app[j]}$). For the fixed effects $\delta$ is the effect of being a panelist vs. reviewer, and $\zeta$ captures the suite of effects for the expertise indicators ($\textbf{Exp}_{ij}$) 
+
+::: {.content-visible when-format="html"}
+<div style="font-size: 0.8em;">
+$$
+\begin{array}{rclr}
+D_{ijk} & \sim & \text{Binomial}(1, p_{ijk}) & \text{[likelihood]} \\
+\text{logit}(p_{ijk}) & = & \alpha_{mem[i]} + \gamma_{cmte[k]} + \beta_{app[j]} + \delta\,\text{Panelist}_{ijk} + \zeta \textbf{Exp}_{ij} & \text{[linear model for log odds]} \\
+ & & & \\
+\alpha_{mem[i]} & \sim & \text{Normal}(\bar\alpha, \sigma_\alpha) & \text{[prior for member intercepts]} \\
+\gamma_{cmte[k]} & \sim & \text{Normal}(0, \sigma_\gamma) & \text{[prior for committee intercepts]} \\
+\beta_{app[j]} & \sim & \text{Normal}(0, \sigma_\beta) & \text{[prior for application intercepts]} \\
+(\delta, \zeta) & \sim & \text{Normal}(0, 0.5) & \text{[prior for fixed effects]} \\
+\bar\alpha & \sim & \text{Normal}(0, 1.0) & \text{[prior for average member]} \\
+(\sigma_\alpha, \sigma_\gamma, \sigma_\beta) & \sim & \text{Exponential}(1) & \text{[prior for standard deviations]} \\
+\end{array}
+$$
+</div>
+:::
+
+::: {.content-visible when-format="typst"}
+```{=typst}
+$ D_"ijk" & tilde upright("Binomial")(1, p_"ijk") &&& upright("[likelihood]") \
+  upright("logit")(p_"ijk") & = alpha_"mem"_i + gamma_"cmte"_k + beta_"app"_j + delta upright("Panelist")_"ijk" + zeta bold(upright("Exp"))_"ij" &&& upright("[linear model for log odds]") \
+  alpha_"mem"_i & tilde upright("Normal")(dash(alpha), sigma_alpha) &&& upright("[prior for member intercepts]") \
+  gamma_"cmte"_k & tilde upright("Normal")(0, sigma_gamma) &&& upright("[prior for committee intercepts]") \
+  beta_"app"_j & tilde upright("Normal")(0, sigma_beta) &&& upright("[prior for application intercepts]") \
+  (delta, zeta) & tilde upright("Normal")(0, 0.5) &&& upright("[prior for fixed effects]") \
+  dash(alpha) & tilde upright("Normal")(0, 1.0) &&& upright("[prior for average member]") \
+  (sigma_alpha, sigma_gamma, sigma_beta) & tilde upright("Exponential")(1) &&& upright("[prior for standard deviations]") $
+```
+:::
+
+::: {.content-visible when-format="docx"}
+<!-- pandoc's docx math converter can't render multi-row aligned math
+(array/aligned/matrix all fail the same way, independent of column
+count or content -- confirmed by testing) -- embedding a rendered
+image instead, generated from the same Typst source as the block
+above. Regenerate media/eq-m1-deviate.png by hand if that source ever
+changes. -->
+![](media/eq-m1-deviate.png)
+:::
+
+Bayesian models require priors on all parameters, and we generally plan to use weakly regularizing priors that allow for a wide range of potential effects but that are generally skeptical of effects of large magnitude. Below we show distributions that helped frame our decision. For the overall probability of deviating the Normal(0, 1.0) prior (green line in top plot) provides a generally wide possibility of the probability of deviating (95% of the )
+
+```{r}
+#| echo: false
+#| label: fig-prior-m1-dev
+#| fig-cap: Hypothetical priors for deviation model
+
+knitr::include_graphics(here("output", "ror-priors-m1-deviate.png"))
+```
 
 ## Simulating the data-generating process
 
@@ -238,7 +260,7 @@ dev_max  =  0.5
 
 data <- data |>
   mutate(
-    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_high) +
+    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_med) +
       (a3 * exp_low) + (a4 * exp_none)),
     deviated = rbinom(n(), 1, p_dev),
     deviation = if_else(
@@ -253,7 +275,51 @@ Every parameter above is at this point just an educated guess and a placeholder,
 
 ## Simulated data
 
-What did we generate with the parameters above? @fig-scores shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations. Since the likely true consensus scores are not necessarily an average of the 3 reviewer scores (depending on calibration, etc.) we see a small excess in the left tail near 3.5. In practice a consensus score of 3.5 *among discussed applications* is likely more rare, but this seems a reasonable approximation. 
+What did we generate with the parameters above? @fig-cmte shows our simulated 50 committees with varying sizes and the number of total and discussed applications. Across the 50 committees the fraction discussed varies from 24.1% to 41.0%. Generally, larger committees end up with more total and more discussed applications. 
+
+```{r}
+#| echo: false
+#| label: fig-cmte
+#| fig-cap: Distribution of committee sizes, total and discussed applications
+
+d <- read_csv(here("data", "sim-deviate.csv"))
+
+cmte_pool <- readRDS(here("output", "cmte-pool.rds"))
+
+cmte_summary <- d |>
+  group_by(cmte) |>
+  summarise(n_discussed = n_distinct(app), n_members = n_distinct(memno)) |>
+  left_join(cmte_pool |> select(cmte, pool_size), by = "cmte")
+
+cmte_summary |>
+  ggplot(aes(x = reorder(cmte, n_members))) +
+  geom_col(aes(y = n_members, fill = "Members"), width = 0.6) +
+  geom_linerange(aes(ymin = n_discussed, ymax = pool_size),
+                 color = "grey40", linewidth = 0.4) +
+  geom_point(aes(y = pool_size, color = "Total applications"), size = 1.8) +
+  geom_point(aes(y = n_discussed, color = "Discussed applications"), size = 1.8) +
+  scale_fill_manual(values = c("Members" = "grey85")) +
+  scale_color_manual(values = c(
+    "Total applications"     = "darkorange",
+    "Discussed applications" = "steelblue")) +
+  scale_y_continuous(limits = c(0, 85)) +
+  labs(x = "Committee", y = "Count", fill = NULL, color = NULL,
+       title = "Members (bar) with total vs. discussed applications (dots)") +
+  theme_minimal() +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.5, 0.90),
+    legend.direction = "horizontal",
+    legend.box = "horizontal",
+    legend.background = element_rect(fill = "white", color = NA),
+    axis.text.x  = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  )
+```
+
+@fig-scores shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations. Since the likely true consensus scores are not necessarily an average of the 3 reviewer scores (depending on calibration, etc.) we see a small excess in the left tail near 3.5. In practice a consensus score of 3.5 *among discussed applications* is likely more rare, but this seems a reasonable approximation. 
 
 ```{r}
 #| echo: false
@@ -333,7 +399,14 @@ by_app <- ggplot(app_summary,
     theme(legend.position = "none") + 
   scale_y_discrete(limits = rev, breaks = c(5, 10, 15, 20, 25))
 
-by_cmte / by_app
+by_app2 <- ggplot(app_summary, 
+  aes(x = factor(consensus_rank), y = score)) + 
+  geom_boxplot(fill = "#377eb8") + 
+  labs(x = "Consensus rank within committee", y = "Score") + 
+  scale_x_discrete(breaks = c(5,10,15,20,25)) + 
+  theme_classic()
+
+by_cmte / by_app2
 ```
 
 ## Part 1: did this member deviate?
@@ -390,28 +463,26 @@ From the fixed effects we see that we generally recover the simulated parameters
 
 ```{r}
 #| echo: false
-#| label: tbl-m1-me
+#| label: tbl-dev-me
 #| fig-cap: Marginal effects from deviation model
 
-tab <- readRDS(here("output", "m1-deviate-me.rds"))
+pred_tab <- readRDS(here("output", "m1-deviate-me.rds"))
 
-fixed_start  <- which(tab$group == "Fixed effects")[1]
-random_start <- which(tab$group == "Random effects (SD)")[1]
+group_starts <- which(!duplicated(pred_tab$group))
+header_rows  <- group_starts + seq_along(group_starts) - 1
 
-tab |>
-  mutate(truth = if_else(group == "Random effects (SD)", "", truth)) |>
-  select(term, truth, estimate, mad, conf.low, conf.high) |>
-  setNames(c("Parameter", "Truth", "Estimate", "Error",
-             "95% CrI Lower", "95% CrI Upper")) |>
-  tt(caption = "Posterior estimates: m1_deviate") |>
-  group_tt(i = list("Fixed effects (log odds)" = fixed_start,
-                    "Random effects (SD)" = random_start)) |>
-  style_tt(i = c(1,7), italic = TRUE) |>
+pred_tab |>
+  select(term, estimate, conf.low, conf.high) |>
+  setNames(c("Parameter", "P(deviate)",
+    "95% CI Lower", "95% CI Upper")) |>
+  tt(caption = "Predicted probability of deviation from consensus") |>
+  group_tt(i = setNames(as.list(group_starts), unique(pred_tab$group))) |>
+  style_tt(i = header_rows, italic = TRUE) |>
   style_tt(i = 0, align = "l") |>
   style_tt(j = 1, align = "l")
 ```
 
-@tbl-dev-me show that the overall fraction of members that deviate is around 38%. Reviewers are slightly less likely to deviate than non-reviewing panelists. With respect to expertise, those with high expertise are the least likely to deviate from the consensus (30%), whereas those with no . In practice we 
+@tbl-dev-me show that the overall fraction of members that deviate is around 38%. Reviewers are slightly less likely to deviate than non-reviewing panelists. With respect to expertise, those with high expertise are the least likely to deviate from the consensus (30%), whereas those with no . In practice we
 
 ## Part 2: how large, given a deviation?
 
@@ -491,7 +562,7 @@ i_expnone_earlycareer =  0.6  # exp(none) x career_stage(early)
 
 data <- data |>
   mutate(
-    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_high) +
+    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_med) +
       (a3 * exp_low) + (a4 * exp_none) +
       (g1 * female) + (c1 * early_career) +
       (i_panelist_female * panelist * female) +

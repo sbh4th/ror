@@ -179,8 +179,6 @@
   abstract: none,
   abstract-title: none,
   cols: 1,
-  margin: (x: 1.25in, y: 1.25in),
-  paper: "us-letter",
   lang: "en",
   region: "US",
   font: "libertinus serif",
@@ -193,18 +191,12 @@
   heading-color: black,
   heading-line-height: 0.65em,
   sectionnumbering: none,
-  pagenumbering: "1",
   toc: false,
   toc_title: none,
   toc_depth: none,
   toc_indent: 1.5em,
   doc,
 ) = {
-  set page(
-    paper: paper,
-    margin: margin,
-    numbering: pagenumbering,
-  )
   set par(justify: true)
   set text(lang: lang,
            region: region,
@@ -215,8 +207,7 @@
     align(center)[#block(inset: 2em)[
       #set par(leading: heading-line-height)
       #if (heading-family != none or heading-weight != "bold" or heading-style != "normal"
-           or heading-color != black or heading-decoration == "underline"
-           or heading-background-color != none) {
+           or heading-color != black) {
         set text(font: heading-family, weight: heading-weight, style: heading-style, fill: heading-color)
         text(size: title-size)[#title]
         if subtitle != none {
@@ -288,6 +279,12 @@
   stroke: none
 )
 
+#set page(
+  paper: "us-letter",
+  margin: (x: 1.87cm,y: 1.87cm,),
+  numbering: "1",
+)
+
 #show: doc => article(
   title: [Simulation Design and Modeling Strategy],
   subtitle: [The Influence of Reviewer Expertise and Engagement on Peer Review of Grants],
@@ -296,33 +293,30 @@
       affiliation: [],
       email: [] ),
     ),
-  date: [2026-08-19],
-  margin: (x: 1.87cm,y: 1.87cm,),
+  date: [2026-08-21],
   font: ("C059",),
   fontsize: 11pt,
-  pagenumbering: "1",
+  sectionnumbering: "1.1.a",
   toc_title: [Table of contents],
   toc_depth: 3,
   cols: 1,
   doc,
 )
 
-= Purpose of this document
-<purpose-of-this-document>
-This is a design and validation exercise for a project that aims to assess how reviewer engagement and expertise may affect grant scores during CIHR peer review. Given the restrictive nature of CIHR funding data, this document does not use real CIHR data; rather it lays out the data-generating process we believe matches CIHR's Project Grant peer review, the model we intend to fit against it, and evidence that the models we will use can actually recover simulated effects.
+= Purpose
+<purpose>
+This is a design and validation exercise for a project that aims to assess how reviewer engagement and expertise may affect grant scores during CIHR peer review. Given the restrictive nature of CIHR funding data, this document lays out the data-generating process we believe is similar to CIHR's Project Grant peer review, the model we intend to fit against it, and evidence that the models we will use can actually recover simulated effects.
 
 It is not a full pre-analysis plan (no pre-specified hypotheses, stopping rules, or multiplicity strategy yet), but it's close in spirit, and a subsequent revision could become one.
 
-= Research questions
-<research-questions>
-Full detail is in the funded proposal (`cihr-ror-proposal.qmd`); briefly:
-
+= Research aims
+<research-aims>
 + #strong[Aim 1] -- How do reviewer expertise (self-described: high/medium/low/not enough) and engagement (assigned reviewer vs.~non-reviewing panelist) affect the impact of panel discussion on scores?
 + #strong[Aim 2] -- Do these effects differ by applicant characteristics, namely gender or career stage?
 + #strong[Aim 3] (exploratory) -- How would alternative funding-decision schemes (e.g.~reweighting by engagement, partial randomization near the funding threshold) compare to the status quo?
 
-= The review process we're modeling
-<the-review-process-were-modeling>
+= Project Scheme review process
+<project-scheme-review-process>
 - The 3 assigned reviewers read the application and score it. At the meeting (and #emph[before] any discussion), they are required to agree on a #strong[consensus score];.
 - After discussion all panel members (including the 3 reviewers) submit a #strong[final score];. Reviewers are not bound to their own consensus number; they can move too.
 - The final score must fall within #strong[±0.5] of the consensus score, and is entered to #strong[one decimal place];.
@@ -330,7 +324,9 @@ Full detail is in the funded proposal (`cihr-ror-proposal.qmd`); briefly:
 
 = Data structure
 <data-structure>
-We're assuming a three-level structure: committees, discussed applications nested in committees, and panel members nested in committees (crossed with applications, since a member reviews many applications within a cycle). Based on recent Project Grant committee sizes, our working numbers are #strong[50 committees × 15 discussed applications per committee × 24 members per committee];.
+We're assuming a three-level structure: committees, discussed applications nested in committees, and panel members nested in committees (crossed with applications, since a member reviews many applications within a cycle). Based on recent Project Grant committee sizes, our working numbers are roughly 50 committees and 24 members per committee, but we allow the number of applications across committees to vary.
+
+#strong[50 committees × 15 discussed applications per committee × 24 members per committee];.
 
 CIHR's Funding Analytics Team confirmed by email (2025-12-04) which fields are actually extractable for a data pull, versus fields that can only ever be touched by a CIHR analyst running our code in-house on the real data (full table and follow-up questions in `code/ror-research-log.qmd`). Headline for this document: committee/application/member identifiers, role (reviewer vs.~panelist), self-described expertise, initial reviewer scores, consensus score, final scores, and funding result are all extractable. #strong[Applicant gender and career stage -- Aim 2's entire basis -- are not];, and won't appear even in CIHR's own distribution-matched dummy data. That constraint is why this document exists: the simulation below is the only rehearsal Aim 2's code gets before it runs once, unsupervised, on real data.
 
@@ -374,114 +370,18 @@ $ E [d_(i j k)] = underbrace(P (upright("deviate")), upright("Part 1: any")\
 upright("deviation at all")) times underbrace(E [upright("magnitude") divides upright("deviate")], upright("Part 2: size")\
 upright("given deviation")) $
 
-This isn't just theoretically motivated -- we checked it empirically before committing to the extra complexity. If most of the covariate signal about reviewer engagement/expertise actually lived in the #emph[average size] of the deviation rather than #emph[whether] a deviation happens, a single linear model on $d_(i j k)$ would be simpler and would suffice.
-
-```r
-d1 <- read_csv(here("data", "sim-data-aim1.csv"), show_col_types = FALSE)
-
-m_linear <- lm(deviation ~ job + exp, data = d1)
-m_logistic <- glm(deviated ~ job + exp, data = d1, family = binomial())
-
-modelsummary(
-  list("Linear: deviation" = m_linear, "Logistic: deviated (0/1)" = m_logistic),
-  gof_omit = "DF|Deviance|R2|AIC|BIC|RMSE|Log.Lik|F",
-  escape = TRUE
-)
-```
-
-#show figure: set block(breakable: false)
-
-#block[ // start block
-
-  #let style-dict = (
-    // tinytable style-dict after
-    "0_1": 0, "1_1": 0, "2_1": 0, "3_1": 0, "4_1": 0, "5_1": 0, "6_1": 0, "7_1": 0, "8_1": 0, "9_1": 0, "10_1": 0, "11_1": 0, "0_2": 0, "1_2": 0, "2_2": 0, "3_2": 0, "4_2": 0, "5_2": 0, "6_2": 0, "7_2": 0, "8_2": 0, "9_2": 0, "10_2": 0, "11_2": 0, "0_0": 1, "1_0": 1, "2_0": 1, "3_0": 1, "4_0": 1, "5_0": 1, "6_0": 1, "7_0": 1, "8_0": 1, "9_0": 1, "10_0": 1, "11_0": 1
-  )
-
-  #let style-array = ( 
-    // tinytable cell style after
-    (align: center,),
-    (align: left,),
-  )
-
-  // Helper function to get cell style
-  #let get-style(x, y) = {
-    let key = str(y) + "_" + str(x)
-    if key in style-dict { style-array.at(style-dict.at(key)) } else { none }
-  }
-
-  // tinytable align-default-array before
-  #let align-default-array = ( left, left, left, ) // tinytable align-default-array here
-  #show table.cell: it => {
-    if style-array.len() == 0 { return it }
-    
-    let style = get-style(it.x, it.y)
-    if style == none { return it }
-    
-    let tmp = it
-    if ("fontsize" in style) { tmp = text(size: style.fontsize, tmp) }
-    if ("color" in style) { tmp = text(fill: style.color, tmp) }
-    if ("indent" in style) { tmp = pad(left: style.indent, tmp) }
-    if ("underline" in style) { tmp = underline(tmp) }
-    if ("italic" in style) { tmp = emph(tmp) }
-    if ("bold" in style) { tmp = strong(tmp) }
-    if ("mono" in style) { tmp = math.mono(tmp) }
-    if ("strikeout" in style) { tmp = strike(tmp) }
-    if ("smallcaps" in style) { tmp = smallcaps(tmp) }
-    tmp
-  }
-
-  // tinytable align-figure before
-
-  #table( // tinytable table start
-    columns: (auto, auto, auto),
-    stroke: none,
-    rows: auto,
-    align: (x, y) => {
-      let style = get-style(x, y)
-      if style != none and "align" in style { style.align } else { left }
-    },
-    fill: (x, y) => {
-      let style = get-style(x, y)
-      if style != none and "background" in style { style.background }
-    },
- table.hline(y: 1, start: 0, end: 3, stroke: 0.05em + black),
- table.hline(y: 11, start: 0, end: 3, stroke: 0.05em + black),
- table.hline(y: 12, start: 0, end: 3, stroke: 0.08em + black),
- table.hline(y: 0, start: 0, end: 3, stroke: 0.08em + black),
-    // tinytable lines before
-
-    // tinytable header start
-    table.header(
-      repeat: true,
-[ ], [Linear: deviation], [Logistic: deviated (0\/1)],
-    ),
-    // tinytable header end
-
-    // tinytable cell content after
-[(Intercept)], [\-0.003], [\-0.962],
-[], [(0.003)], [(0.059)],
-[jobreviewer], [\-0.001], [\-0.345],
-[], [(0.003)], [(0.047)],
-[explow], [0.001], [0.647],
-[], [(0.004)], [(0.065)],
-[expmed], [0.003], [0.520],
-[], [(0.004)], [(0.067)],
-[expnone], [0.004], [0.939],
-[], [(0.004)], [(0.063)],
-[Num.Obs.], [18000], [18000],
-
-    // tinytable footer after
-
-  ) // end table
-
-  // tinytable align-figure after
-
-] // end block
-The linear model's coefficients on `job`/`exp` are tiny and mostly non-significant (largest around 0.005 points, on an outcome bounded at $plus.minus 0.5$). The logistic model on the same covariates recovers the large, highly significant effect pattern actually built into the simulator (`code/ror-sim-deviation.R`). Because deviation magnitude is roughly symmetric around zero conditional on deviating, essentially all the covariate signal lives in #emph[whether] someone deviates -- a model that only looks at the conditional mean of $d_(i j k)$ structurally cannot see it. This confirms the two-part structure is doing real work here, not adding complexity for its own sake.
-
 = Model specification (Aim 1)
 <model-specification-aim-1>
+We adopt a Bayesian modeling approach.
+
+$ D_"ijk" & tilde upright("Binomial")(1, p_"ijk") &&& upright("[likelihood]") \
+  upright("logit")(p_"ijk") & = alpha_"mem"_i + gamma_"cmte"_k + beta_"app"_j + delta upright("Panelist")_"ijk" + zeta bold(upright("Exp"))_"ij" &&& upright("[linear model for log odds]") \
+  alpha_"mem"_i & tilde upright("Normal")(dash(alpha), sigma_alpha) &&& upright("[prior for member intercepts]") \
+  gamma_"cmte"_k & tilde upright("Normal")(0, sigma_gamma) &&& upright("[prior for committee intercepts]") \
+  beta_"app"_j & tilde upright("Normal")(0, sigma_beta) &&& upright("[prior for application intercepts]") \
+  (delta, zeta) & tilde upright("Normal")(0, 0.5) &&& upright("[prior for fixed effects]") \
+  dash(alpha) & tilde upright("Normal")(0, 1.0) &&& upright("[prior for average member]") \
+  (sigma_alpha, sigma_gamma, sigma_beta) & tilde upright("Exponential")(1) &&& upright("[prior for standard deviations]") $
 == Simulating the data-generating process
 <simulating-the-data-generating-process>
 For the basic structure of the data generating process we use 50 committees, 15 discussed applications per committee, 24 members per committee. We also simulate another 15 applications that will end up being streamlined. For the assignments we have 3 of the 24 members on each application as the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn per application (committee- and application-level random effects only, no member-level variation yet, since this is before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR's one-decimal-place scoring (with rejection sampling so a "deviated" row can never round down to a contradictory zero).
@@ -513,7 +413,7 @@ dev_max  =  0.5
 
 data <- data |>
   mutate(
-    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_high) +
+    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_med) +
       (a3 * exp_low) + (a4 * exp_none)),
     deviated = rbinom(n(), 1, p_dev),
     deviation = if_else(
@@ -529,7 +429,22 @@ Every parameter above is at this point just an educated guess and a placeholder,
 
 == Simulated data
 <simulated-data>
-What did we generate with the parameters above? #ref(<fig-scores>, supplement: [Figure]) shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations. Since the likely true consensus scores are not necessarily an average of the 3 reviewer scores (depending on calibration, etc.) we see a small excess in the left tail near 3.5. In practice a consensus score of 3.5 #emph[among discussed applications] is likely more rare, but this seems a reasonable approximation.
+What did we generate with the parameters above? #ref(<fig-cmte>, supplement: [Figure]) shows our simulated 50 committees with varying sizes and the number of total and discussed applications. Across the 50 committees the fraction discussed varies from 24.1% to 41.0%. Generally, larger committees end up with more total and more discussed applications.
+
+#figure([
+#box(image("ror-modeling-strategy_files/figure-typst/fig-cmte-1.svg"))
+], caption: figure.caption(
+position: bottom, 
+[
+Distribution of committee sizes, total and discussed applications
+]), 
+kind: "quarto-float-fig", 
+supplement: "Figure", 
+)
+<fig-cmte>
+
+
+#ref(<fig-scores>, supplement: [Figure]) shows the distribution of initial scores from the three reviewers, the consensus score and then a distribution of overall scores allowing for +/- 0.5 point deviations. Since the likely true consensus scores are not necessarily an average of the 3 reviewer scores (depending on calibration, etc.) we see a small excess in the left tail near 3.5. In practice a consensus score of 3.5 #emph[among discussed applications] is likely more rare, but this seems a reasonable approximation.
 
 #figure([
 #box(image("ror-modeling-strategy_files/figure-typst/fig-scores-1.svg"))
@@ -667,15 +582,15 @@ This model run on the simulated data gives the following estimates, shown in #re
 
     // tinytable cell content after
 table.cell(colspan: 6)[Fixed effects (log odds)],
-[Intercept], [-0.800], [-0.773], [0.047], [-0.869], [-0.679],
-[Panelist vs. Reviewer], [0.300], [0.296], [0.046], [0.206], [0.387],
-[High vs. Medium Expertise], [-0.400], [-0.364], [0.039], [-0.438], [-0.284],
-[Low vs. Medium Expertise], [0.200], [0.210], [0.040], [0.127], [0.293],
-[None vs. Medium Expertise], [0.500], [0.461], [0.042], [0.378], [0.546],
+[Intercept], [-0.5], [-0.590], [0.062], [-0.711], [-0.470],
+[Panelist vs. Reviewer], [0.3], [0.280], [0.052], [0.180], [0.388],
+[Medium vs. High Expertise], [-0.3], [-0.171], [0.061], [-0.289], [-0.052],
+[Low vs. High Expertise], [-0.5], [-0.348], [0.060], [-0.466], [-0.229],
+[None vs. High Expertise], [-0.8], [-0.721], [0.062], [-0.837], [-0.603],
 table.cell(colspan: 6)[Random effects (SD)],
-[Application], [], [0.042], [0.034], [0.002], [0.118],
-[Committee Member], [], [0.059], [0.046], [0.003], [0.146],
-[Committee], [], [0.024], [0.020], [0.001], [0.072],
+[Application], [], [0.043], [0.037], [0.002], [0.127],
+[Committee Member], [], [0.053], [0.045], [0.003], [0.145],
+[Committee], [], [0.018], [0.015], [0.001], [0.058],
 
     // tinytable footer after
 
@@ -697,7 +612,111 @@ supplement: "Table",
 <tbl-m1-deviate>
 
 
-From the fixed effects we see that we generally recover the simulated parameters -- the 'true' treatment effects in the first column are well approximated by our model. The three random-effect SDs are small and estimated with considerable uncertainty; the simulated data-generating process for whether a member deviates (`deviated`) depends only on `job`/`exp`, with no committee-, application-, or member-level heterogeneity built in at that stage (member-level heterogeneity only enters the #emph[magnitude] of deviation, modeled separately in Part 2 below), so this is the expected pattern rather than a recovery failure. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package
+From the fixed effects we see that we generally recover the simulated parameters -- the 'true' treatment effects in the first column are well approximated by our model. The three random-effect SDs are small and estimated with considerable uncertainty; the simulated data-generating process for whether a member deviates (`deviated`) depends only on `job`/`exp`, with no committee-, application-, or member-level heterogeneity built in at that stage (member-level heterogeneity only enters the #emph[magnitude] of deviation, modeled separately in Part 2 below), so this is the expected pattern. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package.
+
+#figure([
+#show figure: set block(breakable: false)
+
+#block[ // start block
+
+  #let style-dict = (
+    // tinytable style-dict after
+    "0_0": 0, "2_0": 0, "4_0": 0, "5_0": 0, "6_0": 0, "7_0": 0, "9_0": 0, "10_0": 0, "0_1": 0, "0_2": 0, "0_3": 0, "1_1": 1, "3_1": 1, "8_1": 1, "1_2": 1, "3_2": 1, "8_2": 1, "1_3": 1, "3_3": 1, "8_3": 1, "1_0": 2, "3_0": 2, "8_0": 2
+  )
+
+  #let style-array = ( 
+    // tinytable cell style after
+    (align: left,),
+    (italic: true,),
+    (italic: true, align: left,),
+  )
+
+  // Helper function to get cell style
+  #let get-style(x, y) = {
+    let key = str(y) + "_" + str(x)
+    if key in style-dict { style-array.at(style-dict.at(key)) } else { none }
+  }
+
+  // tinytable align-default-array before
+  #let align-default-array = ( left, left, left, left, ) // tinytable align-default-array here
+  #show table.cell: it => {
+    if style-array.len() == 0 { return it }
+    
+    let style = get-style(it.x, it.y)
+    if style == none { return it }
+    
+    let tmp = it
+    if ("fontsize" in style) { tmp = text(size: style.fontsize, tmp) }
+    if ("color" in style) { tmp = text(fill: style.color, tmp) }
+    if ("indent" in style) { tmp = pad(left: style.indent, tmp) }
+    if ("underline" in style) { tmp = underline(tmp) }
+    if ("italic" in style) { tmp = emph(tmp) }
+    if ("bold" in style) { tmp = strong(tmp) }
+    if ("mono" in style) { tmp = math.mono(tmp) }
+    if ("strikeout" in style) { tmp = strike(tmp) }
+    if ("smallcaps" in style) { tmp = smallcaps(tmp) }
+    tmp
+  }
+
+  // tinytable align-figure before
+
+  #table( // tinytable table start
+    columns: (auto, auto, auto, auto),
+    stroke: none,
+    rows: auto,
+    align: (x, y) => {
+      let style = get-style(x, y)
+      if style != none and "align" in style { style.align } else { left }
+    },
+    fill: (x, y) => {
+      let style = get-style(x, y)
+      if style != none and "background" in style { style.background }
+    },
+ table.hline(y: 1, start: 0, end: 4, stroke: 0.05em + black),
+ table.hline(y: 11, start: 0, end: 4, stroke: 0.08em + black),
+ table.hline(y: 0, start: 0, end: 4, stroke: 0.08em + black),
+    // tinytable lines before
+
+    // tinytable header start
+    table.header(
+      repeat: true,
+[Parameter], [P(deviate)], [95% CI Lower], [95% CI Upper],
+    ),
+    // tinytable header end
+
+    // tinytable cell content after
+table.cell(colspan: 4)[Overall],
+[All members], [0.317], [0.309], [0.325],
+table.cell(colspan: 4)[By self-rated expertise],
+[High], [0.416], [0.391], [0.437],
+[Medium], [0.376], [0.359], [0.392],
+[Low], [0.334], [0.321], [0.346],
+[Not enough], [0.257], [0.247], [0.266],
+table.cell(colspan: 4)[By role],
+[Reviewer], [0.267], [0.248], [0.288],
+[Panelist], [0.325], [0.319], [0.333],
+
+    // tinytable footer after
+
+  ) // end table
+
+  // tinytable align-figure after
+
+] // end block
+Marginal effects from deviation model
+
+], caption: figure.caption(
+separator: "", 
+position: top, 
+[
+]), 
+kind: "quarto-float-tbl", 
+supplement: "Table", 
+)
+<tbl-dev-me>
+
+
+#ref(<tbl-dev-me>, supplement: [Table]) show that the overall fraction of members that deviate is around 38%. Reviewers are slightly less likely to deviate than non-reviewing panelists. With respect to expertise, those with high expertise are the least likely to deviate from the consensus (30%), whereas those with no . In practice we
 
 == Part 2: how large, given a deviation?
 <part-2-how-large-given-a-deviation>
@@ -745,7 +764,7 @@ i_expnone_earlycareer =  0.6  # exp(none) x career_stage(early)
 
 data <- data |>
   mutate(
-    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_high) +
+    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_med) +
       (a3 * exp_low) + (a4 * exp_none) +
       (g1 * female) + (c1 * early_career) +
       (i_panelist_female * panelist * female) +
@@ -910,12 +929,11 @@ The script is organized into seven numbered sections, matching the `##  N ...` c
 #block[
 ```r
 #  program:  ror-sim-deviate.R
-#  task:     generating a more faithful streamlining DGP
-#            for Aim 1
+#  task:     generating data for Aim 1
 #  input:    none (simulated from scratch)
 #  output:   data/sim-deviate.csv
 #  project:  RoR
-#  author:   sam harper \ 2026-08-19
+#  author:   sam harper \ 2026-08-20
 #
 #  note:       1. each of the 3 assigned reviewers gives a score AND a
 #                 separate categorical "top" (competitive) / "bottom"
@@ -926,23 +944,6 @@ The script is organized into seven numbered sections, matching the `##  N ...` c
 #                 AND its mean-of-3 score ranks in the bottom 60% of
 #                 *that committee's own* candidate pool (a relative/rank
 #                 rule, not a fixed absolute score).
-#            This exactly explains a pattern found in a hypothetical
-#            dataset Sam constructed earlier the same day: two
-#            applications with *identical* 3 reviewer scores had
-#            different discussed/not-discussed outcomes, which a pure
-#            score-threshold rule cannot produce but this mechanism can
-#            (different top/bottom calls and/or different committee
-#            rank context at the same raw score). A "bring back"
-#            advocacy stage was tried on top of this and deliberately
-#            dropped -- see the note where it used to live, in section 3
-#            below, and ror-research-log.qmd.
-#
-#            All streamlining-specific parameters below (tb_center,
-#            tb_slope) are illustrative placeholders invented to make
-#            the mechanism behave sensibly -- same status as every other
-#            parameter in this project's simulations, not estimates.
-#            streamline_rank_threshold = 0.60 is a stated real rule, not
-#            a guess.
 #
 #            Committee-level application-pool size (2026-08-14): was a
 #            fixed pool_per_cmte = 40 for every committee; now drawn per
@@ -969,10 +970,12 @@ set.seed(20260819)
 ##  1 Define parameters ----
 
 cmte_n = 50     # number of committees
-mem_n  = 24     # number of committee members per committee
 
 # Per-committee pool_size is drawn (below, section 2) from a beta
-# distribution scaled to CIHR's own stated 20-80 range.
+# distribution scaled to CIHR's own stated 20-80 range. mem_n is then
+# DERIVED from pool_size.  Noise (lognormal,
+# below) keeps real committee-to-committee variation rather than
+# forcing a fixed ratio.
 
 pool_min = 20        # lower bound on applications reviewed per committee
 pool_max = 80        # upper bound
@@ -980,39 +983,40 @@ pool_shape1 = 2.5    # rbeta() shape -- illustrative, not fit; chosen to
 pool_shape2 = 4      # roughly match the mean/SD/right-skew of the
                      # funded-count back-calculation (mean ~42, SD ~12)
 
+mem_min = 8          # lower bound on committee "Members" count (real range,
+mem_max = 37         # from CIHR's Fall 2025 (202509PJT) Project Grant
+                     # committee roster, cihr-irsc.gc.ca/e/54732.html)
+
+# workload target: roughly 5 applications reviewed per member
+target_reviews_per_member = 5.5
+mem_noise_sd = 0.15   # lognormal noise SD (log scale) around the
+                      # workload
+
 b0         = 4.0    # intercept for (discussed) application's true quality
 u0c_sd     = 0.1    # random intercept SD for committee (quality level)
 u0a_sd     = 0.3    # random intercept SD for application (quality level)
 
-# longer tail for lower-ranked applications. init_sd_lo raised from 0.30
-# to 1.1 (2026-08-14): among DISCUSSED applications specifically, the
-# any_bottom-AND-rank streamlining rule (section 3) means a reviewer's
+# longer tail for lower-ranked applications.
+# streamlining rule (section 3) means a reviewer's
 # very low individual score can only survive to discussion if the
 # other 2 reviewers' scores are high enough to keep the consensus above
-# the committee's 60th-percentile rank -- an inherently rare
-# combination. At the original 0.30, that combination essentially never
-# occurred (0 discussed reviewer-scores below 3.4), which was too tight
-# given real reviewer-score data Sam has access to, where a meaningful
-# share of discussed applications carry within-application reviewer
-# disagreement of a point or more, and individual scores as low as the
-# low 2s. Tried a small-probability "discordant outlier" mixture first,
-# but even at implausibly extreme settings (30% of reviews, SD 1.3) it
-# barely moved the count -- the real lever is just the overall low-tail
-# SD, which lengthens the tail with only a modest effect on the bulk of
-# the distribution. Calibrated to roughly match that real reference
-# distribution's share of discussed reviewer-scores below 3.5 (~8%) and
-# below 3.0 (~1.5%); see ror-research-log.qmd.
+# the committee's 60th-percentile rank
 init_sd_lo = 1.1
 init_sd_hi = 0.15   # reviewer-noise SD above it (tighter)
 
 # probability of deviation from consensus (logit scale), and the
 # signed magnitude given deviation
 # this is the "hurdle"-equivalent part
-a0       = -0.8   # baseline logit prob. of deviating
+# reference category is HIGH expertise (2026-08-20, switched from
+# medium for simplicity) -- re-derived to reproduce the exact same
+# per-category probabilities as before, just relabeled: a0 is now the
+# high-expertise/reviewer baseline logit, a2-a4 are med/low/none
+# relative to high instead of high/low/none relative to med.
+a0       = -0.5   # baseline logit prob. of deviating (high expertise, reviewer)
 a1       =  0.3   # panelist vs. reviewer
-a2       = -0.4   # high expertise
-a3       =  0.2   # low expertise
-a4       =  0.5   # no expertise
+a2       = -0.3   # medium expertise (vs. high)
+a3       = -0.5   # low expertise (vs. high)
+a4       = -0.8   # no expertise (vs. high)
 
 # signed magnitude of deviation, given deviation occurs, truncated to
 # +/- 0.5 (CIHR's stated bound on final vs. consensus score)
@@ -1046,8 +1050,7 @@ tb_slope  = 6
 
 # initial rule: streamlined out iff >=1 "bottom" call AND rank (of the
 # mean of 3 scores, within this committee's own candidate pool) is at
-# or below this percentile. This 0.60 is the one number here that's a
-# stated real rule, not an invented placeholder.
+# or below this percentile.
 streamline_rank_threshold = 0.60
 
 ##  2 Stage 1: candidate pool -- reviewer scores and top/bottom calls ----
@@ -1072,14 +1075,46 @@ cmte_pool <- tibble(
   cmte = sprintf("%02d", 1:cmte_n),
   pool_size = round(pool_min +
     (pool_max - pool_min) * rbeta(cmte_n, pool_shape1, pool_shape2))
-)
+) |>
+  mutate(mem_n_center = 3 * pool_size / target_reviews_per_member)
+
+# mem_n derived from pool_size (workload-target center) plus lognormal
+# noise, redrawn (not clamped) if it lands outside the real observed
+# [mem_min, mem_max] range -- redrawing preserves the noise
+# distribution's shape near the boundary instead of piling probability
+# up at a clamped edge (same rejection-sampling pattern used throughout
+# this script for other bounded quantities).
+cmte_pool$mem_n <- round(cmte_pool$mem_n_center *
+  exp(rnorm(cmte_n, 0, mem_noise_sd)))
+out_idx <- which(cmte_pool$mem_n < mem_min | cmte_pool$mem_n > mem_max)
+while (length(out_idx) > 0) {
+  cmte_pool$mem_n[out_idx] <- round(cmte_pool$mem_n_center[out_idx] *
+    exp(rnorm(length(out_idx), 0, mem_noise_sd)))
+  out_idx <- which(cmte_pool$mem_n < mem_min | cmte_pool$mem_n > mem_max)
+}
+cmte_pool <- cmte_pool |> select(-mem_n_center)
 
 cmte_app <- cmte_pool |>
   reframe(app = seq_len(pool_size), .by = c(cmte, pool_size)) |>
   select(cmte, app)
 
+cmte_mem <- cmte_pool |>
+  reframe(memno = sprintf("%02d", seq_len(mem_n)), .by = c(cmte, mem_n)) |>
+  select(cmte, memno)
+
+# reviewer-assignment weights by self-rated expertise
+# real committees don't assign the 3 reviewers independently of
+# expertise (expertise strongly increases reviewer odds);
+# Used directly below as sample() selection weights (not
+# where high are 40x more likely than none, etc.
+exp_reviewer_weight <- c(high = 40, med = 30, low = 5, none = 1)
+
+# cmte_app x cmte_mem joined by "cmte" only (not a blanket cross_join)
+# so each committee only crosses with its OWN members -- mem_n now
+# varies by committee, so a single global memno range no longer applies
+# to every committee the way it did when mem_n was fixed
 data <- cmte_app |>
-  cross_join(tibble(memno = sprintf("%02d", 1:mem_n))) |>
+  left_join(cmte_mem, by = "cmte", relationship = "many-to-many") |>
   mutate(
     cid = paste0(cmte, "_", memno),
     aid = paste0(cmte, "_", app)
@@ -1090,11 +1125,20 @@ data <- cmte_app |>
 
   group_by(cmte, app) |>
   mutate(
-    job = sample(c(rep("reviewer", 3),
-      rep("panelist", mem_n - 3))),
-    exp = sample(c(rep("high", 6),
-      rep("med", 10), rep("low", 4),
-      rep("none", 4))),
+    # self-rated expertise mix -- weighted draw of size n() (was a
+    # fixed-count permutation of exactly 24, which only worked when
+    # every committee had exactly 24 members; a weighted sample with
+    # replacement generalizes to the now-variable group size, at the
+    # cost of realized per-application counts varying stochastically
+    # around these proportions rather than landing on them exactly)
+    exp = sample(c("high", "med", "low", "none"), size = n(),
+      replace = TRUE, prob = c(high = 2, med = 5, low = 7, none = 10)),
+    # reviewer assignment a weighted draw per above
+    job = {
+      reviewer_pos <- sample.int(n(), size = 3, replace = FALSE,
+        prob = exp_reviewer_weight[exp])
+      if_else(seq_len(n()) %in% reviewer_pos, "reviewer", "panelist")
+    },
     z_init = rnorm(n()),
     init_score = if_else(job == "reviewer",
       round_tenth(b0 + u0c + u0a +
@@ -1104,9 +1148,7 @@ data <- cmte_app |>
   ungroup() |>
   select(-z_init)
 
-# redraw any reviewer's init_score that landed outside the scale's true
-# bounds, rather than clamping it -- identical mechanism to
-# ror-sim-aim1.R
+# redraw any reviewer's init_score outside the scale's true bounds
 out_idx <- which(!is.na(data$init_score) &
   (data$init_score < scale_min | data$init_score > score_max))
 while (length(out_idx) > 0) {
@@ -1118,8 +1160,7 @@ while (length(out_idx) > 0) {
     (data$init_score < scale_min | data$init_score > score_max))
 }
 
-# each reviewer's separate top/bottom call, based on their now-finalized
-# init_score -- correlated with score, not determined by it
+# each reviewer's separate top/bottom call
 data <- data |>
   mutate(
     p_bottom = plogis(tb_slope * (tb_center - init_score)),
@@ -1144,9 +1185,9 @@ data <- data |>
   ) |>
   ungroup()
 
-# decide streamlining once per application (on distinct app-level rows,
-# not the 24x-duplicated member-level rows -- rank has to be computed
-# against other *applications*, not other rows), then join back
+# decide streamlining once per application (on distinct apps),
+# rank has to be computed against other *applications*, not other rows)
+# then join back
 decision <- data |>
   distinct(cmte, app, consensus, any_bottom) |>
   group_by(cmte) |>
@@ -1170,13 +1211,13 @@ data <- data |>
 
   mutate(
     panelist = if_else(job == "panelist", 1, 0),
-    exp_high = if_else(exp == "high", 1, 0),
+    exp_med  = if_else(exp == "med", 1, 0),
     exp_low  = if_else(exp == "low", 1, 0),
     exp_none = if_else(exp == "none", 1, 0)
   ) |>
 
   # member-level leniency/harshness trait
-  # add_ranef on cid, not faux's crossed "member" factor
+  # add_ranef on cid
   add_ranef("cid", u0m_bias = u0m_bias_sd)
 
 ##  4 Two-part deviation from consensus ----
@@ -1188,7 +1229,7 @@ data <- data |>
 
 data <- data |>
   mutate(
-    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_high) +
+    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_med) +
       (a3 * exp_low) + (a4 * exp_none)),
     deviated = rbinom(n(), 1, p_dev),
     deviation = if_else(
@@ -1216,13 +1257,13 @@ data <- data |>
 ##  5 Checks ----
 
 stopifnot(
-  "row count should be a whole number of mem_n-sized application blocks" =
-    nrow(data) %% mem_n == 0,
   "expect exactly 3 reviewers per committee-application" =
     data |> filter(job == "reviewer") |>
       count(cmte, app) |> pull(n) |> unique() == 3,
-  "expect exactly 24 members per committee-application" =
-    data |> count(cmte, app) |> pull(n) |> unique() == mem_n,
+  "every application within a committee should have the same member count as that committee's own mem_n" =
+    data |> count(cmte, app) |>
+      left_join(cmte_pool |> select(cmte, mem_n), by = "cmte") |>
+      summarise(ok = all(n == mem_n)) |> pull(ok),
   "expect exactly 3 non-missing initial reviewer scores per application" =
     data |> filter(!is.na(init_score)) |>
       count(cmte, app) |> pull(n) |> unique() == 3,
@@ -1253,6 +1294,10 @@ n_discussed_total <- data |> distinct(cmte, app) |> nrow()
 cat("=== per-committee pool size (drawn from beta on CIHR's stated [20,80] range) ===\n")
 print(summary(cmte_pool$pool_size))
 cat("SD across committees:", round(sd(cmte_pool$pool_size), 2), "\n\n")
+
+cat("=== per-committee member count (drawn from beta on real Fall 2025 roster range) ===\n")
+print(summary(cmte_pool$mem_n))
+cat("SD across committees:", round(sd(cmte_pool$mem_n), 2), "\n\n")
 
 cat("=== streamlining mechanism ===\n")
 cat("overall discussion rate:",
@@ -1292,6 +1337,15 @@ print(VarCorr(m_member_check))
 ##  7 Write output ----
 
 write_csv(data, here("data", "sim-deviate.csv"))
+
+# cmte_pool (pool_size/mem_n before streamlining) saved separately --
+# data/sim-deviate.csv only has discussed applications, so this is the
+# only place pool_size/mem_n survive. Consumed by
+# writing/ror-modeling-strategy.qmd's fig-cmte, so it stays consistent
+# with whatever data/sim-deviate.csv this same run produced, instead of
+# being hand-recreated there.
+dir.create(here("output"), showWarnings = FALSE, recursive = TRUE)
+saveRDS(cmte_pool, here("output", "cmte-pool.rds"))
 ```
 
 ]

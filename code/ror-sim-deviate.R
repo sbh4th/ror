@@ -1,10 +1,9 @@
 #  program:  ror-sim-deviate.R
-#  task:     generating a more faithful streamlining DGP
-#            for Aim 1
+#  task:     generating data for Aim 1
 #  input:    none (simulated from scratch)
 #  output:   data/sim-deviate.csv
 #  project:  RoR
-#  author:   sam harper \ 2026-08-19
+#  author:   sam harper \ 2026-08-20
 #
 #  note:       1. each of the 3 assigned reviewers gives a score AND a
 #                 separate categorical "top" (competitive) / "bottom"
@@ -15,23 +14,6 @@
 #                 AND its mean-of-3 score ranks in the bottom 60% of
 #                 *that committee's own* candidate pool (a relative/rank
 #                 rule, not a fixed absolute score).
-#            This exactly explains a pattern found in a hypothetical
-#            dataset Sam constructed earlier the same day: two
-#            applications with *identical* 3 reviewer scores had
-#            different discussed/not-discussed outcomes, which a pure
-#            score-threshold rule cannot produce but this mechanism can
-#            (different top/bottom calls and/or different committee
-#            rank context at the same raw score). A "bring back"
-#            advocacy stage was tried on top of this and deliberately
-#            dropped -- see the note where it used to live, in section 3
-#            below, and ror-research-log.qmd.
-#
-#            All streamlining-specific parameters below (tb_center,
-#            tb_slope) are illustrative placeholders invented to make
-#            the mechanism behave sensibly -- same status as every other
-#            parameter in this project's simulations, not estimates.
-#            streamline_rank_threshold = 0.60 is a stated real rule, not
-#            a guess.
 #
 #            Committee-level application-pool size (2026-08-14): was a
 #            fixed pool_per_cmte = 40 for every committee; now drawn per
@@ -58,10 +40,12 @@ set.seed(20260819)
 ##  1 Define parameters ----
 
 cmte_n = 50     # number of committees
-mem_n  = 24     # number of committee members per committee
 
 # Per-committee pool_size is drawn (below, section 2) from a beta
-# distribution scaled to CIHR's own stated 20-80 range.
+# distribution scaled to CIHR's own stated 20-80 range. mem_n is then
+# DERIVED from pool_size.  Noise (lognormal,
+# below) keeps real committee-to-committee variation rather than
+# forcing a fixed ratio.
 
 pool_min = 20        # lower bound on applications reviewed per committee
 pool_max = 80        # upper bound
@@ -69,39 +53,40 @@ pool_shape1 = 2.5    # rbeta() shape -- illustrative, not fit; chosen to
 pool_shape2 = 4      # roughly match the mean/SD/right-skew of the
                      # funded-count back-calculation (mean ~42, SD ~12)
 
+mem_min = 8          # lower bound on committee "Members" count (real range,
+mem_max = 37         # from CIHR's Fall 2025 (202509PJT) Project Grant
+                     # committee roster, cihr-irsc.gc.ca/e/54732.html)
+
+# workload target: roughly 5 applications reviewed per member
+target_reviews_per_member = 5.5
+mem_noise_sd = 0.15   # lognormal noise SD (log scale) around the
+                      # workload
+
 b0         = 4.0    # intercept for (discussed) application's true quality
 u0c_sd     = 0.1    # random intercept SD for committee (quality level)
 u0a_sd     = 0.3    # random intercept SD for application (quality level)
 
-# longer tail for lower-ranked applications. init_sd_lo raised from 0.30
-# to 1.1 (2026-08-14): among DISCUSSED applications specifically, the
-# any_bottom-AND-rank streamlining rule (section 3) means a reviewer's
+# longer tail for lower-ranked applications.
+# streamlining rule (section 3) means a reviewer's
 # very low individual score can only survive to discussion if the
 # other 2 reviewers' scores are high enough to keep the consensus above
-# the committee's 60th-percentile rank -- an inherently rare
-# combination. At the original 0.30, that combination essentially never
-# occurred (0 discussed reviewer-scores below 3.4), which was too tight
-# given real reviewer-score data Sam has access to, where a meaningful
-# share of discussed applications carry within-application reviewer
-# disagreement of a point or more, and individual scores as low as the
-# low 2s. Tried a small-probability "discordant outlier" mixture first,
-# but even at implausibly extreme settings (30% of reviews, SD 1.3) it
-# barely moved the count -- the real lever is just the overall low-tail
-# SD, which lengthens the tail with only a modest effect on the bulk of
-# the distribution. Calibrated to roughly match that real reference
-# distribution's share of discussed reviewer-scores below 3.5 (~8%) and
-# below 3.0 (~1.5%); see ror-research-log.qmd.
+# the committee's 60th-percentile rank
 init_sd_lo = 1.1
 init_sd_hi = 0.15   # reviewer-noise SD above it (tighter)
 
 # probability of deviation from consensus (logit scale), and the
 # signed magnitude given deviation
 # this is the "hurdle"-equivalent part
-a0       = -0.8   # baseline logit prob. of deviating
+# reference category is HIGH expertise (2026-08-20, switched from
+# medium for simplicity) -- re-derived to reproduce the exact same
+# per-category probabilities as before, just relabeled: a0 is now the
+# high-expertise/reviewer baseline logit, a2-a4 are med/low/none
+# relative to high instead of high/low/none relative to med.
+a0       = -0.5   # baseline logit prob. of deviating (high expertise, reviewer)
 a1       =  0.3   # panelist vs. reviewer
-a2       = -0.4   # high expertise
-a3       =  0.2   # low expertise
-a4       =  0.5   # no expertise
+a2       = -0.3   # medium expertise (vs. high)
+a3       = -0.5   # low expertise (vs. high)
+a4       = -0.8   # no expertise (vs. high)
 
 # signed magnitude of deviation, given deviation occurs, truncated to
 # +/- 0.5 (CIHR's stated bound on final vs. consensus score)
@@ -135,8 +120,7 @@ tb_slope  = 6
 
 # initial rule: streamlined out iff >=1 "bottom" call AND rank (of the
 # mean of 3 scores, within this committee's own candidate pool) is at
-# or below this percentile. This 0.60 is the one number here that's a
-# stated real rule, not an invented placeholder.
+# or below this percentile.
 streamline_rank_threshold = 0.60
 
 ##  2 Stage 1: candidate pool -- reviewer scores and top/bottom calls ----
@@ -161,14 +145,46 @@ cmte_pool <- tibble(
   cmte = sprintf("%02d", 1:cmte_n),
   pool_size = round(pool_min +
     (pool_max - pool_min) * rbeta(cmte_n, pool_shape1, pool_shape2))
-)
+) |>
+  mutate(mem_n_center = 3 * pool_size / target_reviews_per_member)
+
+# mem_n derived from pool_size (workload-target center) plus lognormal
+# noise, redrawn (not clamped) if it lands outside the real observed
+# [mem_min, mem_max] range -- redrawing preserves the noise
+# distribution's shape near the boundary instead of piling probability
+# up at a clamped edge (same rejection-sampling pattern used throughout
+# this script for other bounded quantities).
+cmte_pool$mem_n <- round(cmte_pool$mem_n_center *
+  exp(rnorm(cmte_n, 0, mem_noise_sd)))
+out_idx <- which(cmte_pool$mem_n < mem_min | cmte_pool$mem_n > mem_max)
+while (length(out_idx) > 0) {
+  cmte_pool$mem_n[out_idx] <- round(cmte_pool$mem_n_center[out_idx] *
+    exp(rnorm(length(out_idx), 0, mem_noise_sd)))
+  out_idx <- which(cmte_pool$mem_n < mem_min | cmte_pool$mem_n > mem_max)
+}
+cmte_pool <- cmte_pool |> select(-mem_n_center)
 
 cmte_app <- cmte_pool |>
   reframe(app = seq_len(pool_size), .by = c(cmte, pool_size)) |>
   select(cmte, app)
 
+cmte_mem <- cmte_pool |>
+  reframe(memno = sprintf("%02d", seq_len(mem_n)), .by = c(cmte, mem_n)) |>
+  select(cmte, memno)
+
+# reviewer-assignment weights by self-rated expertise
+# real committees don't assign the 3 reviewers independently of
+# expertise (expertise strongly increases reviewer odds);
+# Used directly below as sample() selection weights (not
+# where high are 40x more likely than none, etc.
+exp_reviewer_weight <- c(high = 40, med = 30, low = 5, none = 1)
+
+# cmte_app x cmte_mem joined by "cmte" only (not a blanket cross_join)
+# so each committee only crosses with its OWN members -- mem_n now
+# varies by committee, so a single global memno range no longer applies
+# to every committee the way it did when mem_n was fixed
 data <- cmte_app |>
-  cross_join(tibble(memno = sprintf("%02d", 1:mem_n))) |>
+  left_join(cmte_mem, by = "cmte", relationship = "many-to-many") |>
   mutate(
     cid = paste0(cmte, "_", memno),
     aid = paste0(cmte, "_", app)
@@ -179,11 +195,20 @@ data <- cmte_app |>
 
   group_by(cmte, app) |>
   mutate(
-    job = sample(c(rep("reviewer", 3),
-      rep("panelist", mem_n - 3))),
-    exp = sample(c(rep("high", 6),
-      rep("med", 10), rep("low", 4),
-      rep("none", 4))),
+    # self-rated expertise mix -- weighted draw of size n() (was a
+    # fixed-count permutation of exactly 24, which only worked when
+    # every committee had exactly 24 members; a weighted sample with
+    # replacement generalizes to the now-variable group size, at the
+    # cost of realized per-application counts varying stochastically
+    # around these proportions rather than landing on them exactly)
+    exp = sample(c("high", "med", "low", "none"), size = n(),
+      replace = TRUE, prob = c(high = 2, med = 5, low = 7, none = 10)),
+    # reviewer assignment a weighted draw per above
+    job = {
+      reviewer_pos <- sample.int(n(), size = 3, replace = FALSE,
+        prob = exp_reviewer_weight[exp])
+      if_else(seq_len(n()) %in% reviewer_pos, "reviewer", "panelist")
+    },
     z_init = rnorm(n()),
     init_score = if_else(job == "reviewer",
       round_tenth(b0 + u0c + u0a +
@@ -193,9 +218,7 @@ data <- cmte_app |>
   ungroup() |>
   select(-z_init)
 
-# redraw any reviewer's init_score that landed outside the scale's true
-# bounds, rather than clamping it -- identical mechanism to
-# ror-sim-aim1.R
+# redraw any reviewer's init_score outside the scale's true bounds
 out_idx <- which(!is.na(data$init_score) &
   (data$init_score < scale_min | data$init_score > score_max))
 while (length(out_idx) > 0) {
@@ -207,8 +230,7 @@ while (length(out_idx) > 0) {
     (data$init_score < scale_min | data$init_score > score_max))
 }
 
-# each reviewer's separate top/bottom call, based on their now-finalized
-# init_score -- correlated with score, not determined by it
+# each reviewer's separate top/bottom call
 data <- data |>
   mutate(
     p_bottom = plogis(tb_slope * (tb_center - init_score)),
@@ -233,9 +255,9 @@ data <- data |>
   ) |>
   ungroup()
 
-# decide streamlining once per application (on distinct app-level rows,
-# not the 24x-duplicated member-level rows -- rank has to be computed
-# against other *applications*, not other rows), then join back
+# decide streamlining once per application (on distinct apps),
+# rank has to be computed against other *applications*, not other rows)
+# then join back
 decision <- data |>
   distinct(cmte, app, consensus, any_bottom) |>
   group_by(cmte) |>
@@ -259,13 +281,13 @@ data <- data |>
 
   mutate(
     panelist = if_else(job == "panelist", 1, 0),
-    exp_high = if_else(exp == "high", 1, 0),
+    exp_med  = if_else(exp == "med", 1, 0),
     exp_low  = if_else(exp == "low", 1, 0),
     exp_none = if_else(exp == "none", 1, 0)
   ) |>
 
   # member-level leniency/harshness trait
-  # add_ranef on cid, not faux's crossed "member" factor
+  # add_ranef on cid
   add_ranef("cid", u0m_bias = u0m_bias_sd)
 
 ##  4 Two-part deviation from consensus ----
@@ -277,7 +299,7 @@ data <- data |>
 
 data <- data |>
   mutate(
-    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_high) +
+    p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_med) +
       (a3 * exp_low) + (a4 * exp_none)),
     deviated = rbinom(n(), 1, p_dev),
     deviation = if_else(
@@ -305,13 +327,13 @@ data <- data |>
 ##  5 Checks ----
 
 stopifnot(
-  "row count should be a whole number of mem_n-sized application blocks" =
-    nrow(data) %% mem_n == 0,
   "expect exactly 3 reviewers per committee-application" =
     data |> filter(job == "reviewer") |>
       count(cmte, app) |> pull(n) |> unique() == 3,
-  "expect exactly 24 members per committee-application" =
-    data |> count(cmte, app) |> pull(n) |> unique() == mem_n,
+  "every application within a committee should have the same member count as that committee's own mem_n" =
+    data |> count(cmte, app) |>
+      left_join(cmte_pool |> select(cmte, mem_n), by = "cmte") |>
+      summarise(ok = all(n == mem_n)) |> pull(ok),
   "expect exactly 3 non-missing initial reviewer scores per application" =
     data |> filter(!is.na(init_score)) |>
       count(cmte, app) |> pull(n) |> unique() == 3,
@@ -342,6 +364,10 @@ n_discussed_total <- data |> distinct(cmte, app) |> nrow()
 cat("=== per-committee pool size (drawn from beta on CIHR's stated [20,80] range) ===\n")
 print(summary(cmte_pool$pool_size))
 cat("SD across committees:", round(sd(cmte_pool$pool_size), 2), "\n\n")
+
+cat("=== per-committee member count (drawn from beta on real Fall 2025 roster range) ===\n")
+print(summary(cmte_pool$mem_n))
+cat("SD across committees:", round(sd(cmte_pool$mem_n), 2), "\n\n")
 
 cat("=== streamlining mechanism ===\n")
 cat("overall discussion rate:",
@@ -381,3 +407,12 @@ print(VarCorr(m_member_check))
 ##  7 Write output ----
 
 write_csv(data, here("data", "sim-deviate.csv"))
+
+# cmte_pool (pool_size/mem_n before streamlining) saved separately --
+# data/sim-deviate.csv only has discussed applications, so this is the
+# only place pool_size/mem_n survive. Consumed by
+# writing/ror-modeling-strategy.qmd's fig-cmte, so it stays consistent
+# with whatever data/sim-deviate.csv this same run produced, instead of
+# being hand-recreated there.
+dir.create(here("output"), showWarnings = FALSE, recursive = TRUE)
+saveRDS(cmte_pool, here("output", "cmte-pool.rds"))

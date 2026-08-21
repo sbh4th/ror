@@ -1341,3 +1341,239 @@ including its final `write_csv()` call -- appears exactly once in each
 format's real document body (not just in the html version's separate
 "View Source" modal from `code-tools`, which dumps the raw `.qmd` and
 is unrelated), correctly R-syntax-highlighted and foldable in html.
+
+# 2026-08-21
+
+## Expertise reference category switched from medium to high
+
+For simplicity, `exp`'s reference level is now `high` (was `med`) in
+both `ror-sim-deviate.R` and `ror-analysis-score-models.R`. Not just a
+relabeling -- `a0`/`a2`/`a3`/`a4` were re-derived so every category's
+*true* probability is unchanged, just re-expressed relative to a
+different baseline: `a0 = -0.5` (was `-0.8`), `a2 = -0.3` (med vs.
+high, was `+0.3` high vs. med), `a3 = -0.5` (low vs. high), `a4 = -0.8`
+(none vs. high). Verified algebraically (recomputing each category's
+implied logit from both parameterizations gives identical values) and
+confirmed downstream: `d1`'s factor level order updated to
+`c("high","med","low","none")`, `term_labels`/`truth` in the analysis
+script updated to match (`expmed`/`explow`/`expnone`, all "vs. High
+Expertise").
+
+Separately, revisited (again) whether higher expertise means *more* or
+*less* likely to deviate from consensus -- discussed two competing
+theories: expertise-as-anchoring (confident initial read, doesn't move
+much -- the original assumption) vs. expertise-as-standing-to-disagree
+(no expertise = no grounds to argue for a different number = defers to
+consensus by default). No way to adjudicate from first principles;
+Sam's own reviewing experience favours the second story, so `a2`-`a4`
+were flipped to make higher expertise mean *more* deviation, not less
+(`a2=0.3, a3=-0.2, a4=-0.5` before the reference-category
+re-derivation above folded these into the new baseline).
+
+## Reviewer assignment now correlated with self-rated expertise
+
+Previously `job` (reviewer vs. panelist) and `exp` were assigned
+independently -- unrealistic, since Scientific Officers assign the 3
+reviewers based on relevant expertise, not at random. Checked against
+real reviewer-assignment/expertise data (kept out of this log per
+standing practice for real committee data): P(assigned as reviewer |
+expertise) was heavily concentrated in high/medium and nearly zero for
+low/none. Rather than use those exact figures (one meeting, real
+cycle-to-cycle variation almost certainly exists), rounded to
+illustrative weights preserving the same pattern:
+`exp_reviewer_weight = c(high=40, med=30, low=5, none=1)`, used as
+`sample()` selection weights for a weighted-without-replacement draw
+of the 3 reviewers per application (replacing the old fixed-count
+permutation, which only worked when every application had exactly the
+same category counts). `exp` itself also switched from a fixed-count
+permutation to a weighted sample *with* replacement, since group size
+(`n()`) is no longer constant once `mem_n` varies (see below) --
+realized category counts now vary stochastically around the intended
+proportions per application-committee, rather than landing on them
+exactly, which is arguably more realistic anyway.
+
+## Committee member count (`mem_n`) now varies too, and is derived from `pool_size`
+
+Found CIHR's live Fall 2025 (202509PJT) Project Grant committee roster
+page (cihr-irsc.gc.ca/e/54732.html) and parsed it directly (Chairperson
+/ Scientific Officers / Reviewer-in-Training participants / Members
+are each separately listed per committee) -- 66 committees, "Members"
+count ranging 8-37 (mean 23.8, median 24, SD 6.5). Striking
+independent validation: `mem_n = 24`, the project's original
+placeholder guess, turns out to be almost exactly the real mean/median
+-- but just as wrong to treat as fixed as `pool_size` was before
+2026-08-14.
+
+Initially gave `mem_n` its own independent beta draw matching this
+real distribution (`mem_min=8, mem_max=37`, shape chosen to match mean
+23.8 / SD 6.5). Sam pushed back: `pool_size` and `mem_n` shouldn't be
+independent -- in practice CIHR sees real application volume by the
+Fall deadline, then recruits committee members to keep per-member
+workload manageable, so committee size is *caused by* application
+volume, not just correlated with it by coincidence. That's a better
+argument than "add a rejection-sampling guard against implausible
+combinations" (which was tried first, as a middle ground, and works
+but only trims the extreme tail rather than reflecting the actual
+causal story).
+
+**Settled on:** `mem_n` derived from `pool_size` via a workload target
+(`target_reviews_per_member`), with lognormal noise so it isn't a
+deterministic ratio: `mem_n = round(3 * pool_size /
+target_reviews_per_member * exp(rnorm(n, 0, mem_noise_sd)))`, redrawn
+(not clamped) if outside `[mem_min, mem_max]`. `target_reviews_per_member
+= 5.5` -- between Sam's general recollection ("5-6" applications
+reviewed per member per competition) and a specific real CIHR
+invitation email quoted verbatim ("approximately eight to ten
+applications per competition"), which turned out to be somewhat higher
+than what combining the independently-calibrated `pool_size` and real
+`mem_n` distributions alone implied (~5.4 median) -- real, unresolved
+tension between these two real data points, not fully reconciled, 5.5
+is a reasonable middle value given both.
+`mem_noise_sd` tuned from an initial 0.25 down to 0.15 after visual
+inspection (Sam: "looks a little more sensible to me") -- final
+correlation between `pool_size` and `mem_n` is r ~ 0.7-0.75.
+
+Added a diagnostic figure to `writing/ror-modeling-strategy.qmd`
+(`fig-cmte`: total applications, discussed applications, and member
+count per committee, sorted by member count) built from real
+aggregated `data`/`cmte_pool`, not illustrative numbers. `cmte_pool`
+(pool_size/mem_n before streamlining) is now saved to
+`output/cmte-pool.rds` by `ror-sim-deviate.R` and read directly by the
+qmd, rather than hand-recreating the generating code there -- avoids
+yet another hand-synced duplicate of parameters that would drift, the
+same failure class hit repeatedly this project (see 2026-08-19 aid/cid
+entries, `sim-data-aim1.csv` vs `sim-deviate.csv`, etc.).
+
+Empirical check: fraction of applications discussed per committee
+ranges 24.1%-41.0% across the 50 committees (median 37.8%) --
+clustered near 40% for most committees (consistent with the
+streamlining rule's 60th-percentile-rank structure), with a longer
+left tail for smaller pools where one discrete application makes a
+bigger percentage difference.
+
+## Model-specification equation added, and a three-format rendering saga
+
+Wrote out `m1_deviate`'s full model specification (likelihood, linear
+predictor, priors) in the McElreath/`u2-sibs`-style aligned-array
+format, for `writing/ror-modeling-strategy.qmd`'s "Model specification
+(Aim 1)" section. Caught two real errors in an initial draft before
+it went in: (1) reusing $d_{ijk}$ for the binary "did they deviate"
+indicator collides with the document's own established meaning of
+lowercase $d_{ijk}$ (the continuous score differential) -- switched to
+uppercase $D_{ijk}$ for the indicator; (2) a single `alpha_j ~
+Normal(bar_alpha, sigma_alpha)` prior line can't cover three separate
+grouping factors (`cmte`/`cid`/`aid`) -- following McElreath's own
+multi-cluster convention (chimpanzees model, section 13.3.1, shown by
+Sam), only *one* cluster type absorbs the population intercept
+`bar_alpha` into its own prior mean; the other two are mean-zero with
+their own independent SD. Picked `member` as the cluster carrying
+`bar_alpha` (closest analogue to McElreath's "actor" -- the
+repeated-measures unit), though the choice is mathematically arbitrary
+and any of the three would work.
+
+Getting this to render consistently across html/typst/docx took real
+work, and surfaced a durable finding about this document's toolchain
+(same underlying issue as the 2026-07-15 `vphantom` saga, now
+characterized precisely):
+
+- **html:** MathJax renders `\begin{array}{rclr}...\end{array}`
+  natively, no issue -- but at full size it visually bled into the
+  left-hand TOC once `toc-location: left` was set. Fixed by wrapping
+  the equation in `<div style="font-size: 0.8em;">`; verified via
+  direct DOM measurement (not a screenshot -- the browser tool's
+  screenshot mechanism had an unrelated rendering bug on this specific
+  MathJax content, returning blank images despite the DOM being
+  correctly populated) that the equation's bounding box now sits
+  entirely within the content column (`x: 301-937.5`) without
+  overlapping the TOC (`right: 273`).
+- **typst:** pandoc *does* auto-translate `array` to native Typst
+  math (not a straight failure), but the column spacing comes out
+  wrong -- a large, uneven gap after the first column instead of tight
+  alignment. Fixed with a hand-written Typst-native block (`{=typst}`
+  raw block, guarded by `::: {.content-visible when-format="typst"}`),
+  using the same `&`/`&&&` column-skipping idiom already established
+  in this doc's earlier `u2-sibs`-derived underbrace block, adapted
+  from probit (`qnorm`) to this project's actual logit link where
+  relevant elsewhere. Verified by compiling to PDF and rendering to
+  PNG directly (`fitz`/PyMuPDF) since no PDF-viewing tool was available
+  -- confirmed tight, correct alignment, matches the working isolated
+  test exactly once embedded in the real document.
+- **docx:** confirmed *precisely* what breaks, rather than guessing --
+  tested array with/without the description column, and `aligned`
+  instead of `array`; all three produce the exact same failure
+  (pandoc's docx/OMML converter cannot convert *any* multi-row
+  `&`/`\\`-aligned math construct, regardless of column count or
+  content -- it silently dumps the raw LaTeX source as literal text
+  instead). Only genuinely separate, non-aligned equations survive.
+  Given that, embedded a rendered PNG instead
+  (`writing/media/eq-m1-deviate.png`, generated by compiling the same
+  Typst source standalone with `#set page(width: auto, height: auto)`
+  and rasterizing at 300dpi) rather than degrading to a
+  no-alignment/no-description text fallback -- verified via the docx's
+  own XML (image byte-identical to the source PNG, correctly placed
+  immediately after the intro sentence, correctly proportioned at
+  5.83in x 2.20in). **Not yet fixed:** the older
+  $E[d_{ijk}]=\underbrace{P(\text{deviate})}\times\underbrace{E[\cdot]}$
+  equation in "Why a two-part model" has the same docx problem and
+  never got a format-specific fallback -- flagged, not fixed.
+
+In the course of this, also fixed two unrelated live bugs caught
+along the way: a `data` vs. `d` variable-name mismatch in `fig-cmte`
+(pasted from a scratch script using a different variable name, broke
+the whole render with an opaque "no applicable method for 'group_by'
+applied to an object of class 'function'" error, since unassigned
+`data` fell through to base R's `data()` function), and an orphaned
+`}` in `ror-analysis-score-models.R` (leftover from removing an `if
+(FIT_MODELS) {` wrapper around `m1_magnitude`, left the whole script
+unparseable via a clean `Rscript`/`source()`, though usable if run
+line-by-line interactively, which is presumably how it went unnoticed).
+
+## Magnitude model priors: tested an informed-threshold alternative, not adopting it
+
+Sam fit `m1_magnitude` (the ordinal `cumulative()` part) and found it
+slow. Considered following the threshold-prior approach from a
+Solomon Kurz blog post
+(solomonkurz.netlify.app/blog/2023-05-21-causal-inference-with-ordinal-regression/)
+-- individual `Normal` priors per threshold (via `coef = 1..9` within
+`class = Intercept`) instead of one flat/generic prior across all of
+them, rationale being that default/diffuse threshold priors are
+poorly identified by sparse extreme categories (our magnitude outcome
+is heavily concentrated near +/-0.1, sparse at +/-0.5), which is a
+plausible driver of slow, inefficient sampling.
+
+Adapted (not copied) the blog's method: their example uses a probit
+link and assumes *equal* category probability as a neutral default;
+ours uses `cumulative(link="logit")` and we have much better
+information than "assume uniform," so thresholds were centered via
+`qlogis(cumsum(p))` on the real simulated category proportions instead.
+
+**Tested empirically rather than just adopting it** -- fit `m1_magnitude`
+both ways (generic single prior vs. the 9 informed threshold priors),
+same data/formula/seed, then compared:
+
+- Divergences / max treedepth: 0/0 in both -- already clean.
+- Fixed effects (job/exp): essentially identical between the two.
+- Bulk ESS: meaningfully better with informed priors (minimum across
+  fixed effects 2267 -> 3645, ~61% improvement) -- the theoretical
+  rationale held.
+- Wall-clock time: generic 773.7s, informed 970.2s -- ~25% *slower*
+  with the informed priors, the opposite of the hoped-for result.
+  Better per-draw mixing efficiency didn't translate into less total
+  compute, apparently because the different posterior geometry costs
+  more per iteration. Single run each, so some of this could be
+  run-to-run noise, but it's certainly not the clear speed win the
+  theory predicted.
+- LOO: `elpd_diff = -1.2, se_diff = 1.1` (`loo_compare()`), all
+  Pareto-k < 0.7 for both -- statistically indistinguishable
+  predictive fit either way.
+
+**Decision: not adopting the informed threshold priors** -- they don't
+hurt (identical inference, reliable LOO, zero pathological sampling
+issues in either version), but they don't solve the actual problem
+(wall-clock speed) either, so there's no reason to add the complexity
+right now. Flagged `adapt_delta` (currently 0.95, conservative, with
+zero divergences observed at that setting in either model -- real
+headroom to lower it) as a more promising lever for speed specifically,
+since it directly controls average leapfrog steps per iteration rather
+than threshold identifiability, but not tested yet -- explicitly
+deferred, not pursued today.
