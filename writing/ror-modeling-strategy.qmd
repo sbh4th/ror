@@ -619,6 +619,19 @@ Aims 1-2's data-generating process for reviewer behavior. We haven't
 started designing it, and would welcome input on what the alternative
 schemes worth simulating actually are before building anything.
 
+Structurally, nothing in the current pipeline goes past `score` (the
+final, post-discussion score) -- there's no funding-decision layer at
+all yet (rank by final score, allocate against a budget, apply whatever
+equalization overlay CIHR actually uses). Aim 3 can't be simulated
+without adding one. This is also where the partial-randomization idea
+specifically earns its keep: informally, applications near the funding
+threshold can end up clustered close enough together that discussion-
+driven movement alone is plausibly enough to reorder who clears the
+line, which is exactly the kind of uncertainty a modified-lottery
+scheme is designed to acknowledge rather than paper over with strict
+rank order. Worth real data once it arrives from CIHR to confirm how
+tight that clustering actually is.
+
 # A note on simulation architecture
 
 We're deliberately keeping a separate, self-contained simulation script per
