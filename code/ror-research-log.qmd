@@ -1577,3 +1577,77 @@ headroom to lower it) as a more promising lever for speed specifically,
 since it directly controls average leapfrog steps per iteration rather
 than threshold identifiability, but not tested yet -- explicitly
 deferred, not pursued today.
+
+# 2026-08-25
+
+## Job-specific magnitude SD added to `ror-sim-deviate.R`: first treatment effect on the magnitude model
+
+Until now `job` (reviewer vs. panelist) only entered Part 1 of the
+two-part model (`p_dev`, via `a1`) -- panelists deviate more often,
+but conditional on deviating, magnitude was drawn from the same
+`dev_sd = 0.15` for everyone. Wanted to start experimenting with a
+treatment effect on magnitude too: given that panelists already
+deviate more often, do they also swing harder when they do?
+
+Working from real `m1_magnitude` marginal predictions (job showed
+essentially no separation at any category), the ask was for a
+plausible, non-extreme, detectable difference -- illustrated
+hypothetically as "reviewer ~15%, panelist ~18%" probability of
+landing in the 0.2 category specifically, conditional on deviating.
+
+**That specific target turns out not to be reachable by scaling SD
+alone.** The single-category probability of landing exactly at 0.2
+is *not* monotonic in `sd` -- for a truncated-normal-then-rounded
+magnitude on `[-0.5, 0.5]`, it peaks around 15.3% near `sd=0.20` and
+then *declines* as `sd` grows further, because additional spread
+keeps pushing mass further out to 0.3/0.4/0.5 instead of piling more
+onto 0.2. No value of a job-specific `dev_sd` can hit "18% at exactly
+the 0.2 bin" while reviewers sit at 15%.
+
+**Resolution: reframed the target as tail mass instead of a single
+category.** Introduced `dev_sd_reviewer = 0.15` (unchanged) and
+`dev_sd_panelist = 0.30`, applied via a per-row `dev_sd_i` vector in
+the existing `rtruncnorm()` call (both the main draw and the
+redraw-if-lands-on-zero loop). `P(|deviation| >= 0.3)` is the natural
+summary statistic here since (unlike the single 0.2 category) it
+increases monotonically with `sd`.
+
+Realized in the regenerated `data/sim-deviate.csv`, conditional on
+`deviated == 1`:
+
+| \|deviation\| | reviewer | panelist |
+|---|---|---|
+| 0.1 | 50.1% | 32.0% |
+| 0.2 | 30.7% | 27.4% |
+| 0.3 | 12.5% | 21.9% |
+| 0.4 | 5.7%  | 14.4% |
+| 0.5 | 1.0%  | 4.4%  |
+| **P(\|d\|>=0.3)** | **19.2%** | **40.6%** |
+| **mean(\|d\|)**   | **0.177** | **0.232** |
+
+Note this realized contrast came out larger than a naive hand
+calculation predicted, because that calculation used `mean = 0` and
+missed that the DGP actually centers each draw on `dev_bias +
+u0m_bias` (the existing member-level leniency/harshness term, sd =
+0.1) -- between-member heterogeneity in the mean adds real extra
+population-level spread beyond `dev_sd` alone. Caught by Monte Carlo-
+checking the exact hierarchical structure against the simulated
+output before reporting the numbers as final.
+
+Not yet done: refitting `m1_magnitude` on the regenerated data to
+confirm the two-part model actually recovers this job effect on
+magnitude, rather than assuming it will.
+
+## Aside: `MASS::select()` masking `dplyr::select()` broke the sim script mid-session
+
+Hit `Error in select(cmte_pool, -mem_n_center) : unused argument
+(-mem_n_center)` when re-running `ror-sim-deviate.R` in a session
+that had `MASS` loaded earlier (for `ordinal`/`polr` work). `MASS`
+exports a real, non-generic `select()` (for `MASS::select.polr`),
+which -- unlike a normal S3 method -- fully shadows `dplyr::select`
+if loaded afterward, rather than dispatching through it. Script itself
+was fine (confirmed clean in a fresh `Rscript` session); fixed by
+detaching `MASS`. Worth remembering next time any sim script throws
+an "unused argument" error on a `select()` call that looks
+syntactically correct -- check `find("select")` before assuming the
+script broke.

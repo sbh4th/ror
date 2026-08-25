@@ -92,7 +92,15 @@ a4       = -0.8   # no expertise (vs. high)
 # +/- 0.5 (CIHR's stated bound on final vs. consensus score)
 dev_bias = 0       # population-average bias: still none (see u0m_bias_sd
 # below for between-member variation around this)
-dev_sd   =  0.15
+# magnitude SD differs by job: panelists swing harder conditional on
+# deviating (heavier tail toward +/-0.5), not just more often (that's
+# the deviation-probability model above, a0-a4) -- 2026-08-25, tuned
+# empirically (see research log) so P(|deviation|>=0.3) is ~3x higher
+# for panelists than reviewers, since the single 0.2 category itself
+# saturates well under 16% for any sd (mass beyond that point keeps
+# shifting further out to 0.3-0.5 instead of piling up at 0.2)
+dev_sd_reviewer = 0.15
+dev_sd_panelist = 0.30
 dev_min  = -0.5
 dev_max  =  0.5
 
@@ -302,10 +310,11 @@ data <- data |>
     p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_med) +
       (a3 * exp_low) + (a4 * exp_none)),
     deviated = rbinom(n(), 1, p_dev),
+    dev_sd_i = if_else(panelist == 1, dev_sd_panelist, dev_sd_reviewer),
     deviation = if_else(
       deviated == 1,
       round_tenth(rtruncnorm(n(), a = dev_min, b = dev_max,
-        mean = dev_bias + u0m_bias, sd = dev_sd)),
+        mean = dev_bias + u0m_bias, sd = dev_sd_i)),
       0)
   )
 
@@ -313,7 +322,7 @@ zero_idx <- which(data$deviated == 1 & data$deviation == 0)
 while (length(zero_idx) > 0) {
   data$deviation[zero_idx] <- round_tenth(
     rtruncnorm(length(zero_idx), a = dev_min, b = dev_max,
-      mean = dev_bias + data$u0m_bias[zero_idx], sd = dev_sd))
+      mean = dev_bias + data$u0m_bias[zero_idx], sd = data$dev_sd_i[zero_idx]))
   zero_idx <- which(data$deviated == 1 & data$deviation == 0)
 }
 

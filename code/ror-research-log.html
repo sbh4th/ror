@@ -2408,8 +2408,13 @@ window.Quarto = {
   <li><a href="#model-specification-equation-added-and-a-three-format-rendering-saga" id="toc-model-specification-equation-added-and-a-three-format-rendering-saga" class="nav-link" data-scroll-target="#model-specification-equation-added-and-a-three-format-rendering-saga">Model-specification equation added, and a three-format rendering saga</a></li>
   <li><a href="#magnitude-model-priors-tested-an-informed-threshold-alternative-not-adopting-it" id="toc-magnitude-model-priors-tested-an-informed-threshold-alternative-not-adopting-it" class="nav-link" data-scroll-target="#magnitude-model-priors-tested-an-informed-threshold-alternative-not-adopting-it">Magnitude model priors: tested an informed-threshold alternative, not adopting it</a></li>
   </ul></li>
+  <li><a href="#section-8" id="toc-section-8" class="nav-link" data-scroll-target="#section-8">2026-08-25</a>
+  <ul class="collapse">
+  <li><a href="#job-specific-magnitude-sd-added-to-ror-sim-deviate.r-first-treatment-effect-on-the-magnitude-model" id="toc-job-specific-magnitude-sd-added-to-ror-sim-deviate.r-first-treatment-effect-on-the-magnitude-model" class="nav-link" data-scroll-target="#job-specific-magnitude-sd-added-to-ror-sim-deviate.r-first-treatment-effect-on-the-magnitude-model">Job-specific magnitude SD added to <code>ror-sim-deviate.R</code>: first treatment effect on the magnitude model</a></li>
+  <li><a href="#aside-massselect-masking-dplyrselect-broke-the-sim-script-mid-session" id="toc-aside-massselect-masking-dplyrselect-broke-the-sim-script-mid-session" class="nav-link" data-scroll-target="#aside-massselect-masking-dplyrselect-broke-the-sim-script-mid-session">Aside: <code>MASS::select()</code> masking <code>dplyr::select()</code> broke the sim script mid-session</a></li>
+  </ul></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="ror-research-log.pdf"><i class="bi bi-file-pdf"></i>Typst</a></li></ul></div></nav>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="../ror-research-log.pdf"><i class="bi bi-file-pdf"></i>Typst</a></li></ul></div></nav>
 </div>
 <main class="content" id="quarto-document-content">
 
@@ -2860,6 +2865,69 @@ window.Quarto = {
 <li>LOO: <code>elpd_diff = -1.2, se_diff = 1.1</code> (<code>loo_compare()</code>), all Pareto-k &lt; 0.7 for both – statistically indistinguishable predictive fit either way.</li>
 </ul>
 <p><strong>Decision: not adopting the informed threshold priors</strong> – they don’t hurt (identical inference, reliable LOO, zero pathological sampling issues in either version), but they don’t solve the actual problem (wall-clock speed) either, so there’s no reason to add the complexity right now. Flagged <code>adapt_delta</code> (currently 0.95, conservative, with zero divergences observed at that setting in either model – real headroom to lower it) as a more promising lever for speed specifically, since it directly controls average leapfrog steps per iteration rather than threshold identifiability, but not tested yet – explicitly deferred, not pursued today.</p>
+</section>
+</section>
+<section id="section-8" class="level1">
+<h1>2026-08-25</h1>
+<section id="job-specific-magnitude-sd-added-to-ror-sim-deviate.r-first-treatment-effect-on-the-magnitude-model" class="level2">
+<h2 class="anchored" data-anchor-id="job-specific-magnitude-sd-added-to-ror-sim-deviate.r-first-treatment-effect-on-the-magnitude-model">Job-specific magnitude SD added to <code>ror-sim-deviate.R</code>: first treatment effect on the magnitude model</h2>
+<p>Until now <code>job</code> (reviewer vs. panelist) only entered Part 1 of the two-part model (<code>p_dev</code>, via <code>a1</code>) – panelists deviate more often, but conditional on deviating, magnitude was drawn from the same <code>dev_sd = 0.15</code> for everyone. Wanted to start experimenting with a treatment effect on magnitude too: given that panelists already deviate more often, do they also swing harder when they do?</p>
+<p>Working from real <code>m1_magnitude</code> marginal predictions (job showed essentially no separation at any category), the ask was for a plausible, non-extreme, detectable difference – illustrated hypothetically as “reviewer ~15%, panelist ~18%” probability of landing in the 0.2 category specifically, conditional on deviating.</p>
+<p><strong>That specific target turns out not to be reachable by scaling SD alone.</strong> The single-category probability of landing exactly at 0.2 is <em>not</em> monotonic in <code>sd</code> – for a truncated-normal-then-rounded magnitude on <code>[-0.5, 0.5]</code>, it peaks around 15.3% near <code>sd=0.20</code> and then <em>declines</em> as <code>sd</code> grows further, because additional spread keeps pushing mass further out to 0.3/0.4/0.5 instead of piling more onto 0.2. No value of a job-specific <code>dev_sd</code> can hit “18% at exactly the 0.2 bin” while reviewers sit at 15%.</p>
+<p><strong>Resolution: reframed the target as tail mass instead of a single category.</strong> Introduced <code>dev_sd_reviewer = 0.15</code> (unchanged) and <code>dev_sd_panelist = 0.30</code>, applied via a per-row <code>dev_sd_i</code> vector in the existing <code>rtruncnorm()</code> call (both the main draw and the redraw-if-lands-on-zero loop). <code>P(|deviation| &gt;= 0.3)</code> is the natural summary statistic here since (unlike the single 0.2 category) it increases monotonically with <code>sd</code>.</p>
+<p>Realized in the regenerated <code>data/sim-deviate.csv</code>, conditional on <code>deviated == 1</code>:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>|deviation|</th>
+<th>reviewer</th>
+<th>panelist</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0.1</td>
+<td>50.1%</td>
+<td>32.0%</td>
+</tr>
+<tr class="even">
+<td>0.2</td>
+<td>30.7%</td>
+<td>27.4%</td>
+</tr>
+<tr class="odd">
+<td>0.3</td>
+<td>12.5%</td>
+<td>21.9%</td>
+</tr>
+<tr class="even">
+<td>0.4</td>
+<td>5.7%</td>
+<td>14.4%</td>
+</tr>
+<tr class="odd">
+<td>0.5</td>
+<td>1.0%</td>
+<td>4.4%</td>
+</tr>
+<tr class="even">
+<td><strong>P(|d|&gt;=0.3)</strong></td>
+<td><strong>19.2%</strong></td>
+<td><strong>40.6%</strong></td>
+</tr>
+<tr class="odd">
+<td><strong>mean(|d|)</strong></td>
+<td><strong>0.177</strong></td>
+<td><strong>0.232</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Note this realized contrast came out larger than a naive hand calculation predicted, because that calculation used <code>mean = 0</code> and missed that the DGP actually centers each draw on <code>dev_bias + u0m_bias</code> (the existing member-level leniency/harshness term, sd = 0.1) – between-member heterogeneity in the mean adds real extra population-level spread beyond <code>dev_sd</code> alone. Caught by Monte Carlo- checking the exact hierarchical structure against the simulated output before reporting the numbers as final.</p>
+<p>Not yet done: refitting <code>m1_magnitude</code> on the regenerated data to confirm the two-part model actually recovers this job effect on magnitude, rather than assuming it will.</p>
+</section>
+<section id="aside-massselect-masking-dplyrselect-broke-the-sim-script-mid-session" class="level2">
+<h2 class="anchored" data-anchor-id="aside-massselect-masking-dplyrselect-broke-the-sim-script-mid-session">Aside: <code>MASS::select()</code> masking <code>dplyr::select()</code> broke the sim script mid-session</h2>
+<p>Hit <code>Error in select(cmte_pool, -mem_n_center) : unused argument (-mem_n_center)</code> when re-running <code>ror-sim-deviate.R</code> in a session that had <code>MASS</code> loaded earlier (for <code>ordinal</code>/<code>polr</code> work). <code>MASS</code> exports a real, non-generic <code>select()</code> (for <code>MASS::select.polr</code>), which – unlike a normal S3 method – fully shadows <code>dplyr::select</code> if loaded afterward, rather than dispatching through it. Script itself was fine (confirmed clean in a fresh <code>Rscript</code> session); fixed by detaching <code>MASS</code>. Worth remembering next time any sim script throws an “unused argument” error on a <code>select()</code> call that looks syntactically correct – check <code>find(&quot;select&quot;)</code> before assuming the script broke.</p>
 </section>
 </section>
 
