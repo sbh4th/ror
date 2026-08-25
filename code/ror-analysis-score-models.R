@@ -291,13 +291,15 @@ m1_magnitude <-
     iter = 2000, warmup = 1000, chains = 4, cores = 4,
     sample_prior = "yes",
     seed = 8253,
-    control = list(adapt_delta = 0.95),
+    control = list(adapt_delta = 0.80),
     file = here("code/fits/ror-magnitude-m1"))
   
   
-  avg_predictions(m1_deviate, variables = "exp", ndraws = 200)
+avg_predictions(m1_magnitude, variables = "exp",
+  re_formula = NULL, ndraws = 200)
 
-  avg_predictions(m1_deviate, variables = "job", ndraws = 200)
+avg_predictions(m1_magnitude, variables = "job", 
+  re_formula = NULL, ndraws = 200)
 
 ## 4 TODO before fitting for real ----
 # - Confirm cmdstan can actually compile/run in CIHR's execution
