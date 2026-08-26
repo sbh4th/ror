@@ -1,42 +1,27 @@
-#  program:  ror-analysis-score-models.R
-#  task:     set up a two-part Bayesian model for how
-#            panel members' final scores deviate from the pre-discussion
-#            consensus score
+#  program:  ror-analysis-deviate-model.R
+#  task:     Part 1 of the two-part deviation model -- did this panel
+#            member deviate from the pre-discussion consensus score at
+#            all? (the bernoulli "hurdle" part). See
+#            ror-analysis-magnitude-model.R for Part 2 (signed magnitude,
+#            among deviators only) -- these two scripts were split from
+#            a single ror-analysis-score-models.R on 2026-08-25 purely
+#            for length; nothing about the models changed.
 #  input:    data/sim-deviate.csv
-#  output:   fits/ror-deviate-m1, fits/ror-magnitude-m1
+#  output:   code/fits/ror-deviate-m1; output/m1-deviate-table.rds,
+#            output/m1-deviate-me.rds
 #  project:  RoR
 #  author:   sam harper \ 2026-08-21
 #
 #  note:     brms has no native family for "point mass at an interior
 #            value (0) + continuous elsewhere" the way hurdle_poisson()
 #            handles zero counts, since the deviation outcome here is
-#            signed and bounded (+/- 0.5), not non-negative. So this
-#            splits the u2-sibs hu/main pattern into two linked brm()
-#            calls instead of one bf(y ~ ..., hu ~ ...) call:
-#              m1: bernoulli() -- did this member deviate from consensus
-#                  at all? (the "hu" part, just fit as its own model)
-#              m2: cumulative() ordinal model on the signed deviation,
-#                  among deviators only (the "magnitude" part). CIHR
-#                  scores are only entered to one decimal place, so a
-#                  deviator's score can only depart from consensus by
-#                  one of 10 discrete steps (+/-0.1 ... +/-0.5) -- this
-#                  is genuinely ordinal/discrete data, not a continuous
-#                  quantity with occasional extreme values, so a
-#                  cumulative() logit model (flexible, non-equidistant
-#                  thresholds) is a better match than treating it as
-#                  continuous (e.g. student()/gaussian()): it respects
-#                  the +/-0.5 bound without truncation hacks, and it
-#                  doesn't assume the 10 steps are equally likely.
-#            Combine downstream the way u2s-analysis-priors.R combines
-#            hu-part and main-part draws by hand:
-#              E[deviation] = P(deviate) * E[deviation | deviate]
-#            where E[deviation | deviate] from the ordinal model is the
-#            probability-weighted sum over the 10 category values, not
-#            a linear prediction -- see TODO block below.
-#            See PROJECT.md for the fuller rationale.
-#
-#  status:   DRAFT. FIT_MODELS is FALSE below -- this script defines the
-#            data prep and model calls but does not run brm() yet).
+#            signed and bounded (+/- 0.5), not non-negative. So the
+#            u2-sibs hu/main pattern is split into two linked brm()
+#            calls across two scripts instead of one bf(y ~ ..., hu ~
+#            ...) call -- this script is m1: bernoulli() on whether a
+#            member deviated at all. See PROJECT.md for the fuller
+#            rationale, and ror-analysis-magnitude-model.R for how
+#            Part 1 and Part 2 get combined into E[deviation].
 
 ##  0 Load needed packages ----
 library(here)
@@ -69,13 +54,9 @@ d1 <- d |>
     deviated = factor(deviated, levels = c(0, 1)),
   )
 
-# the 10 discrete steps a deviator's score can take relative to consensus
-# (+/-0.1 ... +/-0.5, in tenths -- CIHR scores have one decimal place).
-dev_levels <- sprintf("%.1f", setdiff((-5:5) / 10, 0))
-
 ## 2 Priors for Model 1
 
-check_prior <- function(n = 4000, 
+check_prior <- function(n = 4000,
   sd_intercept = 1.5, sd_b = 0.5) {
   tibble(
     Intercept = rnorm(n, 0, sd_intercept),
@@ -115,13 +96,13 @@ pr_b <- map_dfr(scenarios, ~check_prior(
 
 m1_dev_priors <- pr_int / pr_b
 
-ggsave(here("output", "ror-priors-m1-deviate.png"), 
+ggsave(here("output", "ror-priors-m1-deviate.png"),
        plot = m1_dev_priors)
 
-## Overall looks like SD of 1.0 for the intercept and 
+## Overall looks like SD of 1.0 for the intercept and
 ## 0.5 for the treatment effect seem reasonable
 
-## 2 Model 1: did this member deviate from consensus at all? ----
+## 3 Model 1: did this member deviate from consensus at all? ----
 
 #delete model if it exists
 if (file.exists(here("code/fits/ror-deviate-m1.rds"))) {
@@ -139,7 +120,7 @@ if (file.exists(here("code/fits/ror-deviate-m1.rds"))) {
         seed = 4102,
         control = list(adapt_delta = 0.95),
         file = here("code/fits/ror-deviate-m1"))
-  
+
 ## Model 1 table
 
 # named lookup: names = stripped term, values = display label.
@@ -204,7 +185,7 @@ tab |>
   style_tt(i = 0, align = "l") |>
   style_tt(j = 1, align = "l")
 
-## 3 Marginal effects
+## 4 Marginal effects ----
 
 # Predicted P(deviate) -- overall, and by expertise/role -- as
 # population-average predictions (marginaleffects' default re_formula
@@ -214,7 +195,7 @@ tab |>
 
 exp_labels <- c(high = "High",
   med = "Medium", low = "Low", none = "Not enough")
-job_labels <- c(reviewer = "Reviewer", 
+job_labels <- c(reviewer = "Reviewer",
   panelist = "Panelist")
 
 p_overall <- avg_predictions(
@@ -222,12 +203,12 @@ p_overall <- avg_predictions(
   as.data.frame() |>
   mutate(group = "Overall", term = "All members")
 
-p_exp <- avg_predictions(m1_deviate, 
+p_exp <- avg_predictions(m1_deviate,
   variables = "exp", ndraws = 200, re_formula = NULL) |>
   as.data.frame() |>
   mutate(group = "By self-rated expertise", term = exp_labels[exp])
 
-p_job <- avg_predictions(m1_deviate, 
+p_job <- avg_predictions(m1_deviate,
   variables = "job", ndraws = 200, re_formula = NULL) |>
   as.data.frame() |>
   mutate(group = "By role", term = job_labels[job])
@@ -258,7 +239,7 @@ header_rows  <- group_starts + seq_along(group_starts) - 1
 
 pred_tab |>
   select(term, estimate, conf.low, conf.high) |>
-  setNames(c("Parameter", "P(deviate)", 
+  setNames(c("Parameter", "P(deviate)",
     "95% CI Lower", "95% CI Upper")) |>
   tt(caption = "Predicted probability of deviation from consensus") |>
   group_tt(i = setNames(as.list(group_starts), unique(pred_tab$group))) |>
@@ -266,103 +247,10 @@ pred_tab |>
   style_tt(i = 0, align = "l") |>
   style_tt(j = 1, align = "l")
 
-
-## 4 Model 2: signed magnitude of deviation, among deviators ----
-## ordinal cumulative() model over the 10 discrete +/-0.1 ... +/-0.5
-## steps. Thresholds default to "flexible" (not "equidistant"), 
-## so the model does not assume the 10 steps are equally likely
-
-#delete model if it exists
-if (file.exists(here("code/fits/ror-magnitude-m1.rds"))) {
-  file.remove(here("code/fits/ror-magnitude-m1.rds"))}
-
-d1_dev <- d1 |>
-  filter(deviated == 1) |>
-  mutate(deviation = factor(sprintf("%.1f", deviation),
-    levels = dev_levels, ordered = TRUE))
-
-m1_magnitude <-
-  brm(data = d1_dev,
-    family = cumulative(link = "logit", threshold = "flexible"),
-    deviation ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | aid),
-    prior = c(prior(normal(0, 1.5), class = Intercept),  # thresholds
-              prior(normal(0, 0.5), class = b),           # betas
-              prior(exponential(1), class = sd)),         # group SDs
-    iter = 2000, warmup = 1000, chains = 4, cores = 4,
-    sample_prior = "yes",
-    seed = 8253,
-    control = list(adapt_delta = 0.80),
-    file = here("code/fits/ror-magnitude-m1"))
-  
-  
-# exp has no simulated dispersion effect, so the location-only
-# m1_magnitude is the right fit for it -- job's dispersion effect is
-# handled by m2_magnitude below instead.
-p_magnitude_exp <- avg_predictions(m1_magnitude, variables = "exp",
-  re_formula = NULL, ndraws = 200) |>
-  as.data.frame()
-
-# rebuild as a bare tibble (see note above pred_tab's saveRDS) so the
-# ~140MB marginaleffects attribute doesn't get serialized along with it
-p_magnitude_exp <- tibble(group = p_magnitude_exp$group,
-  exp = p_magnitude_exp$exp, estimate = p_magnitude_exp$estimate,
-  conf.low = p_magnitude_exp$conf.low,
-  conf.high = p_magnitude_exp$conf.high)
-
-saveRDS(p_magnitude_exp, here("output", "m1-magnitude-exp-me.rds"))
-
-m2_magnitude <- brm(
-  bf(deviation ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | aid),
-     disc ~ 0 + job),
-  data = d1_dev,
-  family = cumulative(link = "logit", threshold = "flexible"),
-  prior = c(prior(normal(0, 1.5), class = Intercept),
-            prior(normal(0, 0.5), class = b),
-            prior(exponential(1), class = sd),
-            prior(normal(0, 1), class = b, dpar = disc)),
-  iter = 2000, warmup = 1000, chains = 4, cores = 4,
-  seed = 8253,
-  control = list(adapt_delta = 0.95),
-  file = here("code/fits/ror-magnitude-m2"))
-
-# job's dispersion effect on magnitude, from the disc-aware model --
-# same bare-tibble rebuild as above to avoid the attribute bloat
-p_magnitude_job <- avg_predictions(m2_magnitude, variables = "job",
-  re_formula = NULL, ndraws = 200) |>
-  as.data.frame()
-
-p_magnitude_job <- tibble(group = p_magnitude_job$group,
-  job = p_magnitude_job$job, estimate = p_magnitude_job$estimate,
-  conf.low = p_magnitude_job$conf.low,
-  conf.high = p_magnitude_job$conf.high)
-
-saveRDS(p_magnitude_job, here("output", "m2-magnitude-job-me.rds"))
-
-## 4 TODO before fitting for real ----
-# - Confirm cmdstan can actually compile/run in CIHR's execution
-#   environment (flagged as the biggest practical risk -- see PROJECT.md)
-# - Prior-predictive check both models on simulated data before ever
-#   setting FIT_MODELS <- TRUE (mirror u2s-analysis-priors.R)
-# - Decide re_formula = NULL vs NA for the headline marginaleffects
-#   estimate (NULL = conditional on these committees, NA = population-
-#   average across committees) -- see PROJECT.md discussion
-# - m1_magnitude is now ordinal (cumulative()), so E[deviation | deviate]
-#   is NOT a linear prediction -- it's the probability-weighted sum over
-#   the 10 category values (posterior_epred(..., dpar or category probs)
-#   x dev_levels, summed per draw). marginaleffects/tidybayes can do this
-#   but it needs an explicit custom contrast, not the default continuous
-#   marginal-effect output.
-# - Write the combination step: E[deviation] = P(deviate) * E[deviation |
-#   deviate], propagating full posterior uncertainty from both fits
-#   (draws from m1_deviate and m1_magnitude, joined by posterior
-#   iteration, not point estimates)
-# - Confirm with CIHR that real data actually lands on the same +/-0.1
-#   ... +/-0.5 grid (dev_levels above) -- this is currently an assumption
-#   carried over from the simulator's parameters, not confirmed with the
-#   Funding Analytics Team
-# - Once real fields are confirmed with CIHR (see writing/sim-data.qmd,
-#   "Questions"), add applicant gender/career-stage to both formulas for
-#   Aim 2, and re-simulate data/sim-deviation-data.csv accordingly
-# - job/exp reference levels above (reviewer, med) are arbitrary
+## 5 TODO ----
+# - job/exp reference levels above (reviewer, high) are arbitrary
 #   placeholders -- revisit once we know which contrasts we actually
 #   want to report
+# - Once real fields are confirmed with CIHR (see writing/sim-data.qmd,
+#   "Questions"), add applicant gender/career-stage to the formula for
+#   Aim 2, and re-simulate accordingly

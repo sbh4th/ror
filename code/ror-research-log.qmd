@@ -1746,3 +1746,132 @@ like a small table silently balloons the file unless you rebuild a
 fresh tibble from the raw column vectors first (which drops
 unrecognized attributes). Verified both save at ~1KB, not ~140MB, and
 read back correctly.
+
+# 2026-08-26
+
+## `ror-analysis-score-models.R` split into a deviate script and a magnitude script
+
+The combined script was getting long (priors, `m1_deviate`, its table
+and marginal effects, then both magnitude models and theirs, all in
+one file). Split along the same Part 1 / Part 2 line the modeling
+strategy doc already uses:
+
+- `code/ror-analysis-deviate-model.R` -- priors, `m1_deviate`
+  (bernoulli), its table, its marginal effects.
+- `code/ror-analysis-magnitude-model.R` -- the magnitude models and
+  their marginal effects.
+
+Package-load/data-read boilerplate is duplicated across both rather
+than shared, matching this project's existing convention of
+self-contained per-piece scripts (see "A note on simulation
+architecture"). Output paths (`output/m1-deviate-*.rds`,
+`output/m1-magnitude-exp-me.rds`, `output/m2-magnitude-job-me.rds`,
+`code/fits/*`) are unchanged. Verified both new files parse cleanly
+via `parse()` rather than actually running them -- the "delete cached
+fit" line at the top of each model section forces a full multi-minute
+refit on every run, which wasn't worth triggering just to check a
+mechanical split.
+
+**Two real, pre-existing render-breaking bugs surfaced** while
+updating `writing/ror-modeling-strategy.qmd`'s references to the old
+filename (unrelated to the split itself, just uncovered by
+re-rendering):
+
+1. A duplicate chunk label (`tbl-m1-deviate` reused for both the Part
+   1 table and the Part 2 plot) -- Quarto errors on this rather than
+   silently overwriting. Renamed the Part 2 one to
+   `fig-m2-magnitude-job` (it's a plot, not a table -- looked like a
+   copy-paste leftover).
+2. The Part 2 plot chunk called `avg_predictions(m2_magnitude, ...)`
+   live, but `m2_magnitude` only ever exists inside an `eval: false`
+   display chunk -- never actually in the render session. Fixed to
+   read the already-saved `output/m2-magnitude-job-me.rds` instead,
+   matching the pattern used everywhere else in this doc.
+
+Both fixed; html and docx render clean end-to-end.
+
+## Flagged, not fixed: `ror-analysis-magnitude-model.R` has a duplicate model block and a tibble-recycling bug
+
+While reviewing the script for the split above, found it in a
+mid-refactor state (Sam's own direct edit, not touched by me): a
+duplicate `m1_magnitude`-fitting block (the new `disc ~ 0 + job`
+model at the top, an old location-only block still below it, both
+targeting `code/fits/ror-magnitude-m1.rds` -- this inverts the
+established naming from 2026-08-25 above, where the disc-aware fit
+was `m2_magnitude` and `m1_magnitude` was location-only), and a real
+bug in the `d_magnitude_job` construction: it discards the
+just-computed `avg_slopes()` result and pulls `estimate`/`conf.low`/
+`conf.high` from `p_magnitude_job` (the *predictions* object, 20
+rows) while keeping `group` from the slopes object (10 rows) --
+confirmed directly that `tibble()` errors on this length mismatch
+(`Tibble columns must have compatible sizes`), so a clean run would
+halt right there and never reach `saveRDS()`.
+
+The currently-saved `output/m2-magnitude-job-me.rds` (which the two
+figures already in the modeling-strategy doc read from) looks correct
+-- genuine `avg_slopes()`-shaped contrasts, sensible signs -- so it
+must be left over from an earlier working version of the script;
+re-running the script as it stands now would not reproduce it. Sam
+asked to leave the script alone for now and just do the doc write-up;
+this is flagged here so it isn't mistaken for current/working when
+someone next opens that file.
+
+## Added the magnitude model's equation (html/typst) and a justification for ordinal over categorical
+
+Added a "Model specification: magnitude, given a deviation" section
+to `writing/ror-modeling-strategy.qmd`, right after Part 1's equation
+and prior plot, in the same style (html `array` block, native typst
+raw block, no docx variant since that wasn't asked for -- docx will
+just skip the section rather than error).
+
+One real difference from Part 1's equation, not just a relabeling: a
+cumulative ordinal model's flexible thresholds already anchor
+location, so none of the three random intercepts (`cmte`/`cid`/`aid`)
+needs to absorb a population mean the way `alpha_mem` did in Part 1 --
+all three are mean-zero here. The other addition is the `disc ~ 0 +
+job` role-specific discrimination term from 2026-08-25 above, written
+as `log(kappa_ijk) = delta^disc_Reviewer * Reviewer + delta^disc_Panelist
+* Panelist` (both levels get their own coefficient directly, matching
+`0 + job`'s no-intercept coding).
+
+Also added prose justifying `cumulative()` over an unordered
+categorical/multinomial model for the magnitude outcome, prompted by
+Sam asking directly: is "order" here just an artifact of how we
+labeled things, or real? Four points, in order of how much they
+actually matter:
+
+1. The 10 levels are the literal numeric ordering of `final_score -
+   consensus`, not arbitrary labels -- categorical throws that away.
+2. Matches the true mechanism: a continuous truncated-normal draw
+   rounded to one decimal place, i.e. a discretized continuum, which
+   is the standard case for an ordinal (not categorical) model.
+3. Parameter efficiency: categorical needs a full separate coefficient
+   set per non-reference category (~9x the parameters), most poorly
+   identified given how sparse the tail categories are; ordinal shares
+   one location (and now one dispersion) parameter across all 10 via
+   the threshold structure.
+4. The actual hypotheses ("panelists deviate larger on average,"
+   "panelists show more spread") are inherently location/dispersion
+   statements, which only have a natural expression on an ordered
+   scale -- categorical has no such notion at all.
+
+Flagged one honest caveat: treating the *full signed* scale as one
+ordered dimension (rather than direction as a separate unordered
+bernoulli, magnitude as ordinal `|d|` -- the three-part-hurdle
+alternative discussed on 2026-08-24) is an assumption, not something
+forced by the data. Chose it because it matches how these scores
+actually arise (one continuous departure from consensus, not "decide
+direction, then decide how far"), not because it's the only
+defensible option.
+
+Caught and fixed one small issue along the way: an inline `$|{\rm
+magnitude}|$` didn't convert cleanly to typst (`\rm` isn't supported;
+pandoc fell back to raw TeX with a warning) -- switched to
+`\text{magnitude}`, matching how the rest of the doc writes text
+inside math. Verified the fix by compiling the generated `.typ`
+directly against the repo root (`typst compile --root .`), which
+bypasses the still-unresolved, pre-existing sandbox restriction on
+`output/ror-priors-m1-deviate.png` escaping `writing/`'s directory
+(flagged 2026-08-25/26, not yet fixed) -- confirms the document
+content itself compiles clean; the image-path issue is a separate,
+already-flagged problem.

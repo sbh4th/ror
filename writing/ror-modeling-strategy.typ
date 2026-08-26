@@ -293,7 +293,7 @@
       affiliation: [],
       email: [] ),
     ),
-  date: [2026-08-21],
+  date: [2026-08-26],
   font: ("C059",),
   fontsize: 11pt,
   sectionnumbering: "1.1.a",
@@ -372,7 +372,7 @@ upright("given deviation")) $
 
 = Model specification (Aim 1)
 <model-specification-aim-1>
-We adopt a Bayesian modeling approach.
+We adopt a Bayesian modeling approach and model the binomial outcome of whether or not a member deviated as a function of their engagement with the application (reviewer vs.~panelist) and their self-declared expertise to review (high, medium, low, none). In our specification below $D_(i j k)$ is 1 for those who deviated, and we include random effects for committees ($gamma_(c m t e [k])$), members ($alpha_(m e m [i])$), and applications ($beta_(a p p [j])$). For the fixed effects $delta$ is the effect of being a panelist vs.~reviewer, and $zeta$ captures the suite of effects for the expertise indicators ($bold("Exp")_(i j)$)
 
 $ D_"ijk" & tilde upright("Binomial")(1, p_"ijk") &&& upright("[likelihood]") \
   upright("logit")(p_"ijk") & = alpha_"mem"_i + gamma_"cmte"_k + beta_"app"_j + delta upright("Panelist")_"ijk" + zeta bold(upright("Exp"))_"ij" &&& upright("[linear model for log odds]") \
@@ -382,6 +382,40 @@ $ D_"ijk" & tilde upright("Binomial")(1, p_"ijk") &&& upright("[likelihood]") \
   (delta, zeta) & tilde upright("Normal")(0, 0.5) &&& upright("[prior for fixed effects]") \
   dash(alpha) & tilde upright("Normal")(0, 1.0) &&& upright("[prior for average member]") \
   (sigma_alpha, sigma_gamma, sigma_beta) & tilde upright("Exponential")(1) &&& upright("[prior for standard deviations]") $
+Bayesian models require priors on all parameters, and we generally plan to use weakly regularizing priors that allow for a wide range of potential effects but that are generally skeptical of effects of large magnitude. Below we show distributions that helped frame our decision. For the overall probability of deviating the Normal(0, 1.0) prior (green line in top plot) provides a generally wide possibility of the probability of deviating (95% of the )
+
+#figure([
+#box(image("../output/ror-priors-m1-deviate.png"))
+], caption: figure.caption(
+position: bottom, 
+[
+Hypothetical priors for deviation model
+]), 
+kind: "quarto-float-fig", 
+supplement: "Figure", 
+)
+<fig-prior-m1-dev>
+
+
+== Model specification: magnitude, given a deviation
+<model-specification-magnitude-given-a-deviation>
+The second part of the model asks, among members who deviated, how large a deviation ($M_(i j k)$, one of 10 discrete steps $plus.minus 0.1 dots.h plus.minus 0.5$)? We use an ordinal cumulative-logit model with flexible (non-equidistant) thresholds $tau_c$. One difference from Part 1 is worth flagging: because the $K - 1 = 9$ thresholds already anchor the model's location, none of the group-level intercepts needs to absorb a population mean the way $alpha_(m e m [i])$ did above -- $gamma_(c m t e [k])$, $alpha_(m e m [i])$, and $beta_(a p p [j])$ are all mean-zero here. The other difference is new as of this round of simulation work: role (reviewer vs.~panelist) doesn't just shift #emph[where] a member's deviation tends to land ($eta_(i j k)$), it also affects #emph[how spread out] the deviation is ($kappa_(i j k)$, brms's discrimination parameter for ordinal models) -- panelists show a genuinely wider distribution of deviation sizes, not just a different average. `disc ~ 0 + job` estimates that discrimination directly for each role rather than as a contrast against a reference level.
+
+$ M_"ijk" bar.v D_"ijk"=1 & tilde upright("Cumulative")(eta_"ijk", kappa_"ijk", bold(tau)) &&& upright("[likelihood, 10 ordered categories]") \
+  P(M_"ijk" lt.eq c) & = upright("logit")^(-1)(kappa_"ijk" (tau_c - eta_"ijk")) &&& upright("[cumulative-logit link]") \
+  eta_"ijk" & = alpha_"mem"_i + gamma_"cmte"_k + beta_"app"_j + delta upright("Panelist")_"ijk" + zeta bold(upright("Exp"))_"ij" &&& upright("[location]") \
+  log(kappa_"ijk") & = delta^"disc"_upright("Reviewer") upright("Reviewer")_"ijk" + delta^"disc"_upright("Panelist") upright("Panelist")_"ijk" &&& upright("[role-specific discrimination]") \
+  alpha_"mem"_i & tilde upright("Normal")(0, sigma_alpha) &&& upright("[prior for member intercepts]") \
+  gamma_"cmte"_k & tilde upright("Normal")(0, sigma_gamma) &&& upright("[prior for committee intercepts]") \
+  beta_"app"_j & tilde upright("Normal")(0, sigma_beta) &&& upright("[prior for application intercepts]") \
+  tau_c & tilde upright("Normal")(0, 1.5), thin c = 1, dots.h, 9 &&& upright("[prior for thresholds]") \
+  (delta, zeta) & tilde upright("Normal")(0, 0.5) &&& upright("[prior for location fixed effects]") \
+  (delta^"disc"_upright("Reviewer"), delta^"disc"_upright("Panelist")) & tilde upright("Normal")(0, 1) &&& upright("[prior for discrimination effects]") \
+  (sigma_alpha, sigma_gamma, sigma_beta) & tilde upright("Exponential")(1) &&& upright("[prior for standard deviations]") $
+#strong[Why ordinal (`cumulative()`), not categorical/multinomial?] The 10 magnitude levels aren't just index labels -- they're the literal numeric ordering of `final_score - consensus` ($- 0.5 < - 0.4 < dots.h < - 0.1 < 0.1 < dots.h < 0.5$), and treating them as categorical would throw that structure away, treating "+0.3" and "-0.4" as no more related to each other than either is to "+0.1". It also matches the actual data-generating mechanism: this is a continuous quantity (a truncated-normal draw) rounded to one decimal place for recording, not 10 qualitatively distinct outcomes -- modeling a discretized continuum with an ordinal model, rather than as unordered categories, is the standard match for that kind of measurement. A multinomial model would also need a full separate set of coefficients (role, expertise, every random effect) for each of the 9 non-reference categories -- roughly 9x the parameters of the ordinal specification, most poorly identified given how sparse the tail categories are -- versus the ordinal model's single location parameter (and now, a role-specific dispersion parameter) shared across all 10 categories via the threshold structure. That matters substantively too: our actual hypotheses ("panelists' deviations run larger on average," "panelists show more spread") are inherently location/dispersion statements, which only have a natural expression on an ordered scale -- a categorical model has no notion of shift or spread at all, just 10 free-floating probabilities from which those would have to be reconstructed post hoc.
+
+One caveat worth flagging: treating the #emph[full signed] scale as a single ordered dimension is a modeling choice, not the only defensible one. It implicitly assumes direction and magnitude of deviation share one underlying continuum, rather than direction being a separate, qualitatively distinct decision (up vs.~down) with magnitude nested inside it -- the latter is what the alternative three-part model discussed elsewhere (bernoulli direction + ordinal $lr(|upright("magnitude")|)$) would assume instead. We think the single-continuum assumption is the more faithful match to how these scores actually arise (one continuous departure from consensus, not "decide direction, then decide how far"), but it is an assumption.
+
 == Simulating the data-generating process
 <simulating-the-data-generating-process>
 For the basic structure of the data generating process we use 50 committees, 15 discussed applications per committee, 24 members per committee. We also simulate another 15 applications that will end up being streamlined. For the assignments we have 3 of the 24 members on each application as the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn per application (committee- and application-level random effects only, no member-level variation yet, since this is before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR's one-decimal-place scoring (with rejection sampling so a "deviated" row can never round down to a contradictory zero).
@@ -686,15 +720,15 @@ From the fixed effects we see that we generally recover the simulated parameters
 
     // tinytable cell content after
 table.cell(colspan: 4)[Overall],
-[All members], [0.317], [0.309], [0.325],
+[All members], [0.317], [0.310], [0.323],
 table.cell(colspan: 4)[By self-rated expertise],
-[High], [0.416], [0.391], [0.437],
-[Medium], [0.376], [0.359], [0.392],
-[Low], [0.334], [0.321], [0.346],
-[Not enough], [0.257], [0.247], [0.266],
+[High], [0.416], [0.394], [0.439],
+[Medium], [0.374], [0.359], [0.390],
+[Low], [0.335], [0.322], [0.347],
+[Not enough], [0.257], [0.248], [0.268],
 table.cell(colspan: 4)[By role],
-[Reviewer], [0.267], [0.248], [0.288],
-[Panelist], [0.325], [0.319], [0.333],
+[Reviewer], [0.269], [0.248], [0.287],
+[Panelist], [0.324], [0.318], [0.332],
 
     // tinytable footer after
 
@@ -738,6 +772,36 @@ m1_magnitude <-
 
 ]
 The cost: $E [upright("magnitude") divides upright("deviate")]$ from an ordinal model is not a linear prediction -- it's a probability-weighted sum over the 10 category values, computed per posterior draw, not read off a default `marginaleffects` contrast. That combination step (and the corresponding $E [d_(i j k)] = P (upright("deviate")) times E [upright("magnitude") divides upright("deviate")]$ calculation across both models) is written but not yet implemented in code -- see Open Questions below.
+
+Below you can see the average marginal predictions for reviewers vs.~panelists in terms of deviations from the consensus score, given that a deviation occurred:
+
+#figure([
+#box(image("ror-modeling-strategy_files/figure-typst/fig-m2-magnitude-job-1.svg"))
+], caption: figure.caption(
+position: bottom, 
+[
+Predicted magnitude of deviation, by role
+]), 
+kind: "quarto-float-fig", 
+supplement: "Figure", 
+)
+<fig-m2-magnitude-job>
+
+
+These differences in predicted probabilities for deviations of different magnitudes can also be expressed as marginal effects in #ref(<fig-m2-diffs>, supplement: [Figure]):
+
+#figure([
+#box(image("ror-modeling-strategy_files/figure-typst/fig-m2-diffs-1.svg"))
+], caption: figure.caption(
+position: bottom, 
+[
+Marginal effects of job on the magnitude of deviations
+]), 
+kind: "quarto-float-fig", 
+supplement: "Figure", 
+)
+<fig-m2-diffs>
+
 
 == Software
 <software>
@@ -872,11 +936,13 @@ coefs[grepl(":", rownames(coefs)), ] |>
 ] // end block
 Both interactions are recovered cleanly and with high significance (the sign flips relative to the parameters above are just R's alphabetical choice of reference category -- `job`'s reference is "panelist", `gender`'s is "female", `career_stage`'s is "early", so e.g. `jobreviewer:gendermale` is algebraically the same interaction as `job(panelist):gender(female)`, just from the opposite corner of the 2x2).
 
-#strong[Not yet built:] an Aim-2-specific version of `code/ror-analysis-score-models.R` that actually includes these interaction terms in the `brm()` formulas. The simulation is ready; the model script that would be tested against it isn't written yet.
+#strong[Not yet built:] Aim-2-specific versions of `code/ror-analysis-deviate-model.R`/`ror-analysis-magnitude-model.R` that actually include these interaction terms in the `brm()` formulas. The simulation is ready; the model scripts that would be tested against it aren't written yet.
 
 = Aim 3: not yet designed
 <aim-3-not-yet-designed>
 Aim 3 asks how alternative funding-decision schemes -- reweighting scores by engagement, or partially randomizing funding decisions for applications near the threshold -- would compare to the status quo. That's a structurally different kind of simulation: an intervention/counterfactual layered on top of the funding decision itself, not just an extension of Aims 1-2's data-generating process for reviewer behavior. We haven't started designing it, and would welcome input on what the alternative schemes worth simulating actually are before building anything.
+
+Structurally, nothing in the current pipeline goes past `score` (the final, post-discussion score) -- there's no funding-decision layer at all yet (rank by final score, allocate against a budget, apply whatever equalization overlay CIHR actually uses). Aim 3 can't be simulated without adding one. This is also where the partial-randomization idea specifically earns its keep: informally, applications near the funding threshold can end up clustered close enough together that discussion- driven movement alone is plausibly enough to reorder who clears the line, which is exactly the kind of uncertainty a modified-lottery scheme is designed to acknowledge rather than paper over with strict rank order. Worth real data once it arrives from CIHR to confirm how tight that clustering actually is.
 
 = A note on simulation architecture
 <a-note-on-simulation-architecture>
@@ -924,7 +990,7 @@ The script is organized into seven numbered sections, matching the `##  N ...` c
 - #strong[4: the two-part deviation model.] Once discussed, each member's score is generated as consensus plus a two-part process: whether they deviate from consensus at all (a function of role and self-described expertise), and, if so, the signed magnitude (a truncated, rounded draw, with member-level leniency/harshness heterogeneity, `u0m_bias`). This is the same two-part structure the modeling strategy above is built to recover.
 - #strong[5: internal consistency checks.] A set of `stopifnot()` assertions -- e.g., every committee retains at least one discussed application, consensus never falls outside the range of its own 3 reviewer scores, deviation is exactly zero whenever `deviated == 0` and never zero when `deviated == 1`. These aren't diagnostics for a reader; they're guardrails that halt the script if a future edit breaks an invariant the rest of the design depends on.
 - #strong[6: empirical checks.] Printed summaries -- pool size and discussion-rate distributions, confirmation that the identical-scores-different-outcomes pattern the mechanism was designed to explain actually occurs, and a quick `glm()`/`lmer()` check that `job`/`exp` effects on deviation and member-level heterogeneity both still recover cleanly despite the richer selection stage.
-- #strong[7: output.] Writes `data/sim-deviate.csv`, which `code/ror-analysis-score-models.R` reads.
+- #strong[7: output.] Writes `data/sim-deviate.csv`, which `code/ror-analysis-deviate-model.R` and `code/ror-analysis-magnitude-model.R` read.
 
 #block[
 ```r
@@ -1022,7 +1088,15 @@ a4       = -0.8   # no expertise (vs. high)
 # +/- 0.5 (CIHR's stated bound on final vs. consensus score)
 dev_bias = 0       # population-average bias: still none (see u0m_bias_sd
 # below for between-member variation around this)
-dev_sd   =  0.15
+# magnitude SD differs by job: panelists swing harder conditional on
+# deviating (heavier tail toward +/-0.5), not just more often (that's
+# the deviation-probability model above, a0-a4) -- 2026-08-25, tuned
+# empirically (see research log) so P(|deviation|>=0.3) is ~3x higher
+# for panelists than reviewers, since the single 0.2 category itself
+# saturates well under 16% for any sd (mass beyond that point keeps
+# shifting further out to 0.3-0.5 instead of piling up at 0.2)
+dev_sd_reviewer = 0.15
+dev_sd_panelist = 0.30
 dev_min  = -0.5
 dev_max  =  0.5
 
@@ -1232,10 +1306,11 @@ data <- data |>
     p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_med) +
       (a3 * exp_low) + (a4 * exp_none)),
     deviated = rbinom(n(), 1, p_dev),
+    dev_sd_i = if_else(panelist == 1, dev_sd_panelist, dev_sd_reviewer),
     deviation = if_else(
       deviated == 1,
       round_tenth(rtruncnorm(n(), a = dev_min, b = dev_max,
-        mean = dev_bias + u0m_bias, sd = dev_sd)),
+        mean = dev_bias + u0m_bias, sd = dev_sd_i)),
       0)
   )
 
@@ -1243,7 +1318,7 @@ zero_idx <- which(data$deviated == 1 & data$deviation == 0)
 while (length(zero_idx) > 0) {
   data$deviation[zero_idx] <- round_tenth(
     rtruncnorm(length(zero_idx), a = dev_min, b = dev_max,
-      mean = dev_bias + data$u0m_bias[zero_idx], sd = dev_sd))
+      mean = dev_bias + data$u0m_bias[zero_idx], sd = data$dev_sd_i[zero_idx]))
   zero_idx <- which(data$deviated == 1 & data$deviation == 0)
 }
 
