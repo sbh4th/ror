@@ -486,8 +486,7 @@ pred_tab |>
 
 ## Part 2: how large, given a deviation?
 
-CIHR scores are entered to one decimal place, so a deviator's score can only
-land on one of 10 discrete steps ($\pm0.1 \ldots \pm0.5$ relative to
+CIHR scores are entered to one decimal place, so a deviator's score can only land on one of 10 discrete steps ($\pm0.1 \ldots \pm0.5$ relative to
 consensus). That's genuinely ordinal/discrete data, not a continuous
 quantity with occasional extreme values -- a continuous family
 (`student()`/`gaussian()`) would assign probability to impossible values
@@ -514,13 +513,45 @@ m1_magnitude <-
       control = list(adapt_delta = 0.95))
 ```
 
-The cost: $E[\text{magnitude} \mid \text{deviate}]$ from an ordinal model is
-not a linear prediction -- it's a probability-weighted sum over the 10
+The cost: $E[\text{magnitude} \mid \text{deviate}]$ from an ordinal model is not a linear prediction -- it's a probability-weighted sum over the 10
 category values, computed per posterior draw, not read off a default
 `marginaleffects` contrast. That combination step (and the corresponding
 $E[d_{ijk}] = P(\text{deviate}) \times E[\text{magnitude} \mid
 \text{deviate}]$ calculation across both models) is written but not yet
 implemented in code -- see Open Questions below.
+
+Below you can see the average marginal predictions for reviewers vs. panelists in terms of deviations from the consensus score:
+
+```{r}
+#| echo: false
+#| label: tbl-m1-deviate
+#| fig-cap: Estimates from deviation model
+#| 
+pred <- avg_predictions(m2_magnitude, variables = "job", re_formula = NULL, ndraws = 200) |>
+  as.data.frame() |>
+  mutate(
+    dev_val = as.numeric(as.character(group)),
+    job = factor(job, levels = c("reviewer", "panelist"),
+      labels = c("Reviewer", "Panelist"))
+  )
+
+
+
+tab <- readRDS(here("output", "m1-deviate-table.rds"))
+
+ggplot(pred, aes(x = dev_val, y = estimate, fill = job)) +
+  geom_col(position = position_dodge(width = 0.08), width = 0.08, color = "white") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
+    position = position_dodge(width = 0.08), width = 0.02,
+    color = "grey30", linewidth = 0.3) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50", linewidth = 0.3) +
+  scale_x_continuous(breaks = seq(-0.5, 0.5, 0.1)) +
+  scale_fill_manual(values = c("Reviewer" = "#377eb8", "Panelist" = "#e41a1c")) +
+  labs(x = "Deviation from consensus (given a deviation occurred)",
+    y = "Predicted probability", fill = NULL) +
+  theme_classic() +
+  theme(legend.position = "top")
+```
 
 ## Software
 

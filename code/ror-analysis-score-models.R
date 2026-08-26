@@ -295,11 +295,48 @@ m1_magnitude <-
     file = here("code/fits/ror-magnitude-m1"))
   
   
-avg_predictions(m1_magnitude, variables = "exp",
-  re_formula = NULL, ndraws = 200)
+# exp has no simulated dispersion effect, so the location-only
+# m1_magnitude is the right fit for it -- job's dispersion effect is
+# handled by m2_magnitude below instead.
+p_magnitude_exp <- avg_predictions(m1_magnitude, variables = "exp",
+  re_formula = NULL, ndraws = 200) |>
+  as.data.frame()
 
-avg_predictions(m1_magnitude, variables = "job", 
-  re_formula = NULL, ndraws = 200)
+# rebuild as a bare tibble (see note above pred_tab's saveRDS) so the
+# ~140MB marginaleffects attribute doesn't get serialized along with it
+p_magnitude_exp <- tibble(group = p_magnitude_exp$group,
+  exp = p_magnitude_exp$exp, estimate = p_magnitude_exp$estimate,
+  conf.low = p_magnitude_exp$conf.low,
+  conf.high = p_magnitude_exp$conf.high)
+
+saveRDS(p_magnitude_exp, here("output", "m1-magnitude-exp-me.rds"))
+
+m2_magnitude <- brm(
+  bf(deviation ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | aid),
+     disc ~ 0 + job),
+  data = d1_dev,
+  family = cumulative(link = "logit", threshold = "flexible"),
+  prior = c(prior(normal(0, 1.5), class = Intercept),
+            prior(normal(0, 0.5), class = b),
+            prior(exponential(1), class = sd),
+            prior(normal(0, 1), class = b, dpar = disc)),
+  iter = 2000, warmup = 1000, chains = 4, cores = 4,
+  seed = 8253,
+  control = list(adapt_delta = 0.95),
+  file = here("code/fits/ror-magnitude-m2"))
+
+# job's dispersion effect on magnitude, from the disc-aware model --
+# same bare-tibble rebuild as above to avoid the attribute bloat
+p_magnitude_job <- avg_predictions(m2_magnitude, variables = "job",
+  re_formula = NULL, ndraws = 200) |>
+  as.data.frame()
+
+p_magnitude_job <- tibble(group = p_magnitude_job$group,
+  job = p_magnitude_job$job, estimate = p_magnitude_job$estimate,
+  conf.low = p_magnitude_job$conf.low,
+  conf.high = p_magnitude_job$conf.high)
+
+saveRDS(p_magnitude_job, here("output", "m2-magnitude-job-me.rds"))
 
 ## 4 TODO before fitting for real ----
 # - Confirm cmdstan can actually compile/run in CIHR's execution

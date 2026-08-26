@@ -1651,3 +1651,98 @@ detaching `MASS`. Worth remembering next time any sim script throws
 an "unused argument" error on a `select()` call that looks
 syntactically correct -- check `find("select")` before assuming the
 script broke.
+
+## `m1_magnitude` couldn't see the job effect on magnitude: needed a `disc` (dispersion) submodel, not a location fixed effect
+
+Followed up on the "not yet done" item above. Refit `m1_magnitude` on
+the regenerated `data/sim-deviate.csv` (the one with
+`dev_sd_reviewer`/`dev_sd_panelist`), and the `jobpanelist` coefficient
+came back at ~0 (estimate 0.015, CI comfortably spanning zero) despite
+the underlying data showing a large, real split: `P(|d| >= 0.3)` =
+19.2% (reviewer) vs. 40.6% (panelist), exactly matching the numbers
+above. Confirmed this wasn't a stale-fit or stale-data problem first
+-- loaded the fitted model's own stored data (`m1_magnitude$data`) and
+verified it reproduced those exact percentages, so the model really
+was fit on the current simulation output.
+
+**Diagnosis:** `dev_sd_reviewer`/`dev_sd_panelist` is a pure
+*dispersion* effect -- same center, different spread. Confirmed
+directly: mean(signed deviation) is ~0 for both roles (-0.005
+reviewer, -0.004 panelist) while SD differs substantially (0.201 vs.
+0.260). A standard `cumulative(link = "logit", threshold =
+"flexible")` model is proportional-odds: every fixed effect enters as
+a single linear predictor that shifts the *location* of the latent
+distribution uniformly across all thresholds. It has no way to
+represent "same center, wider tails" -- a symmetric widening doesn't
+correspond to any net directional shift, so the location-only
+coefficient on `job` correctly converged to ~0. The model wasn't
+wrong; it just couldn't see the parameter that was actually varied.
+
+**Fix:** added a `disc` (discrimination) submodel -- `cumulative()`'s
+auxiliary dispersion parameter, a multiplicative scale on the linear
+predictor and thresholds together, `disc ~ 1/SD_latent` in effect.
+Modeling `disc ~ 0 + job` lets reviewer and panelist have their own
+scale, which is the parameter the simulation actually manipulates:
+
+```r
+bf(deviation ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | aid),
+   disc ~ 0 + job)
+```
+
+with an added prior on the new parameter block (`prior(normal(0, 1),
+class = b, dpar = disc)`, since `disc`'s coefficients need a prior
+specified separately from the main `class = b` block). Fit as
+`m2_magnitude`, cached to `code/fits/ror-magnitude-m2.rds` (kept
+`ror-magnitude-m1.rds`, the location-only fit, as-is rather than
+overwriting it, since it's still the right model for `exp`, which
+doesn't have a simulated dispersion effect).
+
+**Hit one real mistake along the way, not just a modeling gap:** the
+first attempt at `m2_magnitude` threw `Argument 'autocor' should be
+specified within the 'formula' argument` and `disc` came back fixed at
+exactly `1.00` with `Rhat`/`ESS` = `NA` (not a convergence issue --
+`NA` there means `disc` was never sampled at all, just held at its
+default constant). Cause: `disc ~ 0 + job` had been passed to `brm()`
+as a separate argument rather than bundled into the same `bf()` object
+as the main formula, so it landed in `brm()`'s unrelated (and
+largely legacy) `autocor` slot and was silently dropped as a model
+term. Fixed by moving both formulas into one `bf(...)` call.
+
+**Result, refit correctly:** `disc` came out clearly separated by
+role (reviewer more discriminating/concentrated, panelist flatter),
+and `avg_predictions(m2_magnitude, variables = "job", re_formula =
+NULL, ndraws = 200)` now shows the expected shape: reviewers
+concentrated near ±0.1, panelists visibly heavier in the ±0.3-±0.5
+tails. Visualized as a dodged bar chart (predicted probability by
+signed deviation category, colored by role) rather than a line/ribbon,
+since the x-axis is 10 discrete categories with a real gap at zero,
+not a continuous dose axis -- bars read as two overlaid probability
+mass functions, which is what these are. Sam is adding this figure to
+`writing/ror-modeling-strategy.qmd` directly.
+
+## Cached the magnitude-model marginal predictions to `output/`, matching `m1-deviate-me.rds`'s pattern
+
+`ror-analysis-score-models.R` already saved `m1_deviate`'s
+`avg_predictions()` output to `output/m1-deviate-me.rds` so
+`ror-modeling-strategy.qmd` can read a small cached object instead of
+loading `brms`/`cmdstanr` and the full fit just to build a table. Did
+the same for the two magnitude-model predictions object from this
+session:
+
+- `output/m1-magnitude-exp-me.rds` -- `exp`'s predicted magnitude
+  distribution, from `m1_magnitude` (the location-only fit). `exp` has
+  no simulated dispersion effect, so the original model is still the
+  right one for it; only `job` needed the `disc` submodel.
+- `output/m2-magnitude-job-me.rds` -- `job`'s predicted magnitude
+  distribution, from `m2_magnitude` (the `disc`-aware fit), matching
+  the dodged-bar figure above.
+
+Both follow the same "rebuild a bare tibble from `$`-extracted
+columns" trick `m1-deviate-me.rds` already used: a
+`marginaleffects` predictions object carries a hidden ~140MB
+attribute (the full model/draws context) that survives
+`select()`/`mutate()`/`as_tibble()`, so `saveRDS()` on what looks
+like a small table silently balloons the file unless you rebuild a
+fresh tibble from the raw column vectors first (which drops
+unrecognized attributes). Verified both save at ~1KB, not ~140MB, and
+read back correctly.
