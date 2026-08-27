@@ -74,29 +74,16 @@ m1_magnitude <- brm(
   file = here("code/fits/ror-magnitude-m1"))
 
 # job's dispersion effect on magnitude, from the disc-aware model --
-# same bare-tibble rebuild as above to avoid the attribute bloat
 p_magnitude_job <- avg_predictions(m1_magnitude, 
   variables = "job",
   re_formula = NULL, ndraws = 200) |>
-  as.data.frame() |>
-  select(-df)
-
-p_magnitude_job <- tibble(group = p_magnitude_job$group,
-  job = p_magnitude_job$job, estimate = p_magnitude_job$estimate,
-  conf.low = p_magnitude_job$conf.low,
-  conf.high = p_magnitude_job$conf.high)
+  select(group, job, estimate, conf.low, conf.high)
 
 d_magnitude_job <- avg_slopes(m1_magnitude, 
   variables = "job",
   re_formula = NULL, ndraws = 200) |>
-  as.data.frame() |>
-  mutate(job = as.factor("difference")) |>
-  select(-term, -contrast)
-
-d_magnitude_job <- tibble(group = d_magnitude_job$group,
-  job = "difference", estimate = p_magnitude_job$estimate,
-                          conf.low = p_magnitude_job$conf.low,
-                          conf.high = p_magnitude_job$conf.high)
+  select(group, estimate, conf.low, conf.high) |>
+  mutate(job = as.factor("difference"))
 
 tm2 <- p_magnitude_job |> bind_rows(d_magnitude_job)
 
