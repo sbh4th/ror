@@ -200,33 +200,28 @@ job_labels <- c(reviewer = "Reviewer",
 
 p_overall <- avg_predictions(
   m1_deviate, ndraws = 200, re_formula = NULL) |>
-  as.data.frame() |>
   mutate(group = "Overall", term = "All members")
 
 p_exp <- avg_predictions(m1_deviate,
   variables = "exp", ndraws = 200, re_formula = NULL) |>
-  as.data.frame() |>
   mutate(group = "By self-rated expertise", term = exp_labels[exp])
 
 p_job <- avg_predictions(m1_deviate,
   variables = "job", ndraws = 200, re_formula = NULL) |>
-  as.data.frame() |>
   mutate(group = "By role", term = job_labels[job])
 
+# marginaleffects predictions objects carry a hidden "marginaleffects"
+# attribute (the full model/draws context, ~140MB here). select()/
+# mutate() strip it fine when called directly on the object -- it's
+# specifically as.data.frame() that "poisons" it: once demoted to a
+# bare data.frame, the attribute survives every subsequent verb
+# (select/mutate/bind_rows all preserve it from that point on).
+# Dropping the as.data.frame() calls above is what actually fixes
+# this; the select()/mutate() chain below was already doing the right
+# thing, just too late.
 pred_tab <- bind_rows(p_overall, p_exp, p_job) |>
   select(group, term, estimate, conf.low, conf.high) |>
   mutate(across(c(estimate, conf.low, conf.high), ~sprintf("%.3f", .x)))
-
-# marginaleffects predictions objects carry a hidden "marginaleffects"
-# attribute (the full model/draws context, ~140MB here) that survives
-# select()/mutate()/as_tibble() -- none of those strip unrecognized
-# attributes, so saveRDS() on what looks like a tiny 7-row table
-# actually serializes that whole attribute too, ballooning the file to
-# 100+MB. Rebuilding a fresh tibble from the bare column vectors (via
-# $, which drops attributes) is what actually clears it.
-pred_tab <- tibble(group = pred_tab$group, term = pred_tab$term,
-  estimate = pred_tab$estimate, conf.low = pred_tab$conf.low,
-  conf.high = pred_tab$conf.high)
 
 saveRDS(pred_tab, here("output", "m1-deviate-me.rds"))
 
