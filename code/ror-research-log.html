@@ -2421,6 +2421,10 @@ window.Quarto = {
   <li><a href="#flagged-not-fixed-ror-analysis-magnitude-model.r-has-a-duplicate-model-block-and-a-tibble-recycling-bug" id="toc-flagged-not-fixed-ror-analysis-magnitude-model.r-has-a-duplicate-model-block-and-a-tibble-recycling-bug" class="nav-link" data-scroll-target="#flagged-not-fixed-ror-analysis-magnitude-model.r-has-a-duplicate-model-block-and-a-tibble-recycling-bug">Flagged, not fixed: <code>ror-analysis-magnitude-model.R</code> has a duplicate model block and a tibble-recycling bug</a></li>
   <li><a href="#added-the-magnitude-models-equation-htmltypst-and-a-justification-for-ordinal-over-categorical" id="toc-added-the-magnitude-models-equation-htmltypst-and-a-justification-for-ordinal-over-categorical" class="nav-link" data-scroll-target="#added-the-magnitude-models-equation-htmltypst-and-a-justification-for-ordinal-over-categorical">Added the magnitude model’s equation (html/typst) and a justification for ordinal over categorical</a></li>
   </ul></li>
+  <li><a href="#section-10" id="toc-section-10" class="nav-link" data-scroll-target="#section-10">2026-08-27</a>
+  <ul class="collapse">
+  <li><a href="#pinned-down-the-exact-mechanism-of-the-marginaleffects-hidden-attribute-bug-earlier-documentation-of-it-was-over-broad" id="toc-pinned-down-the-exact-mechanism-of-the-marginaleffects-hidden-attribute-bug-earlier-documentation-of-it-was-over-broad" class="nav-link" data-scroll-target="#pinned-down-the-exact-mechanism-of-the-marginaleffects-hidden-attribute-bug-earlier-documentation-of-it-was-over-broad">Pinned down the exact mechanism of the <code>marginaleffects</code> hidden-attribute bug – earlier documentation of it was over-broad</a></li>
+  </ul></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="../ror-research-log.pdf"><i class="bi bi-file-pdf"></i>Typst</a></li></ul></div></nav>
 </div>
@@ -2993,6 +2997,49 @@ window.Quarto = {
 </ol>
 <p>Flagged one honest caveat: treating the <em>full signed</em> scale as one ordered dimension (rather than direction as a separate unordered bernoulli, magnitude as ordinal <code>|d|</code> – the three-part-hurdle alternative discussed on 2026-08-24) is an assumption, not something forced by the data. Chose it because it matches how these scores actually arise (one continuous departure from consensus, not “decide direction, then decide how far”), not because it’s the only defensible option.</p>
 <p>Caught and fixed one small issue along the way: an inline <code>$|{\rm magnitude}|$</code> didn’t convert cleanly to typst (<code>\rm</code> isn’t supported; pandoc fell back to raw TeX with a warning) – switched to <code>\text{magnitude}</code>, matching how the rest of the doc writes text inside math. Verified the fix by compiling the generated <code>.typ</code> directly against the repo root (<code>typst compile --root .</code>), which bypasses the still-unresolved, pre-existing sandbox restriction on <code>output/ror-priors-m1-deviate.png</code> escaping <code>writing/</code>’s directory (flagged 2026-08-25/26, not yet fixed) – confirms the document content itself compiles clean; the image-path issue is a separate, already-flagged problem.</p>
+</section>
+</section>
+<section id="section-10" class="level1">
+<h1>2026-08-27</h1>
+<section id="pinned-down-the-exact-mechanism-of-the-marginaleffects-hidden-attribute-bug-earlier-documentation-of-it-was-over-broad" class="level2">
+<h2 class="anchored" data-anchor-id="pinned-down-the-exact-mechanism-of-the-marginaleffects-hidden-attribute-bug-earlier-documentation-of-it-was-over-broad">Pinned down the exact mechanism of the <code>marginaleffects</code> hidden-attribute bug – earlier documentation of it was over-broad</h2>
+<p>Came back to this after noticing <code>output/m2-magnitude-job-me.rds</code> had ballooned to 126MB again in a commit (see the push-failure fix, same day). Wanted to know precisely whether <code>as.data.frame()</code> vs. <code>as_tibble()</code> mattered, and whether the manual bare-vector <code>tibble()</code> rebuild (<code>tibble(group = x$group, ...)</code>) used in both analysis scripts was actually the <em>only</em> way to fix this, since it reads as distinctly non-tidy code.</p>
+<p><strong>Tested <code>as_tibble()</code> as a drop-in replacement for <code>as.data.frame()</code> first: doesn’t help.</strong> Loaded the cached <code>m1_magnitude</code> fit and compared <code>as.data.frame(raw)</code>, <code>as_tibble(raw)</code>, and the manual rebuild directly: both <code>as.data.frame()</code> and <code>as_tibble()</code> preserve the hidden attribute (133.6MB, identical to the untouched object); only the manual bare-vector rebuild strips it (3.6KB). Makes sense once you know why: <code>avg_predictions()</code> output already inherits <code>data.frame</code> (<code>class = c(&quot;predictions&quot;, &quot;data.frame&quot;)</code>), so both coercion functions are close to a no-op reclassification on an already-data.frame-like object, not a rebuild – neither has any reason to know this particular attribute should be dropped.</p>
+<p><strong>But then tested <code>select()</code>/<code>mutate()</code> called directly on the raw object (no <code>as.data.frame()</code> first), expecting them to also fail based on this project’s own prior documentation (“survives select()/mutate()/as_tibble()”) – and they didn’t fail.</strong> Both stripped the attribute cleanly, on both <code>avg_predictions()</code> and <code>avg_slopes()</code> output, alone or combined via <code>bind_rows()</code> first. That directly contradicts what’s written in <code>reference_ror_docs.md</code> and in comments in both analysis scripts, so this needed tracing properly rather than just updating the docs to match the new observation – if the earlier claim was wrong, something about <em>how</em> it was wrong needed to be understood, not just the correct answer.</p>
+<p><strong>Root cause, isolated by testing the exact original bug chain step by step:</strong> the critical factor is whether <code>as.data.frame()</code> was ever called <em>before</em> <code>select()</code>/<code>mutate()</code>, not whether they’re called at all.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Chain</th>
+<th>Attribute survives?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>avg_predictions() \|&gt; select()</code></td>
+<td>No</td>
+</tr>
+<tr class="even">
+<td><code>avg_predictions() \|&gt; mutate()</code></td>
+<td>No</td>
+</tr>
+<tr class="odd">
+<td><code>avg_predictions() \|&gt; as.data.frame() \|&gt; select()</code></td>
+<td><strong>Yes</strong></td>
+</tr>
+<tr class="even">
+<td><code>avg_predictions() \|&gt; as.data.frame() \|&gt; mutate()</code></td>
+<td><strong>Yes</strong></td>
+</tr>
+<tr class="odd">
+<td><code>avg_slopes() \|&gt; select()</code></td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>Once <code>as.data.frame()</code> demotes the object to a bare <code>data.frame</code> (losing the <code>predictions</code>/<code>slopes</code> class), every subsequent <code>select()</code>/<code>mutate()</code>/<code>bind_rows()</code> call preserves the attribute from then on – a bare data.frame’s dplyr verbs don’t rebuild/strip attributes the way the special marginaleffects classes’ do. The original bug’s exact code (<code>avg_predictions(...) |&gt; as.data.frame() |&gt; mutate(...)</code>, in both <code>p_overall</code>/<code>p_exp</code>/<code>p_job</code> and the <code>m2-magnitude-job-me.rds</code> construction) called <code>as.data.frame()</code> first in every case, which is exactly why the <code>select()</code>/<code>mutate()</code> steps later in the same pipeline didn’t help – by then it was already poisoned. The <code>as.data.frame()</code> calls were never doing anything useful in the first place; <code>mutate()</code>/<code>select()</code> work fine directly on marginaleffects output.</p>
+<p><strong>Fix applied to <code>ror-analysis-deviate-model.R</code>:</strong> removed the three <code>as.data.frame()</code> calls (on <code>p_overall</code>/<code>p_exp</code>/<code>p_job</code>), which makes the pre-existing manual bare-vector <code>tibble()</code> rebuild step entirely redundant – deleted it. The existing <code>bind_rows() |&gt; select() |&gt; mutate()</code> pipeline that was already there now does the whole job on its own. Verified against the real cached <code>m1_deviate</code> fit before and after: identical 7-row content, <code>saveRDS()</code> size 376 bytes either way, hidden attribute confirmed absent. <code>ror-analysis-magnitude-model.R</code> has the same <code>as.data.frame()</code> pattern but was left alone, consistent with the 2026-08-26 decision not to touch that file until its other issues (duplicate model block, <code>d_magnitude_job</code> bug) get sorted out in one pass.</p>
+<p>Updated <code>reference_ror_docs.md</code> to replace the old, over-broad characterization of this bug with the precise mechanism above.</p>
 </section>
 </section>
 

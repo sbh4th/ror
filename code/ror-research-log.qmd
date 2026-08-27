@@ -1875,3 +1875,82 @@ bypasses the still-unresolved, pre-existing sandbox restriction on
 (flagged 2026-08-25/26, not yet fixed) -- confirms the document
 content itself compiles clean; the image-path issue is a separate,
 already-flagged problem.
+
+# 2026-08-27
+
+## Pinned down the exact mechanism of the `marginaleffects` hidden-attribute bug -- earlier documentation of it was over-broad
+
+Came back to this after noticing `output/m2-magnitude-job-me.rds` had
+ballooned to 126MB again in a commit (see the push-failure fix, same
+day). Wanted to know precisely whether `as.data.frame()` vs.
+`as_tibble()` mattered, and whether the manual bare-vector `tibble()`
+rebuild (`tibble(group = x$group, ...)`) used in both analysis scripts
+was actually the *only* way to fix this, since it reads as
+distinctly non-tidy code.
+
+**Tested `as_tibble()` as a drop-in replacement for `as.data.frame()`
+first: doesn't help.** Loaded the cached `m1_magnitude` fit and
+compared `as.data.frame(raw)`, `as_tibble(raw)`, and the manual
+rebuild directly: both `as.data.frame()` and `as_tibble()` preserve
+the hidden attribute (133.6MB, identical to the untouched object);
+only the manual bare-vector rebuild strips it (3.6KB). Makes sense
+once you know why: `avg_predictions()` output already inherits
+`data.frame` (`class = c("predictions", "data.frame")`), so both
+coercion functions are close to a no-op reclassification on an
+already-data.frame-like object, not a rebuild -- neither has any
+reason to know this particular attribute should be dropped.
+
+**But then tested `select()`/`mutate()` called directly on the raw
+object (no `as.data.frame()` first), expecting them to also fail based
+on this project's own prior documentation ("survives
+select()/mutate()/as_tibble()") -- and they didn't fail.** Both
+stripped the attribute cleanly, on both `avg_predictions()` and
+`avg_slopes()` output, alone or combined via `bind_rows()` first.
+That directly contradicts what's written in `reference_ror_docs.md`
+and in comments in both analysis scripts, so this needed tracing
+properly rather than just updating the docs to match the new
+observation -- if the earlier claim was wrong, something about *how*
+it was wrong needed to be understood, not just the correct answer.
+
+**Root cause, isolated by testing the exact original bug chain step by
+step:** the critical factor is whether `as.data.frame()` was ever
+called *before* `select()`/`mutate()`, not whether they're called at
+all.
+
+| Chain | Attribute survives? |
+|---|---|
+| `avg_predictions() \|> select()` | No |
+| `avg_predictions() \|> mutate()` | No |
+| `avg_predictions() \|> as.data.frame() \|> select()` | **Yes** |
+| `avg_predictions() \|> as.data.frame() \|> mutate()` | **Yes** |
+| `avg_slopes() \|> select()` | No |
+
+Once `as.data.frame()` demotes the object to a bare `data.frame`
+(losing the `predictions`/`slopes` class), every subsequent
+`select()`/`mutate()`/`bind_rows()` call preserves the attribute from
+then on -- a bare data.frame's dplyr verbs don't rebuild/strip
+attributes the way the special marginaleffects classes' do. The
+original bug's exact code (`avg_predictions(...) |> as.data.frame() |>
+mutate(...)`, in both `p_overall`/`p_exp`/`p_job` and the
+`m2-magnitude-job-me.rds` construction) called `as.data.frame()`
+first in every case, which is exactly why the `select()`/`mutate()`
+steps later in the same pipeline didn't help -- by then it was already
+poisoned. The `as.data.frame()` calls were never doing anything
+useful in the first place; `mutate()`/`select()` work fine directly on
+marginaleffects output.
+
+**Fix applied to `ror-analysis-deviate-model.R`:** removed the three
+`as.data.frame()` calls (on `p_overall`/`p_exp`/`p_job`), which makes
+the pre-existing manual bare-vector `tibble()` rebuild step entirely
+redundant -- deleted it. The existing `bind_rows() |> select() |>
+mutate()` pipeline that was already there now does the whole job on
+its own. Verified against the real cached `m1_deviate` fit before and
+after: identical 7-row content, `saveRDS()` size 376 bytes either way,
+hidden attribute confirmed absent. `ror-analysis-magnitude-model.R`
+has the same `as.data.frame()` pattern but was left alone, consistent
+with the 2026-08-26 decision not to touch that file until its other
+issues (duplicate model block, `d_magnitude_job` bug) get sorted out
+in one pass.
+
+Updated `reference_ror_docs.md` to replace the old, over-broad
+characterization of this bug with the precise mechanism above.
