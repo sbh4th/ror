@@ -20,9 +20,7 @@ format:
         <style>
         </style>
         <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@300;400;600&display=swap" rel="stylesheet">
-          body, p, li, td, th { font-family: 'Roboto Slab', serif !important; font-weight: 400; color: rgb(54, 55, 55); }
-          h1, h2, h3, h4 { font-family: 'Roboto Slab', serif !important; font-weight: 600; color: rgb(54, 55, 55); }
-          body { line-height: 1.8; }
+
   typst:
     mainfont: "C059"
     fontsize: "11pt"
@@ -283,7 +281,7 @@ potential effects but that are generally skeptical of effects of large
 magnitude. Below we show distributions that helped frame our decision.
 For the overall probability of deviating the Normal(0, 1.0) prior (green
 line in top plot) provides a generally wide possibility of the
-probability of deviating (95% of the )
+probability of deviating (95% of the probability mass is between 14% and 88% deviating), and a Normal(0, 0.5) for the beta coefficients puts 95% of the probability mass on differences in the probability of deviating of +/- 20 percentage points. 
 
 ```{r}
 #| echo: false
