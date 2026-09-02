@@ -14,20 +14,7 @@
 #                 AND its mean-of-3 score ranks in the bottom 60% of
 #                 *that committee's own* candidate pool (a relative/rank
 #                 rule, not a fixed absolute score).
-#
-#            Committee-level application-pool size (2026-08-14): was a
-#            fixed pool_per_cmte = 40 for every committee; now drawn per
-#            committee from a beta distribution on CIHR's own stated
-#            [20, 80] range (cihr-irsc.gc.ca/e/51315.html), instead of a
-#            real basis that didn't exist when 2026-08-06 explicitly
-#            decided to leave committee size fixed. The beta's shape
-#            parameters are illustrative -- chosen to roughly match the
-#            range/right-skew implied by a one-off back-calculation from
-#            real CIHR funded-application counts (see
-#            code/ror-cihr-committee-size-check.R and
-#            ror-research-log.qmd), not fit to it or drawn from it at
-#            runtime -- deliberately not making this script depend on
-#            that dataset for anything beyond a rough ballpark.
+
 
 ##  0 Load needed packages ----
 library(here)
@@ -53,14 +40,12 @@ pool_shape1 = 2.5    # rbeta() shape -- illustrative, not fit; chosen to
 pool_shape2 = 4      # roughly match the mean/SD/right-skew of the
                      # funded-count back-calculation (mean ~42, SD ~12)
 
-mem_min = 8          # lower bound on committee "Members" count (real range,
-mem_max = 37         # from CIHR's Fall 2025 (202509PJT) Project Grant
-                     # committee roster, cihr-irsc.gc.ca/e/54732.html)
+mem_min = 8          # lower bound (from CIHR's Fall 2025 Proj Grant
+mem_max = 37         # committee roster, cihr-irsc.gc.ca/e/54732.html)
 
 # workload target: roughly 5 applications reviewed per member
 target_reviews_per_member = 5.5
-mem_noise_sd = 0.15   # lognormal noise SD (log scale) around the
-                      # workload
+mem_noise_sd = 0.15   # lognormal noise SD around the workload
 
 b0         = 4.0    # intercept for (discussed) application's true quality
 u0c_sd     = 0.1    # random intercept SD for committee (quality level)

@@ -35,6 +35,8 @@ format:
     bibliographystyle: vancouver.csl
     toc: false
     number-sections: true
+    template-partials:
+      - templates/typst-show.typ
   docx:
     toc: false
     execute:
@@ -52,7 +54,6 @@ library(modelsummary)
 library(tinytable)
 library(patchwork)
 library(marginaleffects)
-library(ggridges)
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
 ```
 
@@ -178,12 +179,10 @@ member-application pairing if that member were assigned to be a panelist
 or a reviewer:
 
 ::: {.content-visible when-format="html"}
-
 $$\underbrace{\frac{1}{IJK}\sum^{K}_{k=1}\sum^{J}_{j=1}\sum^{I}_{i=1}}_{\substack{\text{Mean over members } i\text{,} \\ \text{applications } j\text{,} \\ \text{and committees } k}} \underbrace{\left(d_{ijk}(1) - d_{ijk}(0)\right)\vphantom{\sum^{K}_{k=1}\sum^{J}_{j=1}\sum^{I}_{i=1}}}_{\substack{\text{Score if assigned} \\ \text{to panelist(1)} \\ \text{or reviewer(0)}}}$$
 :::
 
 ::: {.content-visible when-format="docx"}
-
 $$\underbrace{\frac{1}{IJK}\sum^{K}_{k=1}\sum^{J}_{j=1}\sum^{I}_{i=1}}_{\substack{\text{Mean over members } i\text{,} \\ \text{applications } j\text{,} \\ \text{and committees } k}} \underbrace{\left(d_{ijk}(1) - d_{ijk}(0)\right)}_{\substack{\text{Score if assigned} \\ \text{to panelist(1)} \\ \text{or reviewer(0)}}}$$
 :::
 
@@ -199,11 +198,19 @@ upright("or reviewer(0)")) $
 ```
 :::
 
-Leaving aside for the moment the assumptions needed to credibly estimate this quantity, the specific data generating process for score deviations leads to challenges, since the distribution of this outcome depends on two processes: 1) whether a given member deviates from the consensus score; and 2) how large that deviation might be. Estimating these effects across the whole population of applications leads to the intuition for a two-part model.
+Leaving aside for the moment the assumptions needed to credibly estimate
+this quantity, the specific data generating process for score deviations
+leads to challenges, since the distribution of this outcome depends on
+two processes: 1) whether a given member deviates from the consensus
+score; and 2) how large that deviation might be. Estimating these
+effects across the whole population of applications leads to the
+intuition for a two-part model.
 
 ## Two-part model
 
-We expect $d_{ijk}$ to have a spike at exactly zero (members who simply adopt the consensus score) plus variation among those who depart from it. So the outcome is split into two linked models:
+We expect $d_{ijk}$ to have a spike at exactly zero (members who simply
+adopt the consensus score) plus variation among those who depart from
+it. So the outcome is split into two linked models:
 
 1.  **Did this member deviate at all?** A binary/logistic model on
     $1[d_{ijk} \neq 0]$.
@@ -213,7 +220,8 @@ We expect $d_{ijk}$ to have a spike at exactly zero (members who simply adopt th
 Estimating the expected value of the both parts across the entire
 population of reviewers (not just those that deviate from consensus)
 recovers the effect in the entire sample. This is akin to a 'hurdle'
-type model [@mullahy1986] that combines a binary outcome and a magnitude estimate for non-zero outcomes.
+type model [@mullahy1986] that combines a binary outcome and a magnitude
+estimate for non-zero outcomes.
 
 $$E[d_{ijk}] = \underbrace{P(\text{deviate})}_{\substack{\text{Part 1: any} \\ \text{deviation at all}}}
 \times
@@ -234,7 +242,6 @@ $\zeta$ captures the suite of effects for the expertise indicators
 
 :::: {.content-visible when-format="html"}
 ::: {style="font-size: 0.8em;"}
-
 $$\begin{array}{rclr}
 D_{ijk} & \sim & \text{Binomial}(1, p_{ijk}) & \text{[likelihood]} \\
 \text{logit}(p_{ijk}) & = & \alpha_{mem[i]} + \gamma_{cmte[k]} + \beta_{app[j]} + \delta\,\text{Panelist}_{ijk} + \zeta \textbf{Exp}_{ij} & \text{[linear model for log odds]} \\
@@ -281,50 +288,68 @@ potential effects but that are generally skeptical of effects of large
 magnitude. Below we show distributions that helped frame our decision.
 For the overall probability of deviating the Normal(0, 1.0) prior (green
 line in top plot) provides a generally wide possibility of the
-probability of deviating (95% of the probability mass is between 14% and 88% deviating), and a Normal(0, 0.5) for the beta coefficients puts 95% of the probability mass on differences in the probability of deviating of +/- 20 percentage points. 
+probability of deviating (95% of the probability mass is between 14% and
+88% deviating), and a Normal(0, 0.5) for the beta coefficients puts 95%
+of the probability mass on differences in the probability of deviating
+of +/- 20 percentage points (i.e., it is quite skeptical of very large
+effect sizes).
 
 ```{r}
 #| echo: false
 #| label: fig-prior-m1-dev
 #| fig-cap: Hypothetical priors for deviation model
 
-knitr::include_graphics(here("output", "ror-priors-m1-deviate.png"))
+knitr::include_graphics(here("writing", "media", "ror-priors-m1-deviate.png"))
 ```
 
 ## Model specification: magnitude, given a deviation
 
-The second part of the model asks, among members who deviated, how large
-a deviation ($M_{ijk}$, one of 10 discrete steps
-$\pm0.1 \ldots \pm0.5$)? We use an ordinal cumulative-logit model with
-flexible (non-equidistant) thresholds $\tau_c$. One difference from Part
-1 is worth flagging: because the $K-1=9$ thresholds already anchor the
-model's location, none of the group-level intercepts needs to absorb a
-population mean the way $\alpha_{mem[i]}$ did above --
-$\gamma_{cmte[k]}$, $\alpha_{mem[i]}$, and $\beta_{app[j]}$ are all
-mean-zero here. The other difference is new as of this round of
-simulation work: role (reviewer vs. panelist) doesn't just shift *where*
-a member's deviation tends to land ($\eta_{ijk}$), it also affects *how
-spread out* the deviation is ($\kappa_{ijk}$, brms's discrimination
-parameter for ordinal models) -- panelists show a genuinely wider
-distribution of deviation sizes, not just a different average.
-`disc ~ 0 + job` estimates that discrimination directly for each role
-rather than as a contrast against a reference level.
+The second part of the model asks how large a deviation occurred among
+members who deviated, i.e., $M_{ijk}$ as one of 10 discrete steps
+($\pm0.1 \ldots \pm0.5$) either positive or negative. Since this outcome
+has fixed categories and a natural ordering (from -0.5 to + 0.5) we use
+an ordinal cumulative-logit model with flexible (non-equidistant)
+thresholds $\tau_c$. One difference from Part 1 is worth flagging:
+because the $K-1=9$ thresholds already anchor the model's location, none
+of the group-level intercepts needs to absorb a population mean the way
+$\alpha_{mem[i]}$ did above -- $\gamma_{cmte[k]}$, $\alpha_{mem[i]}$,
+and $\beta_{app[j]}$ are all mean-zero here. The other difference is new
+as of this round of simulation work: role (reviewer vs. panelist)
+doesn't just shift *where* a member's deviation tends to land
+($\eta_{ijk}$), it also affects *how spread out* the deviation is
+($\kappa_{ijk}$, brms's discrimination parameter for ordinal models) --
+panelists show a genuinely wider distribution of deviation sizes, not
+just a different average. For consistency with how $\eta_{ijk}$ is
+written above, $\kappa_{ijk}$ is shown here using the same
+reference-level (Reviewer) plus contrast (Panelist) convention: an
+intercept $\delta_0^{disc}$ and a contrast $\delta_1^{disc}$. Unlike
+$\eta_{ijk}$, though, $\kappa_{ijk}$ has no random effects or thresholds
+to implicitly absorb a reference value, so it needs an explicit
+intercept term of its own -- both $\delta_0^{disc}$ and
+$\delta_1^{disc}$ are still freely estimated (Reviewer's own
+discrimination isn't pinned at any fixed value here). The model is
+actually fit in code as `disc ~ 0 + job` (each role's discrimination
+estimated directly, rather than as an intercept-plus-contrast) --
+algebraically equivalent to what's shown below, chosen there for direct
+interpretability against `brms`'s neutral default of $\kappa=1$ for
+everyone (see research log, 2026-08-27, for the full reasoning); the
+reference-contrast form here is purely to keep this equation's
+presentation consistent with $\eta_{ijk}$'s.
 
 :::: {.content-visible when-format="html"}
 ::: {style="font-size: 0.8em;"}
-
 $$\begin{array}{rclr}
 M_{ijk} \mid D_{ijk}=1 & \sim & \text{Cumulative}(\eta_{ijk}, \kappa_{ijk}, \boldsymbol\tau) & \text{[likelihood, 10 ordered categories]} \\
 P(M_{ijk} \le c) & = & \text{logit}^{-1}\big(\kappa_{ijk}(\tau_c - \eta_{ijk})\big) & \text{[cumulative-logit link]} \\
 \eta_{ijk} & = & \alpha_{mem[i]} + \gamma_{cmte[k]} + \beta_{app[j]} + \delta\,\text{Panelist}_{ijk} + \zeta \textbf{Exp}_{ij} & \text{[location]} \\
-\log(\kappa_{ijk}) & = & \delta^{disc}_{\text{Reviewer}}\text{Reviewer}_{ijk} + \delta^{disc}_{\text{Panelist}}\text{Panelist}_{ijk} & \text{[role-specific discrimination]} \\
+\log(\kappa_{ijk}) & = & \delta_0^{disc} + \delta_1^{disc}\,\text{Panelist}_{ijk} & \text{[role-specific discrimination]} \\
  & & & \\
 \alpha_{mem[i]} & \sim & \text{Normal}(0, \sigma_\alpha) & \text{[prior for member intercepts]} \\
 \gamma_{cmte[k]} & \sim & \text{Normal}(0, \sigma_\gamma) & \text{[prior for committee intercepts]} \\
 \beta_{app[j]} & \sim & \text{Normal}(0, \sigma_\beta) & \text{[prior for application intercepts]} \\
 \tau_c & \sim & \text{Normal}(0, 1.5), \ c = 1,\ldots,9 & \text{[prior for thresholds]} \\
 (\delta, \zeta) & \sim & \text{Normal}(0, 0.5) & \text{[prior for location fixed effects]} \\
-(\delta^{disc}_{\text{Reviewer}}, \delta^{disc}_{\text{Panelist}}) & \sim & \text{Normal}(0, 1) & \text{[prior for discrimination effects]} \\
+(\delta_0^{disc}, \delta_1^{disc}) & \sim & \text{Normal}(0, 1) & \text{[prior for discrimination effects]} \\
 (\sigma_\alpha, \sigma_\gamma, \sigma_\beta) & \sim & \text{Exponential}(1) & \text{[prior for standard deviations]} \\
 \end{array}$$
 :::
@@ -335,13 +360,13 @@ P(M_{ijk} \le c) & = & \text{logit}^{-1}\big(\kappa_{ijk}(\tau_c - \eta_{ijk})\b
 $ M_"ijk" bar.v D_"ijk"=1 & tilde upright("Cumulative")(eta_"ijk", kappa_"ijk", bold(tau)) &&& upright("[likelihood, 10 ordered categories]") \
   P(M_"ijk" lt.eq c) & = upright("logit")^(-1)(kappa_"ijk" (tau_c - eta_"ijk")) &&& upright("[cumulative-logit link]") \
   eta_"ijk" & = alpha_"mem"_i + gamma_"cmte"_k + beta_"app"_j + delta upright("Panelist")_"ijk" + zeta bold(upright("Exp"))_"ij" &&& upright("[location]") \
-  log(kappa_"ijk") & = delta^"disc"_upright("Reviewer") upright("Reviewer")_"ijk" + delta^"disc"_upright("Panelist") upright("Panelist")_"ijk" &&& upright("[role-specific discrimination]") \
+  log(kappa_"ijk") & = delta_0^"disc" + delta_1^"disc" upright("Panelist")_"ijk" &&& upright("[role-specific discrimination]") \
   alpha_"mem"_i & tilde upright("Normal")(0, sigma_alpha) &&& upright("[prior for member intercepts]") \
   gamma_"cmte"_k & tilde upright("Normal")(0, sigma_gamma) &&& upright("[prior for committee intercepts]") \
   beta_"app"_j & tilde upright("Normal")(0, sigma_beta) &&& upright("[prior for application intercepts]") \
   tau_c & tilde upright("Normal")(0, 1.5), thin c = 1, dots.h, 9 &&& upright("[prior for thresholds]") \
   (delta, zeta) & tilde upright("Normal")(0, 0.5) &&& upright("[prior for location fixed effects]") \
-  (delta^"disc"_upright("Reviewer"), delta^"disc"_upright("Panelist")) & tilde upright("Normal")(0, 1) &&& upright("[prior for discrimination effects]") \
+  (delta_0^"disc", delta_1^"disc") & tilde upright("Normal")(0, 1) &&& upright("[prior for discrimination effects]") \
   (sigma_alpha, sigma_gamma, sigma_beta) & tilde upright("Exponential")(1) &&& upright("[prior for standard deviations]") $
 ```
 :::
@@ -384,57 +409,77 @@ but it is an assumption.
 
 # Simulating
 
-For the basic structure of the data generating process we use 50
-committees, 15 discussed applications per committee, 24 members per
-committee. We also simulate another 15 applications that will end up
-being streamlined. For the assignments we have 3 of the 24 members on
-each application as the assigned reviewers, the rest are non-reviewing
-panelists. A consensus score is drawn per application (committee- and
-application-level random effects only, no member-level variation yet,
-since this is before any individual scoring happens). Whether each
-member deviates from that consensus is a function of their role and
-self-described expertise; if they deviate, the signed magnitude is drawn
-from a truncated distribution and rounded to the nearest tenth, matching
-CIHR's one-decimal-place scoring (with rejection sampling so a
-"deviated" row can never round down to a contradictory zero).
+For the basic structure of the data-generating process we simulate 50
+committees. Rather than fixing the number of applications and members
+per committee, both now vary to reflect real committee-to-committee
+heterogeneity: each committee's candidate application pool (before
+streamlining) is drawn from a beta distribution bounded to CIHR's own
+stated range of 20-80 applications, and committee size is *derived* from
+that pool size via a workload target (roughly 5.5 applications reviewed
+per member) plus lognormal noise, bounded to the real range observed in
+CIHR's Fall 2025 committee rosters (8-37 members) -- reflecting that
+CIHR sizes committees to manage workload given known application volume,
+not an independent draw. Each application still gets exactly 3 assigned
+reviewers regardless of committee size, with the remaining members
+serving as non-reviewing panelists. Not every candidate application is
+discussed -- CIHR's streamlining rule removes some before discussion
+(below), leaving roughly 15-16 discussed applications per committee on
+average, ranging from about 7 to 23 depending on the committee's own
+pool size and score distribution. A consensus score is drawn per
+application by averaging the 3 reviewer scores (committee- and application-level random effects only, no
+member-level variation yet, since this is before any individual scoring
+happens). It should be pointed out that in practice for applications that are streamlined the consensus score is always the mean of the 3 reviewer scores. However, for applications that are discussed this is not a requirement and discussion among the 3 reviewers in the meeting (as well as the discussion of prior applications) may lead to consensus scores that are not strictly the average of the 3 reviews. We do not model that somewhat messy process here, but may be able to identify how it operates with real application data.  Whether each member deviates from that consensus is a function
+of their role and self-described expertise; if they deviate, the signed
+magnitude is drawn from a truncated distribution (its spread now also
+role-dependent -- panelists show a wider range of deviation sizes than
+reviewers) and rounded to the nearest tenth, matching CIHR's
+one-decimal-place scoring (with rejection sampling so a "deviated" row
+can never round down to a contradictory zero).
 
 ```{r}
 #| eval: false
 #| label: aim1-params
-#| code-summary: "code/ror-sim-aim1.R -- parameters and generative process"
+#| code-summary: "code/ror-sim-deviate.R -- parameters and generative process"
 
 # define parameters
-cmte_n   = 50     # number of committees
-app_n    = 15     # number of discussed applications per committee
-mem_n    = 24     # number of committee members per committee
+cmte_n = 50          # number of committees
 
-# candidate applications generated per committee before streamlining
-app_n_candidates = app_n * 2
+# pool_size (candidate applications per committee, before streamlining)
+# varies by committee -- beta-distributed on CIHR's stated [20, 80]
+# range -- and mem_n (committee size) is DERIVED from pool_size via a
+# workload target, not drawn independently
+pool_min = 20
+pool_max = 80
+target_reviews_per_member = 5.5
+mem_min  = 8         # real range, from CIHR's Fall 2025 committee rosters
+mem_max  = 37
 
-b0       = 4.1    # intercept for application's true underlying quality
+b0       = 4.0    # intercept for application's true underlying quality
 u0c_sd   = 0.1    # random intercept SD for committee (quality level)
 u0a_sd   = 0.3    # random intercept SD for application (quality level)
 
 # signed magnitude of deviation, given deviation occurs, truncated to
-# +/- 0.5 (CIHR's stated bound on final vs. consensus score)
-dev_bias = 0      # placeholder: no systematic direction yet
-dev_sd   = 0.15
+# +/- 0.5 (CIHR's stated bound on final vs. consensus score) -- spread
+# is now role-dependent, not a single shared value
+dev_sd_reviewer = 0.15
+dev_sd_panelist = 0.30
 dev_min  = -0.5
 dev_max  =  0.5
 
-# ... committee/application/member structure, reviewer assignment, and
-# expertise assignment omitted here -- see code/ror-sim-aim1.R for
-# the complete script
+# ... committee/application/member structure (including the pool_size
+# -> mem_n derivation), reviewer assignment, and expertise assignment
+# omitted here -- see code/ror-sim-deviate.R for the complete script
 
 data <- data |>
   mutate(
     p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_med) +
       (a3 * exp_low) + (a4 * exp_none)),
     deviated = rbinom(n(), 1, p_dev),
+    dev_sd_i = if_else(panelist == 1, dev_sd_panelist, dev_sd_reviewer),
     deviation = if_else(
       deviated == 1,
       round_tenth(rtruncnorm(n(), a = dev_min, b = dev_max,
-        mean = dev_bias + u0m_bias, sd = dev_sd)),
+        mean = dev_bias + u0m_bias, sd = dev_sd_i)),
       0)
   )
 ```
@@ -446,25 +491,35 @@ CIHR's actual numbers will look like.
 
 ## Simulated data
 
-What did we generate with the parameters above? @fig-cmte shows our
-simulated 50 committees with varying sizes and the number of total and
-discussed applications. Across the 50 committees the fraction discussed
-varies from 24.1% to 41.0%. Generally, larger committees end up with
-more total and more discussed applications.
-
 ```{r}
 #| echo: false
-#| label: fig-cmte
-#| fig-cap: Distribution of committee sizes, total and discussed applications
+#| label: cmte-summary-setup
 
-d <- read_csv(here("data", "sim-deviate.csv"))
+d <- read_csv(here("data", "sim-deviate.csv"), show_col_types = FALSE)
 
 cmte_pool <- readRDS(here("output", "cmte-pool.rds"))
 
 cmte_summary <- d |>
   group_by(cmte) |>
   summarise(n_discussed = n_distinct(app), n_members = n_distinct(memno)) |>
-  left_join(cmte_pool |> select(cmte, pool_size), by = "cmte")
+  left_join(cmte_pool |> select(cmte, pool_size), by = "cmte") |>
+  mutate(frac_discussed = n_discussed / pool_size)
+
+frac_range <- range(cmte_summary$frac_discussed)
+```
+
+What did we generate with the parameters above? @fig-cmte shows our
+simulated `r n_distinct(cmte_summary$cmte)` committees with varying
+sizes and the number of total and discussed applications. Across the
+committees the fraction discussed varies from
+`r sprintf("%.1f%%", 100 * frac_range[1])` to
+`r sprintf("%.1f%%", 100 * frac_range[2])`. Generally, larger committees
+end up with more total and more discussed applications.
+
+```{r}
+#| echo: false
+#| label: fig-cmte
+#| fig-cap: Distribution of committee sizes, total and discussed applications
 
 cmte_summary |>
   ggplot(aes(x = reorder(cmte, n_members))) +
@@ -572,29 +627,21 @@ by_cmte <- ggplot(d, aes(x = cmte, y = score)) +
 app_ranks <- d |>
     distinct(cmte, app, consensus) |>
     group_by(cmte) |>
-    mutate(consensus_rank = rank(consensus, ties.method = "first")) |>
+    mutate(consensus_rank = rank(consensus, 
+    ties.method = "first")) |>
     ungroup() |>
     select(cmte, app, consensus_rank)
 
 app_summary <- d |> left_join(app_ranks, by = c("cmte", "app"))
 
 by_app <- ggplot(app_summary, 
-  aes(x = score, y = factor(consensus_rank), fill = consensus_rank)) +
-  geom_density_ridges(scale = 1.5, rel_min_height = 0.01) +
-  labs(x = "Score",
-       y = "Application rank") +
-    theme_ridges() +
-    theme(legend.position = "none") + 
-  scale_y_discrete(limits = rev, breaks = c(5, 10, 15, 20, 25))
-
-by_app2 <- ggplot(app_summary, 
   aes(x = factor(consensus_rank), y = score)) + 
   geom_boxplot(fill = "#377eb8") + 
   labs(x = "Consensus rank within committee", y = "Score") + 
   scale_x_discrete(breaks = c(5,10,15,20,25)) + 
   theme_classic()
 
-by_cmte / by_app2
+by_cmte / by_app
 ```
 
 ## Part 1: did this member deviate?
@@ -636,7 +683,8 @@ fixed_start  <- which(tab$group == "Fixed effects")[1]
 random_start <- which(tab$group == "Random effects (SD)")[1]
 
 tab |>
-  mutate(truth = if_else(group == "Random effects (SD)", "", truth)) |>
+  mutate(truth = if_else(
+    group == "Random effects (SD)", "", truth)) |>
   select(term, truth, estimate, mad, conf.low, conf.high) |>
   setNames(c("Parameter", "Truth", "Estimate", "Error",
              "95% CrI Lower", "95% CrI Upper")) |>
@@ -652,8 +700,8 @@ From the fixed effects we see that we generally recover the simulated
 parameters -- the 'true' treatment effects in the first column are well
 approximated by our model. The three random-effect SDs are small and
 estimated with considerable uncertainty; the simulated data-generating
-process for whether a member deviates (`deviated`) depends only on
-`job`/`exp`, with no committee-, application-, or member-level
+process for whether a member deviates (`deviated`) depends only on `job`
+and `exp`, with no committee-, application-, or member-level
 heterogeneity built in at that stage (member-level heterogeneity only
 enters the *magnitude* of deviation, modeled separately in Part 2
 below), so this is the expected pattern. We can also generate the
@@ -666,6 +714,9 @@ by `job` and `expertise` using the `marginaleffects` package.
 #| fig-cap: Marginal effects from deviation model
 
 pred_tab <- readRDS(here("output", "m1-deviate-me.rds"))
+
+# overall
+odp <- pred_tab$estimate[pred_tab$term == "All members"] |> as.numeric()
 
 group_starts <- which(!duplicated(pred_tab$group))
 header_rows  <- group_starts + seq_along(group_starts) - 1
@@ -682,10 +733,10 @@ pred_tab |>
 ```
 
 @tbl-dev-me show that the overall fraction of members that deviate is
-around 38%. Reviewers are slightly less likely to deviate than
-non-reviewing panelists. With respect to expertise, those with high
-expertise are the least likely to deviate from the consensus (30%),
-whereas those with no . In practice we
+around `r round(odp*100, 0)`%. Reviewers are slightly less likely to
+deviate than non-reviewing panelists. With respect to expertise, those
+with high expertise are the least likely to deviate from the consensus
+(30%), whereas those with no . In practice we
 
 ## Part 2: how large, given a deviation?
 
@@ -725,6 +776,34 @@ corresponding
 $E[d_{ijk}] = P(\text{deviate}) \times E[\text{magnitude} \mid
 \text{deviate}]$ calculation across both models) is written but not yet
 implemented in code -- see Open Questions below.
+
+```{r}
+#| echo: false
+#| label: tbl-m1-magnitude
+#| fig-cap: Estimates from magnitude model
+
+tab <- readRDS(here("output", "m1-magnitude-table.rds"))
+
+threshold_start <- which(tab$group == "Thresholds")[1]
+fixed_start     <- which(tab$group == "Fixed effects (location)")[1]
+random_start    <- which(tab$group == "Random effects (SD)")[1]
+disc_start      <- which(tab$group == "Fixed effects (dispersion)")[1]
+
+tab |>
+  mutate(truth = if_else(
+    group %in% c("Thresholds", "Fixed effects (dispersion)"), "", truth)) |>
+  select(term, truth, estimate, mad, conf.low, conf.high) |>
+  setNames(c("Parameter", "Truth", "Estimate", "Error",
+             "95% CrI Lower", "95% CrI Upper")) |>
+  tt(caption = "Posterior estimates: m1_magnitude") |>
+  group_tt(i = list("Thresholds" = threshold_start,
+                    "Fixed effects, location (log-cumulative-odds)" = fixed_start,
+                    "Random effects (SD)" = random_start,
+                    "Fixed effects, dispersion (log-scale)" = disc_start)) |>
+  style_tt(i = c(1, 11, 16, 20), italic = TRUE) |>
+  style_tt(i = 0, align = "l") |>
+  style_tt(j = 1, align = "l")
+```
 
 Below you can see the average marginal predictions for reviewers vs.
 panelists in terms of deviations from the consensus score, given that a

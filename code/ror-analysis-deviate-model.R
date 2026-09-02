@@ -96,7 +96,13 @@ pr_b <- map_dfr(scenarios, ~check_prior(
 
 m1_dev_priors <- pr_int / pr_b
 
-ggsave(here("output", "ror-priors-m1-deviate.png"),
+# saved into writing/media/ (not output/) because the modeling-strategy
+# doc's typst render needs it there -- typst's sandboxed compiler
+# refuses to read any path that escapes the .typ file's own directory
+# (writing/), so a here("output", ...) path breaks `quarto render
+# --to typst` with "access denied ... cannot read file outside of
+# project root". Same fix already applied to eq-m1-deviate.png.
+ggsave(here("writing", "media", "ror-priors-m1-deviate.png"),
        plot = m1_dev_priors)
 
 ## Overall looks like SD of 1.0 for the intercept and

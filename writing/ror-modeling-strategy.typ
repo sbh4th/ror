@@ -293,9 +293,10 @@
       affiliation: [],
       email: [] ),
     ),
-  date: [2026-08-26],
+  date: [2026-09-02],
   font: ("C059",),
   fontsize: 11pt,
+  heading-family: ("C059",),
   sectionnumbering: "1.1.a",
   toc_title: [Table of contents],
   toc_depth: 3,
@@ -303,35 +304,35 @@
   doc,
 )
 
-= Purpose
-<purpose>
-This is a design and validation exercise for a project that aims to assess how reviewer engagement and expertise may affect grant scores during CIHR peer review. Given the restrictive nature of CIHR funding data, this document lays out the data-generating process we believe is similar to CIHR's Project Grant peer review, the model we intend to fit against it, and evidence that the models we will use can actually recover simulated effects.
+= Overview
+<overview>
+This is a design and validation exercise for a project that aims to assess how reviewer engagement and expertise may affect post-discussion grant scores during CIHR peer review. Given the restrictive nature of CIHR funding data, this document lays out the data-generating process we believe is similar to CIHR's Project Grant peer review, the model we intend to fit against it, and evidence that the models we will use can actually recover simulated effects.
 
-It is not a full pre-analysis plan (no pre-specified hypotheses, stopping rules, or multiplicity strategy yet), but it's close in spirit, and a subsequent revision could become one.
+It is not a full pre-analysis plan (no pre-specified hypotheses), but it's close in spirit, and a subsequent revision could become one.
 
-= Research aims
+== Research aims
 <research-aims>
-+ #strong[Aim 1] -- How do reviewer expertise (self-described: high/medium/low/not enough) and engagement (assigned reviewer vs.~non-reviewing panelist) affect the impact of panel discussion on scores?
++ #strong[Aim 1] -- How do reviewer expertise (self-described: high/medium/low/not enough) and engagement (assigned reviewer vs. non-reviewing panelist) affect the impact of panel discussion on scores?
 + #strong[Aim 2] -- Do these effects differ by applicant characteristics, namely gender or career stage?
 + #strong[Aim 3] (exploratory) -- How would alternative funding-decision schemes (e.g.~reweighting by engagement, partial randomization near the funding threshold) compare to the status quo?
 
-= Project Scheme review process
+== Project Scheme review process
 <project-scheme-review-process>
 - The 3 assigned reviewers read the application and score it. At the meeting (and #emph[before] any discussion), they are required to agree on a #strong[consensus score];.
 - After discussion all panel members (including the 3 reviewers) submit a #strong[final score];. Reviewers are not bound to their own consensus number; they can move too.
 - The final score must fall within #strong[±0.5] of the consensus score, and is entered to #strong[one decimal place];.
 - The (equally weighted) average of final scores across all panel members feeds the funding decision.
 
-= Data structure
+== Data structure
 <data-structure>
-We're assuming a three-level structure: committees, discussed applications nested in committees, and panel members nested in committees (crossed with applications, since a member reviews many applications within a cycle). Based on recent Project Grant committee sizes, our working numbers are roughly 50 committees and 24 members per committee, but we allow the number of applications across committees to vary.
-
-#strong[50 committees × 15 discussed applications per committee × 24 members per committee];.
+We're assuming a three-level structure: CIHR-established committees, applications nested in committees, and panel members nested in committees (crossed with applications, since each member reviews many applications within a cycle). Based on recent Project Grant committee sizes (cite webpage?), our working numbers are roughly 50 committees, but we allow the number of applications across committees to vary based on CIHR documentation, and simulate the number of applications proportionally (with some variance)
 
 CIHR's Funding Analytics Team confirmed by email (2025-12-04) which fields are actually extractable for a data pull, versus fields that can only ever be touched by a CIHR analyst running our code in-house on the real data (full table and follow-up questions in `code/ror-research-log.qmd`). Headline for this document: committee/application/member identifiers, role (reviewer vs.~panelist), self-described expertise, initial reviewer scores, consensus score, final scores, and funding result are all extractable. #strong[Applicant gender and career stage -- Aim 2's entire basis -- are not];, and won't appear even in CIHR's own distribution-matched dummy data. That constraint is why this document exists: the simulation below is the only rehearsal Aim 2's code gets before it runs once, unsupervised, on real data.
 
-= Primary outcome: modeling the difference, not the level
-<primary-outcome-modeling-the-difference-not-the-level>
+= Modeling Strategy
+<modeling-strategy>
+== Primary outcome(s)
+<primary-outcomes>
 The primary Aim 1 outlined above is to assess how #emph[changes] from the initial consensus score to the final review scores (after discussion) may vary with panel expertise and engagement. Thus, rather than our primary outcome being the overall application score, we specifically want to model the difference between the consensus score and the final scores.
 
 Let $d_(i j k)$ be the final score minus the consensus score, for the $i$th panel member on the $j$th application in the $k$th committee:
@@ -340,13 +341,13 @@ $ d_(i j k) = upright("final score")_(i j k) - upright("consensus score")_(j k) 
 
 Our interest is in modeling $d_(i j k)$ directly, rather than modeling the final score with consensus score as a covariate, for three reasons:
 
-+ #strong[Point mass at zero.] We hypothesize that most or many members will go with the consensus score, which leads to a mass either at the consensus (if you modeled the score) or a mass at zero if you model the difference. A member who doesn't move from consensus has $d_(i j k) = 0$ regardless of which application they're scoring. So even if you model the final score conditional on the consensus you will still have a spike, just relocated to wherever a given application's consensus happened to land. Differencing standardizes the spike's location (at zero) across every application and makes a shared two-part model feasible.
-+ #strong[Avoids some sources of confounding.] The consensus score is constant across everyone in the committee and reflects both the committee's and the application's "true quality" signal. Subtracting it off removes anything that's shared by every member evaluating the same application (committee identity, application quality, etc.), leaving only the within-application variation across panel members as what's left to explain. If some committees have both higher consensus scores and a different mix of reviewer expertise then consensus and 'expertise' are correlated across applications. Differencing eliminates this potential bias since the coefficient on consensus isn't estimated at all.
++ #strong[Point mass at zero.] We hypothesize that most or many members will go with the consensus score, which leads to a probability mass either at the consensus (if you modeled the score) or a mass at zero if you model the difference. A member who doesn't move from consensus has $d_(i j k) = 0$ regardless of which application they're scoring. So even if you model the final score conditional on the consensus you will still have a spike, just relocated to wherever a given application's consensus happened to land. Differencing standardizes the spike's location (at zero) across every application and makes a shared two-part model more feasible.
++ #strong[Avoids some sources of confounding.] The consensus score is constant across everyone in the committee and reflects both the reviewer's and the application's initial "true quality" signal. Subtracting it off removes anything that's shared by every member evaluating the same application (committee identity, application quality, etc.), leaving only the within-application variation across panel members as what's left to explain. If some committees have both higher consensus scores and a different mix of reviewer expertise then consensus and 'expertise' are correlated across applications. Differencing eliminates this potential bias since the coefficient on consensus isn't estimated at all.
 + #strong[Matches the actual research question.] Aim 1 is about the #emph[change from consensus] induced by discussion, not the #emph[level] of the final score (driven mostly by application quality). Since it is simple to recover the final score like $upright("final score") = upright("consensus") + d_(i j k)$, anything Aim 3 needs at the score level for funding-decision simulations can be reconstructed downstream.
 
 == Estimand of interest
 <estimand-of-interest>
-Our main quantity of interest in this project is the value that a given committee member's score differential from the consensus ($d_(i j k)$) would take if a particular reviewer characteristic (role or experience) were set to a specific value, averaged over the entire population of panel members, applications, and committees. We can write an example of, say, the difference between final scores for a given member-application pairing if that member were assigned to be a panelist or a reviewer:
+Our main quantity of interest in this project is the value that a given committee member's score differential from the consensus ($d_(i j k)$) would take if a particular reviewer characteristic (role or experience) were set to a specific value, averaged over the entire population of panel members, applications, and committees. We can write an example of, say, the difference between differential scores for a given member-application pairing if that member were assigned to be a panelist or a reviewer:
 
 #let phantom_tall = box(width: 0pt, hide[$1 / (I J K) sum_(k=1)^K sum_(j=1)^J sum_(i=1)^I$])
 $ underbrace(1 / (I J K) sum_(k=1)^K sum_(j=1)^J sum_(i=1)^I,
@@ -357,20 +358,20 @@ upright("to panelist(1)") \
 upright("or reviewer(0)")) $
 Leaving aside for the moment the assumptions needed to credibly estimate this quantity, the specific data generating process for score deviations leads to challenges, since the distribution of this outcome depends on two processes: 1) whether a given member deviates from the consensus score; and 2) how large that deviation might be. Estimating these effects across the whole population of applications leads to the intuition for a two-part model.
 
-= Why a two-part model
-<why-a-two-part-model>
+== Two-part model
+<two-part-model>
 We expect $d_(i j k)$ to have a spike at exactly zero (members who simply adopt the consensus score) plus variation among those who depart from it. So the outcome is split into two linked models:
 
-+ #strong[Did this member deviate at all?] A Bernoulli/logistic model on $1 [d_(i j k) eq.not 0]$.
++ #strong[Did this member deviate at all?] A binary/logistic model on $1 [d_(i j k) eq.not 0]$.
 + #strong[If they deviated, by how much?] A model for the (signed) magnitude, conditional on deviating.
 
-Estimating the expected value of the both parts across the entire population of reviewers (not just those that deviate from consensus) recovers the effect in the entire sample.
+Estimating the expected value of the both parts across the entire population of reviewers (not just those that deviate from consensus) recovers the effect in the entire sample. This is akin to a 'hurdle' type model (Mullahy 1986) that combines a binary outcome and a magnitude estimate for non-zero outcomes.
 
 $ E [d_(i j k)] = underbrace(P (upright("deviate")), upright("Part 1: any")\
 upright("deviation at all")) times underbrace(E [upright("magnitude") divides upright("deviate")], upright("Part 2: size")\
 upright("given deviation")) $
 
-= Model specification (Aim 1)
+== Model specification (Aim 1)
 <model-specification-aim-1>
 We adopt a Bayesian modeling approach and model the binomial outcome of whether or not a member deviated as a function of their engagement with the application (reviewer vs.~panelist) and their self-declared expertise to review (high, medium, low, none). In our specification below $D_(i j k)$ is 1 for those who deviated, and we include random effects for committees ($gamma_(c m t e [k])$), members ($alpha_(m e m [i])$), and applications ($beta_(a p p [j])$). For the fixed effects $delta$ is the effect of being a panelist vs.~reviewer, and $zeta$ captures the suite of effects for the expertise indicators ($bold("Exp")_(i j)$)
 
@@ -382,10 +383,10 @@ $ D_"ijk" & tilde upright("Binomial")(1, p_"ijk") &&& upright("[likelihood]") \
   (delta, zeta) & tilde upright("Normal")(0, 0.5) &&& upright("[prior for fixed effects]") \
   dash(alpha) & tilde upright("Normal")(0, 1.0) &&& upright("[prior for average member]") \
   (sigma_alpha, sigma_gamma, sigma_beta) & tilde upright("Exponential")(1) &&& upright("[prior for standard deviations]") $
-Bayesian models require priors on all parameters, and we generally plan to use weakly regularizing priors that allow for a wide range of potential effects but that are generally skeptical of effects of large magnitude. Below we show distributions that helped frame our decision. For the overall probability of deviating the Normal(0, 1.0) prior (green line in top plot) provides a generally wide possibility of the probability of deviating (95% of the )
+Bayesian models require priors on all parameters, and we generally plan to use weakly regularizing priors that allow for a wide range of potential effects but that are generally skeptical of effects of large magnitude. Below we show distributions that helped frame our decision. For the overall probability of deviating the Normal(0, 1.0) prior (green line in top plot) provides a generally wide possibility of the probability of deviating (95% of the probability mass is between 14% and 88% deviating), and a Normal(0, 0.5) for the beta coefficients puts 95% of the probability mass on differences in the probability of deviating of +/- 20 percentage points (i.e., it is quite skeptical of very large effect sizes).
 
 #figure([
-#box(image("../output/ror-priors-m1-deviate.png"))
+#box(image("media/ror-priors-m1-deviate.png"))
 ], caption: figure.caption(
 position: bottom, 
 [
@@ -399,61 +400,68 @@ supplement: "Figure",
 
 == Model specification: magnitude, given a deviation
 <model-specification-magnitude-given-a-deviation>
-The second part of the model asks, among members who deviated, how large a deviation ($M_(i j k)$, one of 10 discrete steps $plus.minus 0.1 dots.h plus.minus 0.5$)? We use an ordinal cumulative-logit model with flexible (non-equidistant) thresholds $tau_c$. One difference from Part 1 is worth flagging: because the $K - 1 = 9$ thresholds already anchor the model's location, none of the group-level intercepts needs to absorb a population mean the way $alpha_(m e m [i])$ did above -- $gamma_(c m t e [k])$, $alpha_(m e m [i])$, and $beta_(a p p [j])$ are all mean-zero here. The other difference is new as of this round of simulation work: role (reviewer vs.~panelist) doesn't just shift #emph[where] a member's deviation tends to land ($eta_(i j k)$), it also affects #emph[how spread out] the deviation is ($kappa_(i j k)$, brms's discrimination parameter for ordinal models) -- panelists show a genuinely wider distribution of deviation sizes, not just a different average. `disc ~ 0 + job` estimates that discrimination directly for each role rather than as a contrast against a reference level.
+The second part of the model asks how large a deviation occurred among members who deviated, i.e., $M_(i j k)$ as one of 10 discrete steps ($plus.minus 0.1 dots.h plus.minus 0.5$) either positive or negative. Since this outcome has fixed categories and a natural ordering (from -0.5 to + 0.5) we use an ordinal cumulative-logit model with flexible (non-equidistant) thresholds $tau_c$. One difference from Part 1 is worth flagging: because the $K - 1 = 9$ thresholds already anchor the model's location, none of the group-level intercepts needs to absorb a population mean the way $alpha_(m e m [i])$ did above -- $gamma_(c m t e [k])$, $alpha_(m e m [i])$, and $beta_(a p p [j])$ are all mean-zero here. The other difference is new as of this round of simulation work: role (reviewer vs.~panelist) doesn't just shift #emph[where] a member's deviation tends to land ($eta_(i j k)$), it also affects #emph[how spread out] the deviation is ($kappa_(i j k)$, brms's discrimination parameter for ordinal models) -- panelists show a genuinely wider distribution of deviation sizes, not just a different average. For consistency with how $eta_(i j k)$ is written above, $kappa_(i j k)$ is shown here using the same reference-level (Reviewer) plus contrast (Panelist) convention: an intercept $delta_0^(d i s c)$ and a contrast $delta_1^(d i s c)$. Unlike $eta_(i j k)$, though, $kappa_(i j k)$ has no random effects or thresholds to implicitly absorb a reference value, so it needs an explicit intercept term of its own -- both $delta_0^(d i s c)$ and $delta_1^(d i s c)$ are still freely estimated (Reviewer's own discrimination isn't pinned at any fixed value here). The model is actually fit in code as `disc ~ 0 + job` (each role's discrimination estimated directly, rather than as an intercept-plus-contrast) -- algebraically equivalent to what's shown below, chosen there for direct interpretability against `brms`'s neutral default of $kappa = 1$ for everyone (see research log, 2026-08-27, for the full reasoning); the reference-contrast form here is purely to keep this equation's presentation consistent with $eta_(i j k)$'s.
 
 $ M_"ijk" bar.v D_"ijk"=1 & tilde upright("Cumulative")(eta_"ijk", kappa_"ijk", bold(tau)) &&& upright("[likelihood, 10 ordered categories]") \
   P(M_"ijk" lt.eq c) & = upright("logit")^(-1)(kappa_"ijk" (tau_c - eta_"ijk")) &&& upright("[cumulative-logit link]") \
   eta_"ijk" & = alpha_"mem"_i + gamma_"cmte"_k + beta_"app"_j + delta upright("Panelist")_"ijk" + zeta bold(upright("Exp"))_"ij" &&& upright("[location]") \
-  log(kappa_"ijk") & = delta^"disc"_upright("Reviewer") upright("Reviewer")_"ijk" + delta^"disc"_upright("Panelist") upright("Panelist")_"ijk" &&& upright("[role-specific discrimination]") \
+  log(kappa_"ijk") & = delta_0^"disc" + delta_1^"disc" upright("Panelist")_"ijk" &&& upright("[role-specific discrimination]") \
   alpha_"mem"_i & tilde upright("Normal")(0, sigma_alpha) &&& upright("[prior for member intercepts]") \
   gamma_"cmte"_k & tilde upright("Normal")(0, sigma_gamma) &&& upright("[prior for committee intercepts]") \
   beta_"app"_j & tilde upright("Normal")(0, sigma_beta) &&& upright("[prior for application intercepts]") \
   tau_c & tilde upright("Normal")(0, 1.5), thin c = 1, dots.h, 9 &&& upright("[prior for thresholds]") \
   (delta, zeta) & tilde upright("Normal")(0, 0.5) &&& upright("[prior for location fixed effects]") \
-  (delta^"disc"_upright("Reviewer"), delta^"disc"_upright("Panelist")) & tilde upright("Normal")(0, 1) &&& upright("[prior for discrimination effects]") \
+  (delta_0^"disc", delta_1^"disc") & tilde upright("Normal")(0, 1) &&& upright("[prior for discrimination effects]") \
   (sigma_alpha, sigma_gamma, sigma_beta) & tilde upright("Exponential")(1) &&& upright("[prior for standard deviations]") $
 #strong[Why ordinal (`cumulative()`), not categorical/multinomial?] The 10 magnitude levels aren't just index labels -- they're the literal numeric ordering of `final_score - consensus` ($- 0.5 < - 0.4 < dots.h < - 0.1 < 0.1 < dots.h < 0.5$), and treating them as categorical would throw that structure away, treating "+0.3" and "-0.4" as no more related to each other than either is to "+0.1". It also matches the actual data-generating mechanism: this is a continuous quantity (a truncated-normal draw) rounded to one decimal place for recording, not 10 qualitatively distinct outcomes -- modeling a discretized continuum with an ordinal model, rather than as unordered categories, is the standard match for that kind of measurement. A multinomial model would also need a full separate set of coefficients (role, expertise, every random effect) for each of the 9 non-reference categories -- roughly 9x the parameters of the ordinal specification, most poorly identified given how sparse the tail categories are -- versus the ordinal model's single location parameter (and now, a role-specific dispersion parameter) shared across all 10 categories via the threshold structure. That matters substantively too: our actual hypotheses ("panelists' deviations run larger on average," "panelists show more spread") are inherently location/dispersion statements, which only have a natural expression on an ordered scale -- a categorical model has no notion of shift or spread at all, just 10 free-floating probabilities from which those would have to be reconstructed post hoc.
 
 One caveat worth flagging: treating the #emph[full signed] scale as a single ordered dimension is a modeling choice, not the only defensible one. It implicitly assumes direction and magnitude of deviation share one underlying continuum, rather than direction being a separate, qualitatively distinct decision (up vs.~down) with magnitude nested inside it -- the latter is what the alternative three-part model discussed elsewhere (bernoulli direction + ordinal $lr(|upright("magnitude")|)$) would assume instead. We think the single-continuum assumption is the more faithful match to how these scores actually arise (one continuous departure from consensus, not "decide direction, then decide how far"), but it is an assumption.
 
-== Simulating the data-generating process
-<simulating-the-data-generating-process>
-For the basic structure of the data generating process we use 50 committees, 15 discussed applications per committee, 24 members per committee. We also simulate another 15 applications that will end up being streamlined. For the assignments we have 3 of the 24 members on each application as the assigned reviewers, the rest are non-reviewing panelists. A consensus score is drawn per application (committee- and application-level random effects only, no member-level variation yet, since this is before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed magnitude is drawn from a truncated distribution and rounded to the nearest tenth, matching CIHR's one-decimal-place scoring (with rejection sampling so a "deviated" row can never round down to a contradictory zero).
+= Simulating
+<simulating>
+For the basic structure of the data-generating process we simulate 50 committees. Rather than fixing the number of applications and members per committee, both now vary to reflect real committee-to-committee heterogeneity: each committee's candidate application pool (before streamlining) is drawn from a beta distribution bounded to CIHR's own stated range of 20-80 applications, and committee size is #emph[derived] from that pool size via a workload target (roughly 5.5 applications reviewed per member) plus lognormal noise, bounded to the real range observed in CIHR's Fall 2025 committee rosters (8-37 members) -- reflecting that CIHR sizes committees to manage workload given known application volume, not an independent draw. Each application still gets exactly 3 assigned reviewers regardless of committee size, with the remaining members serving as non-reviewing panelists. Not every candidate application is discussed -- CIHR's streamlining rule removes some before discussion (below), leaving roughly 15-16 discussed applications per committee on average, ranging from about 7 to 23 depending on the committee's own pool size and score distribution. A consensus score is drawn per application (committee- and application-level random effects only, no member-level variation yet, since this is before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed magnitude is drawn from a truncated distribution (its spread now also role-dependent -- panelists show a wider range of deviation sizes than reviewers) and rounded to the nearest tenth, matching CIHR's one-decimal-place scoring (with rejection sampling so a "deviated" row can never round down to a contradictory zero).
 
 #block[
 ```r
 # define parameters
-cmte_n   = 50     # number of committees
-app_n    = 15     # number of discussed applications per committee
-mem_n    = 24     # number of committee members per committee
+cmte_n = 50          # number of committees
 
-# candidate applications generated per committee before streamlining
-app_n_candidates = app_n * 2
+# pool_size (candidate applications per committee, before streamlining)
+# varies by committee -- beta-distributed on CIHR's stated [20, 80]
+# range -- and mem_n (committee size) is DERIVED from pool_size via a
+# workload target, not drawn independently
+pool_min = 20
+pool_max = 80
+target_reviews_per_member = 5.5
+mem_min  = 8         # real range, from CIHR's Fall 2025 committee rosters
+mem_max  = 37
 
-b0       = 4.1    # intercept for application's true underlying quality
+b0       = 4.0    # intercept for application's true underlying quality
 u0c_sd   = 0.1    # random intercept SD for committee (quality level)
 u0a_sd   = 0.3    # random intercept SD for application (quality level)
 
 # signed magnitude of deviation, given deviation occurs, truncated to
-# +/- 0.5 (CIHR's stated bound on final vs. consensus score)
-dev_bias = 0      # placeholder: no systematic direction yet
-dev_sd   = 0.15
+# +/- 0.5 (CIHR's stated bound on final vs. consensus score) -- spread
+# is now role-dependent, not a single shared value
+dev_sd_reviewer = 0.15
+dev_sd_panelist = 0.30
 dev_min  = -0.5
 dev_max  =  0.5
 
-# ... committee/application/member structure, reviewer assignment, and
-# expertise assignment omitted here -- see code/ror-sim-aim1.R for
-# the complete script
+# ... committee/application/member structure (including the pool_size
+# -> mem_n derivation), reviewer assignment, and expertise assignment
+# omitted here -- see code/ror-sim-deviate.R for the complete script
 
 data <- data |>
   mutate(
     p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_med) +
       (a3 * exp_low) + (a4 * exp_none)),
     deviated = rbinom(n(), 1, p_dev),
+    dev_sd_i = if_else(panelist == 1, dev_sd_panelist, dev_sd_reviewer),
     deviation = if_else(
       deviated == 1,
       round_tenth(rtruncnorm(n(), a = dev_min, b = dev_max,
-        mean = dev_bias + u0m_bias, sd = dev_sd)),
+        mean = dev_bias + u0m_bias, sd = dev_sd_i)),
       0)
   )
 ```
@@ -463,7 +471,7 @@ Every parameter above is at this point just an educated guess and a placeholder,
 
 == Simulated data
 <simulated-data>
-What did we generate with the parameters above? #ref(<fig-cmte>, supplement: [Figure]) shows our simulated 50 committees with varying sizes and the number of total and discussed applications. Across the 50 committees the fraction discussed varies from 24.1% to 41.0%. Generally, larger committees end up with more total and more discussed applications.
+What did we generate with the parameters above? #ref(<fig-cmte>, supplement: [Figure]) shows our simulated 50 committees with varying sizes and the number of total and discussed applications. Across the committees the fraction discussed varies from 24.1% to 41.0%. Generally, larger committees end up with more total and more discussed applications.
 
 #figure([
 #box(image("ror-modeling-strategy_files/figure-typst/fig-cmte-1.svg"))
@@ -646,7 +654,7 @@ supplement: "Table",
 <tbl-m1-deviate>
 
 
-From the fixed effects we see that we generally recover the simulated parameters -- the 'true' treatment effects in the first column are well approximated by our model. The three random-effect SDs are small and estimated with considerable uncertainty; the simulated data-generating process for whether a member deviates (`deviated`) depends only on `job`/`exp`, with no committee-, application-, or member-level heterogeneity built in at that stage (member-level heterogeneity only enters the #emph[magnitude] of deviation, modeled separately in Part 2 below), so this is the expected pattern. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package.
+From the fixed effects we see that we generally recover the simulated parameters -- the 'true' treatment effects in the first column are well approximated by our model. The three random-effect SDs are small and estimated with considerable uncertainty; the simulated data-generating process for whether a member deviates (`deviated`) depends only on `job` and `exp`, with no committee-, application-, or member-level heterogeneity built in at that stage (member-level heterogeneity only enters the #emph[magnitude] of deviation, modeled separately in Part 2 below), so this is the expected pattern. We can also generate the estimated absolute probabilities of deviating and how those are affected by `job` and `expertise` using the `marginaleffects` package.
 
 #figure([
 #show figure: set block(breakable: false)
@@ -750,7 +758,7 @@ supplement: "Table",
 <tbl-dev-me>
 
 
-#ref(<tbl-dev-me>, supplement: [Table]) show that the overall fraction of members that deviate is around 38%. Reviewers are slightly less likely to deviate than non-reviewing panelists. With respect to expertise, those with high expertise are the least likely to deviate from the consensus (30%), whereas those with no . In practice we
+#ref(<tbl-dev-me>, supplement: [Table]) show that the overall fraction of members that deviate is around 32%. Reviewers are slightly less likely to deviate than non-reviewing panelists. With respect to expertise, those with high expertise are the least likely to deviate from the consensus (30%), whereas those with no . In practice we
 
 == Part 2: how large, given a deviation?
 <part-2-how-large-given-a-deviation>
@@ -773,7 +781,121 @@ m1_magnitude <-
 ]
 The cost: $E [upright("magnitude") divides upright("deviate")]$ from an ordinal model is not a linear prediction -- it's a probability-weighted sum over the 10 category values, computed per posterior draw, not read off a default `marginaleffects` contrast. That combination step (and the corresponding $E [d_(i j k)] = P (upright("deviate")) times E [upright("magnitude") divides upright("deviate")]$ calculation across both models) is written but not yet implemented in code -- see Open Questions below.
 
-Below you can see the average marginal predictions for reviewers vs.~panelists in terms of deviations from the consensus score, given that a deviation occurred:
+#figure([
+#show figure: set block(breakable: false)
+
+#block[ // start block
+
+  #let style-dict = (
+    // tinytable style-dict after
+    "0_0": 0, "2_0": 0, "3_0": 0, "4_0": 0, "5_0": 0, "6_0": 0, "7_0": 0, "8_0": 0, "9_0": 0, "10_0": 0, "12_0": 0, "13_0": 0, "14_0": 0, "15_0": 0, "17_0": 0, "18_0": 0, "19_0": 0, "21_0": 0, "22_0": 0, "0_1": 0, "0_2": 0, "0_3": 0, "0_4": 0, "0_5": 0, "1_1": 1, "11_1": 1, "16_1": 1, "20_1": 1, "1_2": 1, "11_2": 1, "16_2": 1, "20_2": 1, "1_3": 1, "11_3": 1, "16_3": 1, "20_3": 1, "1_4": 1, "11_4": 1, "16_4": 1, "20_4": 1, "1_5": 1, "11_5": 1, "16_5": 1, "20_5": 1, "1_0": 2, "11_0": 2, "16_0": 2, "20_0": 2
+  )
+
+  #let style-array = ( 
+    // tinytable cell style after
+    (align: left,),
+    (italic: true,),
+    (italic: true, align: left,),
+  )
+
+  // Helper function to get cell style
+  #let get-style(x, y) = {
+    let key = str(y) + "_" + str(x)
+    if key in style-dict { style-array.at(style-dict.at(key)) } else { none }
+  }
+
+  // tinytable align-default-array before
+  #let align-default-array = ( left, left, left, left, left, left, ) // tinytable align-default-array here
+  #show table.cell: it => {
+    if style-array.len() == 0 { return it }
+    
+    let style = get-style(it.x, it.y)
+    if style == none { return it }
+    
+    let tmp = it
+    if ("fontsize" in style) { tmp = text(size: style.fontsize, tmp) }
+    if ("color" in style) { tmp = text(fill: style.color, tmp) }
+    if ("indent" in style) { tmp = pad(left: style.indent, tmp) }
+    if ("underline" in style) { tmp = underline(tmp) }
+    if ("italic" in style) { tmp = emph(tmp) }
+    if ("bold" in style) { tmp = strong(tmp) }
+    if ("mono" in style) { tmp = math.mono(tmp) }
+    if ("strikeout" in style) { tmp = strike(tmp) }
+    if ("smallcaps" in style) { tmp = smallcaps(tmp) }
+    tmp
+  }
+
+  // tinytable align-figure before
+
+  #table( // tinytable table start
+    columns: (auto, auto, auto, auto, auto, auto),
+    stroke: none,
+    rows: auto,
+    align: (x, y) => {
+      let style = get-style(x, y)
+      if style != none and "align" in style { style.align } else { left }
+    },
+    fill: (x, y) => {
+      let style = get-style(x, y)
+      if style != none and "background" in style { style.background }
+    },
+ table.hline(y: 1, start: 0, end: 6, stroke: 0.05em + black),
+ table.hline(y: 23, start: 0, end: 6, stroke: 0.08em + black),
+ table.hline(y: 0, start: 0, end: 6, stroke: 0.08em + black),
+    // tinytable lines before
+
+    // tinytable header start
+    table.header(
+      repeat: true,
+[Parameter], [Truth], [Estimate], [Error], [95% CrI Lower], [95% CrI Upper],
+    ),
+    // tinytable header end
+
+    // tinytable cell content after
+table.cell(colspan: 6)[Thresholds],
+[Threshold 1 (-0.5 | -0.4)], [], [-3.327], [0.598], [-4.609], [-2.303],
+[Threshold 2 (-0.4 | -0.3)], [], [-2.046], [0.372], [-2.833], [-1.406],
+[Threshold 3 (-0.3 | -0.2)], [], [-1.263], [0.232], [-1.768], [-0.872],
+[Threshold 4 (-0.2 | -0.1)], [], [-0.595], [0.120], [-0.864], [-0.396],
+[Threshold 5 (-0.1 | 0.1)], [], [0.010], [0.055], [-0.101], [0.121],
+[Threshold 6 (0.1 | 0.2)], [], [0.640], [0.125], [0.424], [0.913],
+[Threshold 7 (0.2 | 0.3)], [], [1.259], [0.228], [0.859], [1.740],
+[Threshold 8 (0.3 | 0.4)], [], [2.078], [0.367], [1.428], [2.843],
+[Threshold 9 (0.4 | 0.5)], [], [3.486], [0.619], [2.390], [4.782],
+table.cell(colspan: 6)[Fixed effects, location (log-cumulative-odds)],
+[Panelist vs. Reviewer (location)], [0], [0.012], [0.048], [-0.082], [0.110],
+[Medium vs. High Expertise], [0], [-0.008], [0.056], [-0.127], [0.106],
+[Low vs. High Expertise], [0], [-0.054], [0.063], [-0.182], [0.066],
+[None vs. High Expertise], [0], [-0.024], [0.062], [-0.155], [0.101],
+table.cell(colspan: 6)[Random effects (SD)],
+[Application], [0], [0.044], [0.038], [0.002], [0.147],
+[Committee Member], [], [0.401], [0.079], [0.269], [0.579],
+[Committee], [0], [0.068], [0.043], [0.005], [0.159],
+table.cell(colspan: 6)[Fixed effects, dispersion (log-scale)],
+[Reviewer (dispersion)], [], [0.650], [0.179], [0.324], [1.022],
+[Panelist (dispersion)], [], [0.129], [0.179], [-0.193], [0.496],
+
+    // tinytable footer after
+
+  ) // end table
+
+  // tinytable align-figure after
+
+] // end block
+Estimates from magnitude model
+
+], caption: figure.caption(
+separator: "", 
+position: top, 
+[
+]), 
+kind: "quarto-float-tbl", 
+supplement: "Table", 
+)
+<tbl-m1-magnitude>
+
+
+Below you can see the average marginal predictions for reviewers vs. panelists in terms of deviations from the consensus score, given that a deviation occurred:
 
 #figure([
 #box(image("ror-modeling-strategy_files/figure-typst/fig-m2-magnitude-job-1.svg"))
@@ -1010,20 +1132,7 @@ The script is organized into seven numbered sections, matching the `##  N ...` c
 #                 AND its mean-of-3 score ranks in the bottom 60% of
 #                 *that committee's own* candidate pool (a relative/rank
 #                 rule, not a fixed absolute score).
-#
-#            Committee-level application-pool size (2026-08-14): was a
-#            fixed pool_per_cmte = 40 for every committee; now drawn per
-#            committee from a beta distribution on CIHR's own stated
-#            [20, 80] range (cihr-irsc.gc.ca/e/51315.html), instead of a
-#            real basis that didn't exist when 2026-08-06 explicitly
-#            decided to leave committee size fixed. The beta's shape
-#            parameters are illustrative -- chosen to roughly match the
-#            range/right-skew implied by a one-off back-calculation from
-#            real CIHR funded-application counts (see
-#            code/ror-cihr-committee-size-check.R and
-#            ror-research-log.qmd), not fit to it or drawn from it at
-#            runtime -- deliberately not making this script depend on
-#            that dataset for anything beyond a rough ballpark.
+
 
 ##  0 Load needed packages ----
 library(here)
@@ -1049,9 +1158,8 @@ pool_shape1 = 2.5    # rbeta() shape -- illustrative, not fit; chosen to
 pool_shape2 = 4      # roughly match the mean/SD/right-skew of the
                      # funded-count back-calculation (mean ~42, SD ~12)
 
-mem_min = 8          # lower bound on committee "Members" count (real range,
-mem_max = 37         # from CIHR's Fall 2025 (202509PJT) Project Grant
-                     # committee roster, cihr-irsc.gc.ca/e/54732.html)
+mem_min = 8          # lower bound (from CIHR's Fall 2025 Proj Grant
+mem_max = 37         # committee roster, cihr-irsc.gc.ca/e/54732.html)
 
 # workload target: roughly 5 applications reviewed per member
 target_reviews_per_member = 5.5
@@ -1427,6 +1535,10 @@ saveRDS(cmte_pool, here("output", "cmte-pool.rds"))
 = References
 <references>
 #block[
+#block[
+Mullahy, John. 1986. “Specification and Testing of Some Modified Count Data Models.” #emph[Journal of Econometrics] 33 (3): 341365.
+
+] <ref-mullahy1986>
 ] <refs>
 
 

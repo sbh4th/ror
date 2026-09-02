@@ -1954,3 +1954,262 @@ in one pass.
 
 Updated `reference_ror_docs.md` to replace the old, over-broad
 characterization of this bug with the precise mechanism above.
+
+## Why the magnitude model's equation shows two `disc` coefficients for a binary covariate
+
+Sam asked a sharp question about the modeling-strategy doc's
+role-specific-discrimination line: role (`job`) is binary, so why does
+$\log(\kappa_{ijk})$ show *two* parameters
+($\delta^{disc}_{\text{Reviewer}}$, $\delta^{disc}_{\text{Panelist}}$)
+when the location line ($\eta_{ijk}$) only needed one ($\delta$, for
+Panelist, with Reviewer implicit at 0)?
+
+**Answer: it's a coding-convention difference, not extra information.**
+A 2-level factor only ever spans 2 free numbers no matter how it's
+written. $\eta_{ijk}$ uses standard `1 + job` treatment coding
+(intercept absorbed elsewhere by the mean-zero random effects/
+thresholds structure; Reviewer implicit at 0, Panelist gets one
+contrast $\delta$). The `disc` submodel was specified in code as
+`disc ~ 0 + job` (no intercept) instead, which under R's model-matrix
+rules gives one *full* dummy per level rather than intercept +
+contrast -- so both $\delta^{disc}_{\text{Reviewer}}$ and
+$\delta^{disc}_{\text{Panelist}}$ appear, each directly equal to that
+role's own $\log(\kappa)$.
+
+**Why `0 + job` was chosen for `disc` specifically** (this was actually
+already the rationale in the 2026-08-25 entry above, worth restating
+plainly): unlike location, dispersion has a natural "no effect"
+reference that isn't tied to either factor level -- `brms` fixes
+$\kappa=1$ for everyone whenever no `disc` formula is specified at all.
+`0 + job` lets both roles' coefficients be read directly against that
+same neutral default, rather than one role's coefficient being an
+absolute value and the other being a ratio relative to it.
+
+**A real subtlety surfaced while answering this, worth recording
+precisely:** a naive `1 + job`-with-implicit-zero-Reviewer coding for
+`disc` (mirroring $\eta$'s exact convention) would NOT be an
+equivalent relabeling the way it is for location -- it would pin
+Reviewer's discrimination at exactly $\kappa=1$ with no freedom to move,
+which is a genuinely more restrictive model than what's fit
+(`0 + job` estimates *both* roles' discrimination freely). The reason
+this works harmlessly for $\eta$ but not for $\kappa$: $\eta$ has other
+structure (random effects, thresholds) that implicitly absorbs a
+reference value with no real constraint being added; $\kappa$ has none
+of that, so forcing Reviewer's coefficient to exactly 0 would be a real
+constraint, not a notational choice.
+
+## Updated the modeling-strategy doc's `disc` equation to `1 + job`-style notation, for consistency with $\eta$
+
+Sam asked for this switch specifically in how the model is *written* in
+`writing/ror-modeling-strategy.qmd` (not a change to the actual `brms`
+formula, which stays `disc ~ 0 + job`). Given the subtlety above,
+implemented it as a genuine intercept-plus-contrast form rather than
+mirroring $\eta$'s implicit-zero convention: $\log(\kappa_{ijk}) =
+\delta_0^{disc} + \delta_1^{disc}\,\text{Panelist}_{ijk}$, where both
+$\delta_0^{disc}$ (Reviewer's own log-discrimination) and
+$\delta_1^{disc}$ (Panelist's contrast from it) remain freely
+estimated -- same 2-parameter space as `0 + job`, just relabeled, not
+the more restrictive implicit-zero version. Added explicit prose in
+the doc flagging that this is a presentational choice for consistency
+with $\eta_{ijk}$'s style, distinct from the actual fitted formula,
+with a pointer to this log entry for the full reasoning. Verified both
+html and typst render clean after the change (typst checked via direct
+`typst compile --root .`, same pre-existing image-path issue as
+before, unrelated to this edit).
+
+## Actually fixed the typst image-path issue, instead of just working around it again
+
+This has been flagged as an unresolved, pre-existing blocker several
+times over the last couple of days (worked around each time via
+`typst compile --root .` for my own verification, never fixed). Sam
+hit it directly running `quarto render ... --to typst` himself, which
+doesn't have that workaround available, so it was time to actually fix
+it.
+
+**Root cause:** `knitr::include_graphics(here("output",
+"ror-priors-m1-deviate.png"))` emits a relative path
+(`../output/ror-priors-m1-deviate.png`) in the generated `.typ` file,
+since `output/` sits one level above `writing/`. Typst's sandboxed
+compiler restricts file access to its "project root," which defaults
+to the input file's own directory (`writing/`) when nothing else is
+configured -- so any `../`-escaping path is refused with "access
+denied ... cannot read file outside of project root." `quarto render`
+doesn't pass a `--root` flag pointing at the repo root, so this bites
+every plain `quarto render --to typst` call, not just an edge case.
+
+**Fix:** moved `ror-priors-m1-deviate.png` into `writing/media/`
+(alongside `eq-m1-deviate.png`, which already lives there for exactly
+this same reason) instead of `output/`, and updated both the
+`ggsave()` call in `ror-analysis-deviate-model.R` and the
+`knitr::include_graphics()` call in
+`writing/ror-modeling-strategy.qmd` to match. This PNG is only ever
+consumed by this one qmd (unlike genuine cross-script `output/`
+artifacts like `cmte-pool.rds`), so moving its generation target is
+clean, not a duplication-drift risk.
+
+Verified for real this time -- `quarto render
+writing/ror-modeling-strategy.qmd --to typst` (no `--root` workaround)
+now completes with `DONE` and produces a PDF. html and docx still
+render clean too.
+
+## Added `_quarto.yml`: turns this repo into an actual Quarto project, root cause of the typst image-path issue
+
+Sam asked why `u2-sibs` (which references `output/` images from
+`manuscripts/index.qmd` via the exact same `here("output", "...")`
+pattern) doesn't hit the typst path-escaping error at all, while `ror`
+did. Root cause, confirmed by direct test rather than just inferring
+it from `u2-sibs`'s `_quarto.yml`: it's entirely about the presence of
+a `project:` declaration. When Quarto renders inside a declared
+project, it passes `--root <project-dir>` to the typst compiler, so
+the *whole project tree* is inside typst's sandbox and any path within
+it -- including `../output/...` from a file one level down -- resolves
+fine. Without a `_quarto.yml`, each `.qmd` renders as an isolated
+standalone file with no declared root, and typst falls back to
+treating the file's own directory as the sandbox boundary, refusing
+anything reached via `../`.
+
+Verified this precisely with a minimal, disposable reproduction (not
+just asserted): built a scratch file in a subdirectory referencing an
+image one level up, confirmed it fails identically to the real
+`ror` error with no `_quarto.yml` present, then added nothing but a
+bare `_quarto.yml` with no other changes -- same file, same path --
+and it rendered clean.
+
+**Added `_quarto.yml`** at the repo root (previously `ror` had none --
+`u2-sibs` does, which is the actual explanation):
+
+```yaml
+project:
+  title: "ror"
+  render:
+    - writing/ror-modeling-strategy.qmd
+    - code/ror-research-log.qmd
+```
+
+Kept the `render:` list explicit (matching `u2-sibs`'s own pattern)
+rather than letting Quarto auto-discover every `.qmd` in the repo --
+`writing/` also has several stray/scratch/unrelated files
+(`sim-data.qmd`, `Untitled.qmd`, `cv.qmd`, `cihr-analytics-meeting.qmd`,
+`cihr-ror-proposal.qmd`) that shouldn't be part of a project-wide
+render. This means the immediate fix (moving
+`ror-priors-m1-deviate.png` into `writing/media/`, above) turned out
+not to be strictly necessary for the underlying typst issue -- but it
+was still applied first and is fine to leave as-is; the project file
+is what makes *future* `output/`-referencing images from any doc in
+the render list work without needing the same per-file treatment.
+
+Side effect, expected and benign: Quarto auto-appended `/.quarto/` and
+`**/*.quarto_ipynb` to `.gitignore` on first project-mode render (its
+own standard behavior on detecting a new project, not something done
+by hand) -- confirmed no `_freeze/` directory or other unexpected
+artifacts appeared. Re-verified all three formats for both
+`ror-modeling-strategy.qmd` and `ror-research-log.qmd` render clean
+under the new project.
+
+## `job` is a mediator, not a confounder, of `exp`'s effect on `deviated` -- confirmed empirically, not just in theory
+
+Prompted by Sam noticing a tension he hadn't fully articulated before:
+this project hasn't said anything about causal interpretation, and
+`job` and `exp` sit in an awkward relationship for that. CIHR assigns
+reviewer/panelist role partly based on self-declared expertise (real
+committees put more-expert people in the reviewer seats), and
+expertise may also affect the outcome directly. That's a DAG where
+`job` is a **mediator**, not a confounder:
+
+```
+exp ──────────────────► job ──────────────► deviated
+  \                                              ▲
+   \_____________________________________________/
+              (direct effect of exp on deviated)
+```
+
+**What this means for interpretation, precisely:** a model that
+includes both `exp` and `job` as covariates (as `m1_deviate` does)
+gives an `exp` coefficient that is a *controlled direct effect* --
+expertise's effect *not* operating through role assignment -- not the
+*total* effect of expertise. Aim 1's own stated question ("how do
+reviewer expertise... and engagement... affect the impact of panel
+discussion") reads as asking about the total effect, not a
+role-net-of version of it, so the current model specification may be
+systematically understating what Aim 1 is actually asking about.
+`job`'s own coefficient is on somewhat firmer footing -- it's causally
+interpretable as "the effect of role assignment" *if* self-declared
+expertise is a sufficient adjustment set for whatever actually drives
+real-world assignment, which is a real, stated, but untestable
+assumption (real committee chairs may assign roles based on things
+beyond self-declared expertise -- reputation, past reliability -- that
+we don't measure).
+
+**A useful real-world parallel came up along the way:** Tamblyn et
+al.'s work on CIHR peer review reliability (the table Sam shared a few
+turns earlier) includes analyses in this same genre that adjust for
+scientific productivity (e.g. h-index) when estimating gender effects
+on review scores. That adjustment is vulnerable to the same family of
+problem, via (at least) two distinct mechanisms worth distinguishing:
+(1) productivity may itself be *downstream* of the very structural
+bias being studied (a lifetime of unequal opportunity depressing
+productivity), making it a mediator whose adjustment would
+*understate* a true total effect; (2) productivity could be a genuine
+**collider** if it's a common effect of gender and unmeasured "true
+ability" that also independently affects scores, in which case
+adjustment can bias the estimate in *either* direction, not just
+toward zero. Both are instances of what Cinelli, Forney & Pearl call a
+"bad control" -- adjusting for a variable that sits causally downstream
+of the exposure under study, unlike a genuine pre-treatment confounder.
+(Note: reasoning about the general methodological pattern here, not a
+verified claim about that specific paper's exact model specification.)
+
+**Confirmed this isn't just a hypothetical concern for our own
+simulation -- `job` genuinely is generated as a function of `exp`**
+(`exp_reviewer_weight <- c(high = 40, med = 30, low = 5, none = 1)` in
+`ror-sim-deviate.R`, added 2026-08-21), so the mediator structure
+above is already baked into `data/sim-deviate.csv`, not just a concern
+about eventual real CIHR data.
+
+**Empirical demonstration**, fit as two plain `glm()`s on `d1` (no
+random effects -- a quick check, not the project's real model):
+`m1: deviated ~ exp` (total effect) vs. `m2: deviated ~ exp + job`
+(direct effect, conditional on job). All three `exp` contrasts shift
+in the same direction -- more negative once `job` is added -- both on
+the log-odds scale and via `avg_slopes()` on the response
+(probability) scale:
+
+| Contrast | m1 (total) | m2 (direct) | Shift |
+|---|---|---|---|
+| low − high | −0.122 | −0.142 | −0.020 (16.2%) |
+| med − high | −0.092 | −0.097 | −0.005 (5.4%) |
+| none − high | −0.184 | −0.205 | −0.021 (11.6%) |
+
+`med` shows the smallest shift on both scales and both absolute/
+relative framings, consistent with `med`'s job-assignment odds being
+closest to `high`'s (weight 30 vs. 40) -- least room for a mediated
+component. The `low`-vs-`none` ordering isn't as clean (bigger in
+absolute terms for `none`, bigger in relative terms for `low`), so
+that specific ranking shouldn't be over-read. Mechanistically: since
+`jobpanelist`'s true effect is positive (panelists deviate more) and
+low/no-expertise members are disproportionately panelists, part of the
+*raw* association between low expertise and higher deviation in `m1`
+is actually coming from "low-expertise people are mostly panelists,
+and panelists deviate more anyway" -- a channel with nothing to do
+with expertise directly. Conditioning on `job` in `m2` strips that
+channel out, revealing a steeper direct effect.
+
+Caveats on this quick check, worth remembering before treating the
+specific numbers as final: no random effects (unlike `m1_deviate`
+itself), and the `m1`-vs-`m2` shift's own statistical significance
+hasn't been formally tested (would need a paired/bootstrap comparison
+accounting for the correlation between the two model fits, not just
+eyeballing overlapping CIs from two separate models).
+
+**Not yet resolved -- flagged for a conversation with Arijit:** whether
+`ror-modeling-strategy.qmd` should (a) state explicitly which causal
+estimand each reported coefficient corresponds to (direct vs. total
+effect), (b) additionally report `exp`'s total effect (the `m1`-style
+contrast, dropping `job`) alongside the current direct-effect version,
+if Aim 1's actual interest is the total effect, and/or (c) attempt a
+formal mediation decomposition of `exp`'s effect into direct + via-job
+components. No decision made; this entry exists so the reasoning and
+the empirical check are on record before that conversation happens.
+
+
+
