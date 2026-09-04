@@ -3,3 +3,4 @@ project:
   render:
     - writing/ror-modeling-strategy.qmd
     - code/ror-research-log.qmd
+    - code/ror-dag.qmd

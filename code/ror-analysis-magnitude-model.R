@@ -87,67 +87,55 @@ d_magnitude_job <- avg_slopes(m1_magnitude,
 
 tm2 <- p_magnitude_job |> bind_rows(d_magnitude_job)
 
-saveRDS(tm2, here("output", "m2-magnitude-job-me.rds"))
+saveRDS(tm2, here("output", "m1-magnitude-job-me.rds"))
 
-## 4 TODO before fitting for real ----
-# - Prior-predictive check both magnitude models on simulated data
-#   before ever fitting on real CIHR data (mirror u2s-analysis-priors.R)
-# - m1_magnitude/m2_magnitude are ordinal (cumulative()), so
-#   E[deviation | deviate] is NOT a linear prediction -- it's the
-#   probability-weighted sum over the 10 category values
-#   (posterior_epred(..., category probs) x dev_levels, summed per
-#   draw). marginaleffects/tidybayes can do this but it needs an
-#   explicit custom contrast, not the default continuous
-#   marginal-effect output.
-# - Write the combination step: E[deviation] = P(deviate) *
-#   E[deviation | deviate], propagating full posterior uncertainty from
-#   both fits (draws from ror-analysis-deviate-model.R's m1_deviate and
-#   this script's m1_magnitude/m2_magnitude, joined by posterior
-#   iteration, not point estimates)
-# - Confirm with CIHR that real data actually lands on the same +/-0.1
-#   ... +/-0.5 grid (dev_levels above) -- this is currently an assumption
-#   carried over from the simulator's parameters, not confirmed with the
-#   Funding Analytics Team
-# - Confirm cmdstan can actually compile/run in CIHR's execution
-#   environment (flagged as the biggest practical risk -- see PROJECT.md)
+## table
+dev_levels <- sprintf("%.1f", setdiff((-5:5) / 10, 0))
+threshold_labels <- setNames(
+  paste0("Threshold ", 1:9, " (", dev_levels[1:9], " | ", dev_levels[2:10], ")"),
+  paste0("Intercept[", 1:9, "]"))
+
+term_labels <- c(
+  threshold_labels,
+  "jobpanelist"       = "Panelist vs. Reviewer (location)",
+  "expmed"            = "Medium vs. High Expertise",
+  "explow"            = "Low vs. High Expertise",
+  "expnone"           = "None vs. High Expertise",
+  "aid"               = "Application",
+  "cid"               = "Committee Member",
+  "cmte"              = "Committee",
+  "disc_jobreviewer"  = "Reviewer (dispersion)",
+  "disc_jobpanelist"  = "Panelist (dispersion)"
+)
+
+# truth shown only where it's exactly 0 (scale-invariant); thresholds,
+# disc coefficients, and cid's SD are left blank -- no direct mapping
+# onto the fitted model's latent scale (see research log, 2026-08-27)
+truth <- c(
+  setNames(rep(NA_real_, 9), paste0("Intercept[", 1:9, "]")),
+  "jobpanelist" = 0, "expmed" = 0, "explow" = 0, "expnone" = 0,
+  "aid" = 0, "cid" = NA_real_, "cmte" = 0,
+  "disc_jobreviewer" = NA_real_, "disc_jobpanelist" = NA_real_
+)
+
+tab <- get_estimates(m1_magnitude) |>
+  select(term, estimate, mad, conf.low, conf.high) |>
+  mutate(
+    group = case_when(
+      str_starts(term, "b_Intercept") ~ "Thresholds",
+      str_starts(term, "b_disc_")     ~ "Fixed effects (dispersion)",
+      str_starts(term, "b_")          ~ "Fixed effects (location)",
+      str_starts(term, "sd_")         ~ "Random effects (SD)",
+      TRUE ~ NA_character_),
+    term = term |> str_remove("^b_") |> str_remove("^sd_") |> str_remove("__Intercept$")
+  ) |>
+  mutate(
+    truth = if_else(is.na(truth[term]), "", as.character(truth[term])),
+    term  = term_labels[term],
+    across(c(estimate, mad, conf.low, conf.high), ~sprintf("%.3f", .x))
+  )
+
+saveRDS(tab, here("output", "m1-magnitude-table.rds"))
 
 
-## 2 old model 1: signed magnitude of deviation, among deviators (location only) ----
-## ordinal cumulative() model over the 10 discrete +/-0.1 ... +/-0.5
-## steps. Thresholds default to "flexible" (not "equidistant"),
-## so the model does not assume the 10 steps are equally likely
-
-#delete model if it exists
-if (file.exists(here("code/fits/ror-magnitude-m1.rds"))) {
-  file.remove(here("code/fits/ror-magnitude-m1.rds"))}
-
-m1_magnitude <-
-  brm(data = d1_dev,
-      family = cumulative(link = "logit", threshold = "flexible"),
-      deviation ~ 1 + job + exp + (1 | cmte) + (1 | cid) + (1 | aid),
-      prior = c(prior(normal(0, 1.5), class = Intercept),  # thresholds
-                prior(normal(0, 0.5), class = b),           # betas
-                prior(exponential(1), class = sd)),         # group SDs
-      iter = 2000, warmup = 1000, chains = 4, cores = 4,
-      sample_prior = "yes",
-      seed = 8253,
-      control = list(adapt_delta = 0.80),
-      file = here("code/fits/ror-magnitude-m1"))
-
-# exp has no simulated dispersion effect, so the location-only
-# m1_magnitude is the right fit for it -- job's dispersion effect is
-# handled by m2_magnitude below instead.
-p_magnitude_exp <- avg_predictions(m1_magnitude, variables = "exp",
-                                   re_formula = NULL, ndraws = 200) |>
-  as.data.frame()
-
-# rebuild as a bare tibble (see note above pred_tab's saveRDS in
-# ror-analysis-deviate-model.R) so the ~140MB marginaleffects attribute
-# doesn't get serialized along with it
-p_magnitude_exp <- tibble(group = p_magnitude_exp$group,
-                          exp = p_magnitude_exp$exp, estimate = p_magnitude_exp$estimate,
-                          conf.low = p_magnitude_exp$conf.low,
-                          conf.high = p_magnitude_exp$conf.high)
-
-saveRDS(p_magnitude_exp, here("output", "m1-magnitude-exp-me.rds"))
 

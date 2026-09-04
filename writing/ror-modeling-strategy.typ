@@ -293,7 +293,7 @@
       affiliation: [],
       email: [] ),
     ),
-  date: [2026-09-02],
+  date: [2026-09-03],
   font: ("C059",),
   fontsize: 11pt,
   heading-family: ("C059",),
@@ -318,8 +318,10 @@ It is not a full pre-analysis plan (no pre-specified hypotheses), but it's close
 
 == Project Scheme review process
 <project-scheme-review-process>
-- The 3 assigned reviewers read the application and score it. At the meeting (and #emph[before] any discussion), they are required to agree on a #strong[consensus score];.
-- After discussion all panel members (including the 3 reviewers) submit a #strong[final score];. Reviewers are not bound to their own consensus number; they can move too.
+- The 3 assigned reviewers read the application and score it. At the meeting (and #emph[before] any discussion), they they give their initial scores.
+- R1 gives a summary and strengths/weaknesses. R2/R3 add any additional points of disagreement, followed by discussion among the entire panel.
+- After discussion the 3 assigned reviewers agree on a #strong[consensus score];.
+- All panel members (including the 3 reviewers) then submit a #strong[final score];. Reviewers are not bound to their own consensus number; they can move too.
 - The final score must fall within #strong[±0.5] of the consensus score, and is entered to #strong[one decimal place];.
 - The (equally weighted) average of final scores across all panel members feeds the funding decision.
 
@@ -327,7 +329,123 @@ It is not a full pre-analysis plan (no pre-specified hypotheses), but it's close
 <data-structure>
 We're assuming a three-level structure: CIHR-established committees, applications nested in committees, and panel members nested in committees (crossed with applications, since each member reviews many applications within a cycle). Based on recent Project Grant committee sizes (cite webpage?), our working numbers are roughly 50 committees, but we allow the number of applications across committees to vary based on CIHR documentation, and simulate the number of applications proportionally (with some variance)
 
-CIHR's Funding Analytics Team confirmed by email (2025-12-04) which fields are actually extractable for a data pull, versus fields that can only ever be touched by a CIHR analyst running our code in-house on the real data (full table and follow-up questions in `code/ror-research-log.qmd`). Headline for this document: committee/application/member identifiers, role (reviewer vs.~panelist), self-described expertise, initial reviewer scores, consensus score, final scores, and funding result are all extractable. #strong[Applicant gender and career stage -- Aim 2's entire basis -- are not];, and won't appear even in CIHR's own distribution-matched dummy data. That constraint is why this document exists: the simulation below is the only rehearsal Aim 2's code gets before it runs once, unsupervised, on real data.
+CIHR's Funding Analytics Team confirmed by email which fields are actually extractable for a data pull, versus fields that can only ever be touched by a CIHR analyst running our code in-house on the real data under the same remote-execution workflow, without a dummy-data rehearsal step first, grouped by the level each field is measured at:
+
+#figure([
+#show figure: set block(breakable: false)
+
+#block[ // start block
+
+  #let style-dict = (
+    // tinytable style-dict after
+    "0_0": 0, "2_0": 0, "3_0": 0, "4_0": 0, "5_0": 0, "6_0": 0, "7_0": 0, "9_0": 0, "10_0": 0, "11_0": 0, "12_0": 0, "14_0": 0, "15_0": 0, "16_0": 0, "17_0": 0, "18_0": 0, "19_0": 0, "20_0": 0, "21_0": 0, "22_0": 0, "0_1": 0, "1_1": 1, "8_1": 1, "13_1": 1, "1_0": 2, "8_0": 2, "13_0": 2
+  )
+
+  #let style-array = ( 
+    // tinytable cell style after
+    (align: left,),
+    (italic: true,),
+    (italic: true, align: left,),
+  )
+
+  // Helper function to get cell style
+  #let get-style(x, y) = {
+    let key = str(y) + "_" + str(x)
+    if key in style-dict { style-array.at(style-dict.at(key)) } else { none }
+  }
+
+  // tinytable align-default-array before
+  #let align-default-array = ( left, left, ) // tinytable align-default-array here
+  #show table.cell: it => {
+    if style-array.len() == 0 { return it }
+    
+    let style = get-style(it.x, it.y)
+    if style == none { return it }
+    
+    let tmp = it
+    if ("fontsize" in style) { tmp = text(size: style.fontsize, tmp) }
+    if ("color" in style) { tmp = text(fill: style.color, tmp) }
+    if ("indent" in style) { tmp = pad(left: style.indent, tmp) }
+    if ("underline" in style) { tmp = underline(tmp) }
+    if ("italic" in style) { tmp = emph(tmp) }
+    if ("bold" in style) { tmp = strong(tmp) }
+    if ("mono" in style) { tmp = math.mono(tmp) }
+    if ("strikeout" in style) { tmp = strike(tmp) }
+    if ("smallcaps" in style) { tmp = smallcaps(tmp) }
+    tmp
+  }
+
+  // tinytable align-figure before
+
+  #table( // tinytable table start
+    columns: (auto, auto),
+    stroke: none,
+    rows: auto,
+    align: (x, y) => {
+      let style = get-style(x, y)
+      if style != none and "align" in style { style.align } else { left }
+    },
+    fill: (x, y) => {
+      let style = get-style(x, y)
+      if style != none and "background" in style { style.background }
+    },
+ table.hline(y: 1, start: 0, end: 2, stroke: 0.05em + black),
+ table.hline(y: 23, start: 0, end: 2, stroke: 0.08em + black),
+ table.hline(y: 0, start: 0, end: 2, stroke: 0.08em + black),
+    // tinytable lines before
+
+    // tinytable header start
+    table.header(
+      repeat: true,
+[Indicator], [Availability],
+    ),
+    // tinytable header end
+
+    // tinytable cell content after
+table.cell(colspan: 2)[Application],
+[Committee number], [Extractable],
+[Application number], [Extractable],
+[Funding result], [Extractable],
+[Consensus score], [Extractable],
+[Resubmission status], [Extractable (2023 competition onward only)],
+[Keywords/domain; number of investigators; funding requested], [Refused -- identifiability risk],
+table.cell(colspan: 2)[Applicant],
+[Prior funding success (binary)], [Extractable],
+[Gender], [In-house only (no dummy data)],
+[Career stage], [In-house only (no dummy data)],
+[Scientific productivity], [In-house only -- and unlikely even then],
+table.cell(colspan: 2)[Member],
+[Member number / cid], [Extractable],
+[Job (reviewer vs. panelist role)], [Extractable],
+[Self-declared expertise (High/Medium/Low/Not enough)], [Extractable (can be split into binary columns)],
+[Score (final/voted score)], [Extractable],
+[Initial reviewer scores], [Extractable],
+[Past funding success (binary)], [Extractable],
+[Conflicts of interest], [Extractable (probably -- bundled with expertise data)],
+[Gender], [In-house only (no dummy data)],
+[Experience/tenure as a reviewer (distinct from self-declared expertise above; measurement TBD)], [In-house only (no dummy data)],
+
+    // tinytable footer after
+
+  ) // end table
+
+  // tinytable align-figure after
+
+] // end block
+CIHR field-by-field data availability, by level
+
+], caption: figure.caption(
+separator: "", 
+position: top, 
+[
+]), 
+kind: "quarto-float-tbl", 
+supplement: "Table", 
+)
+<tbl-cihr-fields>
+
+
+#strong[Applicant gender and career stage -- Aim 2's entire basis -- are not extractable];, and won't appear even in CIHR's own distribution-matched dummy data. That constraint is why this document exists: the simulation below is the only rehearsal Aim 2's code gets before it runs once, unsupervised, on real data.
 
 = Modeling Strategy
 <modeling-strategy>
@@ -419,7 +537,7 @@ One caveat worth flagging: treating the #emph[full signed] scale as a single ord
 
 = Simulating
 <simulating>
-For the basic structure of the data-generating process we simulate 50 committees. Rather than fixing the number of applications and members per committee, both now vary to reflect real committee-to-committee heterogeneity: each committee's candidate application pool (before streamlining) is drawn from a beta distribution bounded to CIHR's own stated range of 20-80 applications, and committee size is #emph[derived] from that pool size via a workload target (roughly 5.5 applications reviewed per member) plus lognormal noise, bounded to the real range observed in CIHR's Fall 2025 committee rosters (8-37 members) -- reflecting that CIHR sizes committees to manage workload given known application volume, not an independent draw. Each application still gets exactly 3 assigned reviewers regardless of committee size, with the remaining members serving as non-reviewing panelists. Not every candidate application is discussed -- CIHR's streamlining rule removes some before discussion (below), leaving roughly 15-16 discussed applications per committee on average, ranging from about 7 to 23 depending on the committee's own pool size and score distribution. A consensus score is drawn per application (committee- and application-level random effects only, no member-level variation yet, since this is before any individual scoring happens). Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed magnitude is drawn from a truncated distribution (its spread now also role-dependent -- panelists show a wider range of deviation sizes than reviewers) and rounded to the nearest tenth, matching CIHR's one-decimal-place scoring (with rejection sampling so a "deviated" row can never round down to a contradictory zero).
+For the basic structure of the data-generating process we simulate 50 committees. Rather than fixing the number of applications and members per committee, both now vary to reflect real committee-to-committee heterogeneity: each committee's candidate application pool (before streamlining) is drawn from a beta distribution bounded to CIHR's own stated range of 20-80 applications, and committee size is #emph[derived] from that pool size via a workload target (roughly 5.5 applications reviewed per member) plus lognormal noise, bounded to the real range observed in CIHR's Fall 2025 committee rosters (8-37 members) -- reflecting that CIHR sizes committees to manage workload given known application volume, not an independent draw. Each application still gets exactly 3 assigned reviewers regardless of committee size, with the remaining members serving as non-reviewing panelists. Not every candidate application is discussed -- CIHR's streamlining rule removes some before discussion (below), leaving roughly 15-16 discussed applications per committee on average, ranging from about 7 to 23 depending on the committee's own pool size and score distribution. A consensus score is drawn per application by averaging the 3 reviewer scores (committee- and application-level random effects only, no member-level variation yet, since this is before any individual scoring happens). It should be pointed out that in practice for applications that are streamlined the consensus score is always the mean of the 3 reviewer scores. However, for applications that are discussed this is not a requirement and discussion among the 3 reviewers in the meeting (as well as the discussion of prior applications) may lead to consensus scores that are not strictly the average of the 3 reviews. We do not model that somewhat messy process here, but may be able to identify how it operates with real application data. Whether each member deviates from that consensus is a function of their role and self-described expertise; if they deviate, the signed magnitude is drawn from a truncated distribution (its spread now also role-dependent -- panelists show a wider range of deviation sizes than reviewers) and rounded to the nearest tenth, matching CIHR's one-decimal-place scoring (with rejection sampling so a "deviated" row can never round down to a contradictory zero).
 
 #block[
 ```r
@@ -432,7 +550,7 @@ cmte_n = 50          # number of committees
 # workload target, not drawn independently
 pool_min = 20
 pool_max = 80
-target_reviews_per_member = 5.5
+target_reviews_per_member = 8
 mem_min  = 8         # real range, from CIHR's Fall 2025 committee rosters
 mem_max  = 37
 
@@ -471,7 +589,7 @@ Every parameter above is at this point just an educated guess and a placeholder,
 
 == Simulated data
 <simulated-data>
-What did we generate with the parameters above? #ref(<fig-cmte>, supplement: [Figure]) shows our simulated 50 committees with varying sizes and the number of total and discussed applications. Across the committees the fraction discussed varies from 24.1% to 41.0%. Generally, larger committees end up with more total and more discussed applications.
+What did we generate with the parameters above? #ref(<fig-cmte>, supplement: [Figure]) shows our simulated 50 committees with varying sizes and the number of total and discussed applications. Across the committees the fraction discussed varies from 28.3% to 43.2%. Generally, larger committees end up with more total and more discussed applications.
 
 #figure([
 #box(image("ror-modeling-strategy_files/figure-typst/fig-cmte-1.svg"))
@@ -1062,7 +1180,9 @@ Both interactions are recovered cleanly and with high significance (the sign fli
 
 = Aim 3: not yet designed
 <aim-3-not-yet-designed>
-Aim 3 asks how alternative funding-decision schemes -- reweighting scores by engagement, or partially randomizing funding decisions for applications near the threshold -- would compare to the status quo. That's a structurally different kind of simulation: an intervention/counterfactual layered on top of the funding decision itself, not just an extension of Aims 1-2's data-generating process for reviewer behavior. We haven't started designing it, and would welcome input on what the alternative schemes worth simulating actually are before building anything.
+Aim 3 asks how alternative funding-decision schemes -- reweighting scores by engagement, or partially randomizing funding decisions for applications near the threshold -- would compare to the status quo. For example, if in Aims 1 and 2 we find that a very substantial proportion of committee members simply adopt the consensus score, this may suggest that allowing the 3 application reviewers to discuss and form their own consensus may not lead to substantially different funding outcomes, but could be considerably more efficient. Alternatively, increasing the weight place on the scores given by the 3 reviewers relative to the non-reviewing panel members may also lead to a different set of funded applications if non-reviewing members often deviate from the consensus.
+
+That's a structurally different kind of simulation: an intervention/counterfactual layered on top of the funding decision itself, not just an extension of Aims 1-2's data-generating process for reviewer behavior. We haven't started designing it, and would welcome input on what the alternative schemes worth simulating actually are before building anything.
 
 Structurally, nothing in the current pipeline goes past `score` (the final, post-discussion score) -- there's no funding-decision layer at all yet (rank by final score, allocate against a budget, apply whatever equalization overlay CIHR actually uses). Aim 3 can't be simulated without adding one. This is also where the partial-randomization idea specifically earns its keep: informally, applications near the funding threshold can end up clustered close enough together that discussion- driven movement alone is plausibly enough to reorder who clears the line, which is exactly the kind of uncertainty a modified-lottery scheme is designed to acknowledge rather than paper over with strict rank order. Worth real data once it arrives from CIHR to confirm how tight that clustering actually is.
 
@@ -1161,10 +1281,18 @@ pool_shape2 = 4      # roughly match the mean/SD/right-skew of the
 mem_min = 8          # lower bound (from CIHR's Fall 2025 Proj Grant
 mem_max = 37         # committee roster, cihr-irsc.gc.ca/e/54732.html)
 
-# workload target: roughly 5 applications reviewed per member
-target_reviews_per_member = 5.5
-mem_noise_sd = 0.15   # lognormal noise SD (log scale) around the
-                      # workload
+# workload target: 2026-09-02, raised from 5.5 -- CIHR's Peer Review
+# Manual states a per-reviewer max of 8-10 applications
+# (cihr-irsc.gc.ca/e/49564.html), matching Sam's own experience on the
+# Public Health committee. Also fixes a real calibration problem, not
+# just a values update: at 5.5, the implied mem_n center at pool_max=80
+# was 43.6, exceeding the real mem_max=37 (from CIHR's Fall 2025
+# committee roster) -- large-pool committees were hitting the redraw
+# boundary repeatedly rather than reflecting genuine variation. 8 is a
+# deliberate middle reading of "maximum 8-10" (typical load, not the
+# literal ceiling) and keeps the whole implied range inside [8, 37].
+target_reviews_per_member = 8
+mem_noise_sd = 0.15   # lognormal noise SD around the workload
 
 b0         = 4.0    # intercept for (discussed) application's true quality
 u0c_sd     = 0.1    # random intercept SD for committee (quality level)

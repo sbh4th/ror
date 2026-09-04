@@ -1634,10 +1634,6 @@ population-level spread beyond `dev_sd` alone. Caught by Monte Carlo-
 checking the exact hierarchical structure against the simulated
 output before reporting the numbers as final.
 
-Not yet done: refitting `m1_magnitude` on the regenerated data to
-confirm the two-part model actually recovers this job effect on
-magnitude, rather than assuming it will.
-
 ## Aside: `MASS::select()` masking `dplyr::select()` broke the sim script mid-session
 
 Hit `Error in select(cmte_pool, -mem_n_center) : unused argument
@@ -2098,13 +2094,7 @@ was still applied first and is fine to leave as-is; the project file
 is what makes *future* `output/`-referencing images from any doc in
 the render list work without needing the same per-file treatment.
 
-Side effect, expected and benign: Quarto auto-appended `/.quarto/` and
-`**/*.quarto_ipynb` to `.gitignore` on first project-mode render (its
-own standard behavior on detecting a new project, not something done
-by hand) -- confirmed no `_freeze/` directory or other unexpected
-artifacts appeared. Re-verified all three formats for both
-`ror-modeling-strategy.qmd` and `ror-research-log.qmd` render clean
-under the new project.
+
 
 ## `job` is a mediator, not a confounder, of `exp`'s effect on `deviated` -- confirmed empirically, not just in theory
 
@@ -2210,6 +2200,99 @@ if Aim 1's actual interest is the total effect, and/or (c) attempt a
 formal mediation decomposition of `exp`'s effect into direct + via-job
 components. No decision made; this entry exists so the reasoning and
 the empirical check are on record before that conversation happens.
+
+# 2026-09-02
+
+## `target_reviews_per_member` raised from 5.5 to 8 -- fixes a real calibration problem, not just an updated guess
+
+Prompted by looking up CIHR's actual reviewer-assignment process (see
+below): the Peer Review Manual states a per-reviewer maximum of 8-10
+applications (cihr-irsc.gc.ca/e/49564.html), and Sam's own experience
+on the Public Health committee matched that (8-10), not the 5.5
+`ror-sim-deviate.R` had been using.
+
+**This isn't just a values update -- checked first whether 5.5 was
+actually miscalibrated against the DGP's own other empirically-anchored
+bound, and it was.** `mem_n_center = 3 * pool_size / target_reviews_per_member`,
+and at `pool_max = 80`, `target = 5.5` implies a center of 43.6 --
+*exceeding* the real `mem_max = 37` (from CIHR's Fall 2025 committee
+roster) by 6.6. Since `mem_n` is redrawn (not clamped) whenever it
+lands outside `[mem_min, mem_max]`, a center above the ceiling means
+large-pool committees were repeatedly hitting the boundary and piling
+up near 37 rather than reflecting genuine variation -- exactly the
+"artificial spike at a clamped edge" the redraw-not-clamp design was
+built to avoid, undermined by a miscalibrated center rather than the
+redraw logic itself. Verified directly: at `target=5.5` the implied
+range `[10.9, 43.6]` exceeds `[8, 37]`; every value from `target=7`
+up keeps the whole range inside it.
+
+**Chose `target = 8`** -- a deliberate middle reading of "maximum
+8-10" as a typical load, not the literal ceiling; also matches Sam's
+own recollection directly. Regenerated `data/sim-deviate.csv` and
+`output/cmte-pool.rds`: committee sizes now range 9-29 (mean 16.4,
+comfortably inside `[8, 37]`, no more boundary pileup), discussion
+rate 37.2%, all existing `stopifnot()` checks and the job/exp
+recovery check on `deviated` still pass cleanly.
+
+Two things updated automatically, one that needed a manual fix:
+`writing/ror-modeling-strategy.qmd`'s "fraction discussed" range and
+committee count are computed live from the regenerated simulation
+output (2026-08-27's fix), so those updated on their own on re-render
+(24.1%-41.0% -> 28.3%-43.2%) with zero doc edits. The illustrative
+`aim1-params` code chunk in the same doc, though, *displays* the
+parameter value as literal example code rather than computing it --
+that still needed a manual one-line fix to avoid becoming stale
+relative to the real script, the same duplication-drift risk this
+project has hit before.
+
+## Looked up CIHR's actual reviewer-assignment process -- confirms several DAG/simulation assumptions weren't just plausible, they're documented policy
+
+Searched CIHR's public documentation for how reviewers actually get
+assigned to applications, prompted by wanting real grounding for
+today's DAG work rather than continuing to reason from plausibility
+alone.
+
+**Reviewer assignment is explicitly expertise-based, and CIHR's own
+categorization is the exact 4-level scheme already used in the
+simulation:** "Committee members are given access to application
+summaries to declare... their level of expertise, which are
+categorized as High, Medium, Low, or Not enough expertise. The
+Chairs, Scientific Officers and CIHR staff then assign each
+application to three committee members based on optimal alignment
+between the application content and the reviewer's declared
+expertise" (Peer Review Manual -- Project,
+cihr-irsc.gc.ca/e/49564.html). Confirms the `exp -> job` arrow in
+today's DAG as documented process, not an assumption -- and confirms
+`exp`'s High/Medium/Low/Not-enough categories in `ror-sim-deviate.R`
+match CIHR's real scheme exactly, not just a plausible simplification.
+
+**COI recusal confirmed directly:** "No peer reviewer or observer may
+participate in the review process of an application with which
+he/she is in conflict of interest... was not involved in discussing
+the application and did not rate the application" (COI and
+Confidentiality Agreement, cihr-irsc.gc.ca/e/46378.html) -- the
+mechanical `coi -> job` recusal pathway discussed a few turns earlier
+in this same session, now policy-confirmed rather than inferred.
+
+**CIHR explicitly draws the same distinction proposed for
+`same_institution` vs. `coi`:** "A reviewer is not automatically in
+conflict with an application if they are from the same institution as
+the applicant, but do not know or work with the applicant" -- direct
+policy basis for Tamblyn's "home institution bias" question being a
+live possibility (same-institution, non-conflicted reviewers legally
+stay in the pool and participate normally), not a stretch.
+
+**"Optimal alignment" is a capacity-constrained match, not pure
+expertise-maximization:** "Each reviewer will receive a maximum of 8
+to 10 applications to review" -- confirmed this is the source of
+today's `target_reviews_per_member` fix above. No published formal
+algorithm found beyond the administrative description (Chairs/SOs/CIHR
+staff make the assignments); external referees can be solicited when
+a committee's internal expertise pool is insufficient. One mechanism
+not currently in the simulation or DAG: reviewers can flag their own
+insufficient expertise *after* seeing the full application (not just
+the summary used for initial assignment), triggering reassignment --
+an iterative correction step on top of the initial expertise match.
 
 
 

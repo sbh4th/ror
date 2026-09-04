@@ -43,8 +43,17 @@ pool_shape2 = 4      # roughly match the mean/SD/right-skew of the
 mem_min = 8          # lower bound (from CIHR's Fall 2025 Proj Grant
 mem_max = 37         # committee roster, cihr-irsc.gc.ca/e/54732.html)
 
-# workload target: roughly 5 applications reviewed per member
-target_reviews_per_member = 5.5
+# workload target: 2026-09-02, raised from 5.5 -- CIHR's Peer Review
+# Manual states a per-reviewer max of 8-10 applications
+# (cihr-irsc.gc.ca/e/49564.html), matching Sam's own experience on the
+# Public Health committee. Also fixes a real calibration problem, not
+# just a values update: at 5.5, the implied mem_n center at pool_max=80
+# was 43.6, exceeding the real mem_max=37 (from CIHR's Fall 2025
+# committee roster) -- large-pool committees were hitting the redraw
+# boundary repeatedly rather than reflecting genuine variation. 8 is a
+# deliberate middle reading of "maximum 8-10" (typical load, not the
+# literal ceiling) and keeps the whole implied range inside [8, 37].
+target_reviews_per_member = 8
 mem_noise_sd = 0.15   # lognormal noise SD around the workload
 
 b0         = 4.0    # intercept for (discussed) application's true quality

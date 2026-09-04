@@ -85,13 +85,12 @@ it's close in spirit, and a subsequent revision could become one.
 ## Project Scheme review process
 
 - The 3 assigned reviewers read the application and score it. At the
-  meeting (and *before* any discussion), they are required to agree on a
-  **consensus score**.
-- After discussion all panel members (including the 3 reviewers) submit
-  a **final score**. Reviewers are not bound to their own consensus
+  meeting (and *before* any discussion), they they give their initial scores.
+- R1 gives a summary and strengths/weaknesses. R2/R3 add any additional points of disagreement, followed by discussion among the entire panel. 
+- After discussion the 3 assigned reviewers agree on a **consensus score**.
+- All panel members (including the 3 reviewers) then submit a **final score**. Reviewers are not bound to their own consensus
   number; they can move too.
-- The final score must fall within **±0.5** of the consensus score, and
-  is entered to **one decimal place**.
+- The final score must fall within **±0.5** of the consensus score, and is entered to **one decimal place**.
 - The (equally weighted) average of final scores across all panel
   members feeds the funding decision.
 
@@ -99,25 +98,58 @@ it's close in spirit, and a subsequent revision could become one.
 
 We're assuming a three-level structure: CIHR-established committees,
 applications nested in committees, and panel members nested in
-committees (crossed with applications, since each member reviews many
-applications within a cycle). Based on recent Project Grant committee
-sizes (cite webpage?), our working numbers are roughly 50 committees,
-but we allow the number of applications across committees to vary based
-on CIHR documentation, and simulate the number of applications
-proportionally (with some variance)
+committees (crossed with applications, since each member reviews many applications within a cycle). Based on recent Project Grant committee sizes (cite webpage?), our working numbers are roughly 50 committees, but we allow the number of applications across committees to vary based on CIHR documentation, and simulate the number of applications proportionally (with some variance)
 
-CIHR's Funding Analytics Team confirmed by email (2025-12-04) which
-fields are actually extractable for a data pull, versus fields that can
-only ever be touched by a CIHR analyst running our code in-house on the
-real data (full table and follow-up questions in
-`code/ror-research-log.qmd`). Headline for this document:
-committee/application/member identifiers, role (reviewer vs. panelist),
-self-described expertise, initial reviewer scores, consensus score,
-final scores, and funding result are all extractable. **Applicant gender
-and career stage -- Aim 2's entire basis -- are not**, and won't appear
-even in CIHR's own distribution-matched dummy data. That constraint is
-why this document exists: the simulation below is the only rehearsal Aim
-2's code gets before it runs once, unsupervised, on real data.
+CIHR's Funding Analytics Team confirmed by email which fields are actually extractable for a data pull, versus fields that can only ever be touched by a CIHR analyst running our code in-house on the real data under the same remote-execution workflow, without a dummy-data rehearsal step first, grouped by the level each field is measured at:
+
+```{r}
+#| echo: false
+#| label: tbl-cihr-fields
+#| fig-cap: CIHR field-by-field data availability, by level
+
+cihr_fields <- tribble(
+  ~level,       ~indicator,                                                  ~availability,
+  "Application", "Committee number",                                        "Extractable",
+  "Application", "Application number",                                     "Extractable",
+  "Application", "Funding result",                                          "Extractable",
+  "Application", "Consensus score",                                         "Extractable",
+  "Application", "Resubmission status",                                     "Extractable (2023 competition onward only)",
+  "Application", "Keywords/domain", "Refused -- identifiability risk",
+    "Application", "Number of investigators", "Refused -- identifiability risk",
+    "Application", "Funding requested", "Refused -- identifiability risk",
+  "Applicant",   "Prior funding success (binary)",                          "Extractable",
+  "Applicant",   "Gender",                                                  "In-house only (no dummy data)",
+  "Applicant",   "Career stage",                                            "In-house only (no dummy data)",
+  "Applicant",   "Scientific productivity",                                 "In-house only -- and unlikely even then",
+  "Member",      "Member number / cid",                                    "Extractable",
+  "Member",      "Job (reviewer vs. panelist role)",                        "Extractable",
+  "Member",      "Self-declared expertise (High/Medium/Low/Not enough)",    "Extractable (can be split into binary columns)",
+  "Member",      "Score (final/voted score)",                               "Extractable",
+  "Member",      "Initial reviewer scores",                                 "Extractable",
+  "Member",      "Past funding success (binary)",                          "Extractable",
+  "Member",      "Conflicts of interest",                                  "Extractable (probably -- bundled with expertise data)",
+  "Member",      "Gender",                                                  "In-house only (no dummy data)",
+  "Member",      "Experience/tenure as a reviewer (distinct from self-declared expertise above; measurement TBD)", "In-house only (no dummy data)"
+)
+
+group_starts <- which(!duplicated(cihr_fields$level))
+header_rows  <- group_starts + seq_along(group_starts) - 1
+
+cihr_fields |>
+  select(indicator, availability) |>
+  setNames(c("Indicator", "Availability")) |>
+  tt(caption = "CIHR field-by-field data availability, by level") |>
+  group_tt(i = setNames(as.list(group_starts), unique(cihr_fields$level))) |>
+  style_tt(i = header_rows, italic = TRUE) |>
+  style_tt(i = 0, align = "l") |>
+  style_tt(j = 1, align = "l")
+```
+
+**Applicant gender and career stage -- Aim 2's entire basis -- are not
+extractable**, and won't appear even in CIHR's own distribution-matched
+dummy data. That constraint is why this document exists: the simulation
+below is the only rehearsal Aim 2's code gets before it runs once,
+unsupervised, on real data.
 
 # Modeling Strategy
 
@@ -450,7 +482,7 @@ cmte_n = 50          # number of committees
 # workload target, not drawn independently
 pool_min = 20
 pool_max = 80
-target_reviews_per_member = 5.5
+target_reviews_per_member = 8
 mem_min  = 8         # real range, from CIHR's Fall 2025 committee rosters
 mem_max  = 37
 
@@ -806,8 +838,7 @@ tab |>
 ```
 
 Below you can see the average marginal predictions for reviewers vs.
-panelists in terms of deviations from the consensus score, given that a
-deviation occurred:
+panelists in terms of deviations from the consensus score, given that a deviation occurred:
 
 ```{r}
 #| echo: false
@@ -955,7 +986,8 @@ it aren't written yet.
 
 Aim 3 asks how alternative funding-decision schemes -- reweighting
 scores by engagement, or partially randomizing funding decisions for
-applications near the threshold -- would compare to the status quo.
+applications near the threshold -- would compare to the status quo. For example, if in Aims 1 and 2 we find that a very substantial proportion of committee members simply adopt the consensus score, this may suggest that allowing the 3 application reviewers to discuss and form their own consensus may not lead to substantially different funding outcomes, but could be considerably more efficient. Alternatively, increasing the weight place on the scores given by the 3 reviewers relative to the non-reviewing panel members may also lead to a different set of funded applications if non-reviewing members often deviate from the consensus. 
+
 That's a structurally different kind of simulation: an
 intervention/counterfactual layered on top of the funding decision
 itself, not just an extension of Aims 1-2's data-generating process for

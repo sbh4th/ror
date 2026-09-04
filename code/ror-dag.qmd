@@ -1,6 +1,6 @@
 ---
 title: "Causal considerations for the RoR project"
-subtitle: 
+#subtitle: 
 author: "Sam Harper"
 date: last-modified
 date-format: iso
@@ -16,11 +16,7 @@ execute:
 
 ## Purpose
 
-A working document for the causal structure underlying this project --
-not a finished DAG, a place to think through it and keep the reasoning
-alongside the code that draws it, so it's easy to pick back up later.
-See `code/ror-research-log.qmd` (2026-09-02 entry) for the discussion
-that prompted this.
+This document tries to lay out some thinking about how to model whether reviewer characteristics like being a primary/secondary/tertiary reviewer vs. panelist or the level of expertise affect deviations from the consensus score. 
 
 ```{r}
 #| label: setup
@@ -39,7 +35,13 @@ for the curved arrowheads.
 
 ## Aim 1: `exp` / `job` / `deviated`
 
-`job` is a **mediator**, not a confounder, of `exp`'s effect on
+Aim 1 is about how `job` and `expertise` may affect the likelihood of deviating from the consensus score (`deviated`) and/or the magnitude of that deviation (`deviation`). In terms of treatment assignment, the pool of potential reviewers self-assigns their level of expertise based on application titles and registration summaries. 
+
+> "Committee members are given access to application summaries to declare conflicts of interest and indicate their level of expertise, which are categorized as High, Medium, Low, or Not enough expertise. The Chairs, Scientific Officers and CIHR staff then assign each application to three committee members based on optimal alignment between the application content and the reviewer's declared expertise" [^1]
+
+[^1]: See [Peer Review Manual - Project](https://cihr-irsc.gc.ca/e/49564.html)
+
+CIHR assigns the reviewer/panelist partly based on this self-reported expertise.  job` is a **mediator**, not a confounder, of `exp`'s effect on
 `deviated` -- CIHR assigns reviewer/panelist role partly based on
 self-declared expertise, and expertise may also affect deviation
 behavior directly. Confirmed this structure is already baked into the
@@ -58,8 +60,8 @@ dag_aim1 <- dagitty("dag {
 }")
 
 coordinates(dag_aim1) <- list(
-  x = c(exp = 0, job = 1, deviated = 2),
-  y = c(exp = 0, job = -1, deviated = 0)
+  x = c(exp = 1, job = 0, deviated = 2),
+  y = c(exp = -1, job = 0, deviated = 0)
 )
 
 drawdag(dag_aim1, cex = 1.3)
