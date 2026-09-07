@@ -84,8 +84,14 @@ a4       = -0.8   # no expertise (vs. high)
 
 # signed magnitude of deviation, given deviation occurs, truncated to
 # +/- 0.5 (CIHR's stated bound on final vs. consensus score)
-dev_bias = 0       # population-average bias: still none (see u0m_bias_sd
-# below for between-member variation around this)
+# location also now differs slightly by job (2026-09-07): Johnson's
+# PNAS analysis of NIH study sections (10.1073/pnas.0804538105, Table
+# 1) found non-readers' post-discussion scores average ~0.12 SD worse
+# than readers' -- reviewers here are the "readers" (they did the
+# in-depth read), panelists the "non-readers" (discussion only), so
+# panelists get a small negative contrast against the reviewer = 0.05).
+dev_bias_reviewer =  0       # reference level
+dev_bias_panelist = -0.05    # small negative contrast vs. reviewer
 # magnitude SD differs by job: panelists swing harder conditional on
 # deviating (heavier tail toward +/-0.5), not just more often (that's
 # the deviation-probability model above, a0-a4) -- 2026-08-25, tuned
@@ -100,10 +106,10 @@ dev_max  =  0.5
 
 # between-member SD in habitual leniency/harshness -- some members
 # consistently deviate a bit high, some a bit low, across every
-# application they review, but the population average stays at
-# dev_bias (0). Not a fixed direction for everyone (that would just be
-# dev_bias != 0); this is heterogeneity *across* members. One draw per
-# unique cid, not per raw member-slot.
+# application they review, on top of their job's own dev_bias above.
+# Not a fixed direction for everyone (that would just be another bias
+# term); this is heterogeneity *across* members. One draw per unique
+# cid, not per raw member-slot.
 u0m_bias_sd = 0.1
 
 scale_min = 0     # lower bound of the scoring scale
@@ -304,11 +310,12 @@ data <- data |>
     p_dev = plogis(a0 + (a1 * panelist) + (a2 * exp_med) +
       (a3 * exp_low) + (a4 * exp_none)),
     deviated = rbinom(n(), 1, p_dev),
+    dev_bias_i = if_else(panelist == 1, dev_bias_panelist, dev_bias_reviewer),
     dev_sd_i = if_else(panelist == 1, dev_sd_panelist, dev_sd_reviewer),
     deviation = if_else(
       deviated == 1,
       round_tenth(rtruncnorm(n(), a = dev_min, b = dev_max,
-        mean = dev_bias + u0m_bias, sd = dev_sd_i)),
+        mean = dev_bias_i + u0m_bias, sd = dev_sd_i)),
       0)
   )
 
@@ -316,7 +323,8 @@ zero_idx <- which(data$deviated == 1 & data$deviation == 0)
 while (length(zero_idx) > 0) {
   data$deviation[zero_idx] <- round_tenth(
     rtruncnorm(length(zero_idx), a = dev_min, b = dev_max,
-      mean = dev_bias + data$u0m_bias[zero_idx], sd = data$dev_sd_i[zero_idx]))
+      mean = data$dev_bias_i[zero_idx] + data$u0m_bias[zero_idx],
+      sd = data$dev_sd_i[zero_idx]))
   zero_idx <- which(data$deviated == 1 & data$deviation == 0)
 }
 

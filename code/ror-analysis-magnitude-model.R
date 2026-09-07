@@ -109,11 +109,13 @@ term_labels <- c(
 )
 
 # truth shown only where it's exactly 0 (scale-invariant); thresholds,
-# disc coefficients, and cid's SD are left blank -- no direct mapping
-# onto the fitted model's latent scale (see research log, 2026-08-27)
+# jobpanelist (nonzero location shift as of 2026-09-07 -- see
+# ror-sim-deviate.R dev_bias_panelist), disc coefficients, and cid's
+# SD are left blank -- no direct mapping onto the fitted model's
+# latent scale (see research log, 2026-08-27)
 truth <- c(
   setNames(rep(NA_real_, 9), paste0("Intercept[", 1:9, "]")),
-  "jobpanelist" = 0, "expmed" = 0, "explow" = 0, "expnone" = 0,
+  "jobpanelist" = NA_real_, "expmed" = 0, "explow" = 0, "expnone" = 0,
   "aid" = 0, "cid" = NA_real_, "cmte" = 0,
   "disc_jobreviewer" = NA_real_, "disc_jobpanelist" = NA_real_
 )
