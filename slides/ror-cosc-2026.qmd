@@ -1,0 +1,385 @@
+---
+title: "Who shapes the score? Reviewer expertise and engagement in grant peer review"
+subtitle: "2nd Canadian Open Science Conference -- pre-conference webinar"
+author: "Sam Harper (with Arijit Nandi)"
+date: 2026-10-02
+date-format: iso
+format:
+  revealjs:
+    theme: [default, custom.scss]
+    width: 1600
+    height: 900
+    slide-number: true
+    html-math-method: mathjax
+    auto-stretch: false
+    embed-resources: true
+title-slide-attributes:
+    data-background-image: "images/mcgill-epi-logo.png"
+    data-background-size: 30%
+    data-background-position: 50% 90%
+editor: source
+bibliography: ../writing/ror.bib
+---
+
+```{r setup, include=FALSE}
+library(here)
+library(tidyverse)
+library(patchwork)
+library(dagitty)
+source(here("code", "dag-helpers.R"))
+
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  out.width = "100%"
+)
+
+theme_blue <- "#377eb8"
+theme_red  <- "#ED1B2F"
+job_cols   <- c(Reviewer = theme_blue, Panelist = theme_red)
+
+# simulated (NOT real CIHR) data -- see code/ror-sim-deviate.R
+d <- read_csv(here("data", "sim-deviate.csv"), show_col_types = FALSE) |>
+  mutate(
+    job = factor(job, levels = c("reviewer", "panelist"),
+      labels = c("Reviewer", "Panelist")),
+    exp = factor(exp, levels = c("high", "med", "low", "none"),
+      labels = c("High", "Medium", "Low", "Not enough"))
+  )
+```
+
+<!--
+TIMING TARGET: 8-9 minutes total (hard stop). Rough per-slide budget is in
+each slide's speaker notes (press S in the browser for speaker view).
+Items marked [CONFIRM] need Sam to fill in / verify before the talk.
+-->
+
+## The problem {.vcenter}
+
+::::::: roomy
+:::::: msg-list
+::: msg-item
+**Scores decide who gets funded**\
+Peer review moves billions of research dollars
+:::
+
+::: msg-item
+**Scores come out of a conversation**\
+Panel discussion can change what reviewers think
+:::
+
+::: msg-item
+**Not everyone in that conversation is equally engaged**\
+Some members read the application closely; most did not
+:::
+::::::
+:::::::
+
+::: notes
+(~1:00) Open with the stakes. Funding decisions rest on scores, but those scores
+are not just averages of independent opinions -- they are shaped by a group
+discussion. And the people in the room differ in how much they actually know about
+the application in front of them. That difference is our question.
+:::
+
+## How CIHR Project Grant review works {.vcenter}
+
+::::::: roomy
+:::::: msg-list
+::: msg-item
+**1. Three assigned reviewers read and score**\
+Assigned partly on self-declared expertise (high / medium / low / not enough)
+:::
+
+::: msg-item
+**2. The committee discusses and agrees a consensus score**\
+Reviewers present; all other members are "panelists"
+:::
+
+::: msg-item
+**3. Every member then scores privately**\
+Final scores must stay within ±0.5 of consensus
+:::
+::::::
+:::::::
+
+::: footnote
+CIHR Project Grant Peer Review Manual, cihr-irsc.gc.ca/e/49564.html
+:::
+
+::: notes
+(~1:00) Brief walkthrough, all public information from CIHR's own manual. The key
+quantity for us is step 3 minus step 2: how far does each member's final score sit
+from the consensus? The plus/minus 0.5 rule bounds it, which matters for modeling.
+NIH has a near-identical structure -- "readers" vs. "non-readers" -- which Valen
+Johnson analysed in PNAS in 2008 [@johnson2008a].
+:::
+
+## Research questions {.vcenter}
+
+::::::: roomy
+:::::: msg-list
+::: msg-item
+**Aim 1: Expertise and engagement**\
+Do reviewers vs. panelists, and high vs. low expertise, differ in how they deviate from consensus?
+:::
+
+::: msg-item
+**Aim 2: Whose scores move?**\
+Do those patterns differ by applicant characteristics?
+:::
+
+::: msg-item
+**Aim 3: What if?**\
+Would alternative funding rules (e.g., weighting by engagement) change who is funded?
+:::
+::::::
+:::::::
+
+::: notes
+(~0:45) Three aims. Aim 1 is descriptive/etiologic about the process; Aim 2 asks
+about fairness across applicants; Aim 3 is exploratory policy simulation. Be brisk --
+the interesting part is how we are doing it.
+:::
+
+## Approach: bring the code to the data {.vcenter}
+
+::::::: roomy
+:::::: msg-list
+::: msg-item
+**Restricted application-level data**\
+CIHR Funding Analytics holds it; we do not see identities
+:::
+
+::: msg-item
+**Our code runs *inside* CIHR**\
+Analysts run it and return results -- no interactive debugging
+:::
+
+::: msg-item
+**So we simulate first**\
+Build, test, and pre-specify the whole pipeline on synthetic data
+:::
+::::::
+:::::::
+
+::: notes
+(~1:00) This is the open-science hook. We cannot share the real data, so what we
+*can* share is everything else: the simulated data-generating process, the
+analysis code, and a modeling strategy document, all public before the real run.
+Code has to work first time on data we will never see, so simulation is not a luxury
+here -- it is the only way to debug. It also works as a pre-registration of the
+analysis.
+:::
+
+## A two-part model for a "spike and slab" outcome {.smaller}
+
+:::::: {.columns .valign-center}
+::: {.column width="50%"}
+Outcome: $d_{ijk}$ = final score − consensus score
+
+Many members simply adopt the consensus ($d = 0$); the rest vary within ±0.5.
+
+**Part 1:** did they deviate at all?
+
+**Part 2:** by how much, and in which direction, if they did?
+:::
+
+::: {.column width="50%"}
+$$
+E[d] = \underbrace{P(\text{deviate})}_{\text{Part 1: Bernoulli}} \times \underbrace{E[d \mid \text{deviate}]}_{\text{Part 2: ordinal}}
+$$
+
+Bayesian multilevel models (`brms`), with committee, application and member effects
+
+Both parts allow **role** and **expertise** to shift the *location* and, in Part 2, the *spread*
+:::
+::::::
+
+::: notes
+(~0:45) Technical slide -- keep it short. The outcome has a big spike at zero plus a
+bounded continuous-ish part, and CIHR scores are on a one-decimal grid, so we split
+it: a Bernoulli model for whether anyone deviates, and an ordinal model for the
+magnitude. The interesting design choice is that we deliberately let role affect both
+the mean and the dispersion -- flexible enough to find either, both or neither.
+:::
+
+## What the simulated data look like {.smaller}
+
+```{r}
+#| label: sim-fig
+#| fig-width: 14
+#| fig-height: 5.6
+
+p1 <- d |>
+  group_by(job, exp) |>
+  summarise(p = mean(deviated), .groups = "drop") |>
+  ggplot(aes(exp, p, fill = job)) +
+  geom_col(position = position_dodge(width = 0.75), width = 0.7) +
+  scale_fill_manual(values = job_cols) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(x = "Self-rated expertise", y = NULL, fill = NULL,
+    title = "Share who deviate from consensus") +
+  theme_minimal(base_size = 18) +
+  theme(panel.grid.minor = element_blank(), legend.position = "top")
+
+p2 <- d |>
+  filter(deviated == 1) |>
+  ggplot(aes(deviation, fill = job)) +
+  geom_histogram(binwidth = 0.1, boundary = 0, colour = "white",
+    alpha = 0.85, position = "identity") +
+  facet_wrap(~job, ncol = 1, scales = "free_y") +
+  scale_fill_manual(values = job_cols) +
+  labs(x = "Final − consensus score", y = NULL,
+    title = "Direction and size, among deviators") +
+  theme_minimal(base_size = 18) +
+  theme(panel.grid.minor = element_blank(), legend.position = "none")
+
+p1 + p2 + plot_layout(widths = c(1.15, 1))
+```
+
+::: footnote
+**Simulated** data only -- built from public CIHR process descriptions; no real applicant or reviewer data are shown.
+:::
+
+::: notes
+(~0:45) Everything on this slide is simulated. Left: deviation is more likely for
+panelists and for people with less expertise -- that is what we put in. Right: among
+those who deviate, panelists swing wider and slightly more negatively, following the
+NIH pattern in Johnson 2008. The point is not the result; it is that our models can
+recover what we built in, which is what we need to know before touching real data.
+:::
+
+## Lesson 1: draw the causal diagram *before* choosing covariates {.smaller}
+
+:::::: {.columns .valign-center}
+::: {.column width="55%"}
+```{r}
+#| label: dag-fig
+#| fig-width: 7
+#| fig-height: 4.2
+
+dag_aim1 <- dagitty("dag {
+  Expertise -> Role
+  Expertise -> Deviation
+  Role -> Deviation
+}")
+
+coordinates(dag_aim1) <- list(
+  x = c(Expertise = 1, Role = 0, Deviation = 2),
+  y = c(Expertise = -1, Role = 0, Deviation = 0)
+)
+
+par(mar = c(0.5, 2.5, 0.5, 2.5))
+drawdag(dag_aim1, cex = 1.5)
+```
+:::
+
+::: {.column width="45%"}
+CIHR assigns the reviewer role partly *based on expertise*.
+
+So **role is a mediator, not a confounder, of expertise's effect** -- and "adjusting for everything" would answer a different question than the one we ask.
+
+Focal exposure: **role**. Expertise is then a genuine confounder.
+:::
+::::::
+
+::: notes
+(~0:45) A lesson that came out of simulating, not analysing. Once we wrote down how
+reviewers actually get assigned -- expertise drives who becomes a reviewer -- the causal
+structure changed which model answers which question. Mediator vs. confounder; a "Table
+2 fallacy" trap if we had just thrown everything into one regression. Better to find
+that out on simulated data than after CIHR runs our code once.
+:::
+
+## Lesson 2: the estimand decides what the model can see {.vcenter}
+
+::::::: roomy
+:::::: msg-list
+::: msg-item
+**Combining the two parts is a real decision**\
+Averaging *signed* deviation can cancel to ≈ 0 even when groups differ a lot
+:::
+
+::: msg-item
+**Location and spread are different questions**\
+Panelists may sit lower, swing wider, or both
+:::
+
+::: msg-item
+**Simulation makes that visible early**\
+We now simulate both, and plan to report which survive in real data
+:::
+::::::
+:::::::
+
+::: footnote
+Simulation calibrated to public CIHR information (committee sizes, reviewer workload) and to @johnson2008a.
+:::
+
+::: notes
+(~0:30) Second lesson. In our first cut the simulated groups differed only in *spread*,
+so the combined average signed deviation came out at essentially zero for everyone --
+technically correct, substantively useless. That pushed us to simulate both a location
+and a spread difference and to pre-specify a flexible model. [CONFIRM: add one line on
+real-data status/timeline here if there are results or a date to mention.]
+:::
+
+## Why dedicated metaresearch funding matters {.vcenter}
+
+::::::: roomy
+:::::: msg-list
+::: msg-item
+**Access**\
+Partnership with the funder itself makes evaluating the funder's own process possible
+:::
+
+::: msg-item
+**Time to do it properly**\
+Simulation, pre-specification and open code are slow -- and rarely rewarded in project grants
+:::
+
+::: msg-item
+**Open science with sensitive data**\
+A reusable template for "open code, closed data" evaluation that other funders can adopt
+:::
+::::::
+:::::::
+
+::: notes
+(~1:15) Land the significance point. Three things this funding bought us. One, a
+seat at the table with CIHR's analytics team -- you cannot study a review process
+from the outside with this granularity. Two, the time to do the unglamorous work:
+simulation, a public modeling strategy, code that runs remotely. Three, a template:
+the same approach could be reused by any funder that cannot release applicant-level
+data. Emphasize that the RoR joint initiative (SSHRC, CIHR, Michael Smith Health
+Research BC) is what made this a fundable thing to do rather than a side project.
+:::
+
+## Thank you {.vcenter}
+
+::::::: roomy
+:::::: msg-list
+::: msg-item
+**Sam Harper** -- McGill University\
+`sbh4th@gmail.com` <!-- [CONFIRM] preferred contact / project site -->
+:::
+
+::: msg-item
+**Funded by**\
+Research on Research Joint Initiative: SSHRC, CIHR, Michael Smith Health Research BC
+:::
+
+::: msg-item
+**Materials**\
+Simulation code and modeling strategy: [CONFIRM: OSF / GitHub link]
+:::
+::::::
+:::::::
+
+::: notes
+(~0:15) Thank CIHR's Funding Analytics team and the co-applicant, Arijit Nandi.
+Take questions.
+:::
